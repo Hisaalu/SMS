@@ -32,6 +32,19 @@ abstract class Controller
         $this->view->share('theme', $this->settings->getTheme());
         $this->view->share('baseUrl', BASE_URL);
     }
+
+    protected function authorize(string $permission): void
+    {
+        if (!$this->auth->check() || !$this->auth->user()->can($permission)) {
+            http_response_code(403);
+            if (file_exists(VIEWS_PATH . '/errors/403.php')) {
+                require VIEWS_PATH . '/errors/403.php';
+            } else {
+                echo "403 - Unauthorized Access";
+            }
+            exit;
+        }
+    }
     
     protected function jsonResponse(array $data, int $statusCode = 200): void
     {

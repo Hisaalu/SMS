@@ -58,12 +58,12 @@
     <!-- Student Management -->
     <li class="nav-section">Students</li>
     <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'students') && !str_contains($currentView, 'academic') ? 'active' : '' ?>" href="<?= BASE_URL . '/students' ?>">
+        <a class="nav-link <?= (str_contains($currentView, 'students') || str_contains($currentView, 'student/show') || str_contains($currentView, 'student/edit') || str_contains($currentView, 'student/create')) && !str_contains($currentView, 'categor') ? 'active' : '' ?>" href="<?= BASE_URL . '/students' ?>">
             <i class="fas fa-user-graduate"></i> Student Management
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'student/categories') ? 'active' : '' ?>" href="<?= BASE_URL . '/student/categories' ?>">
+        <a class="nav-link <?= str_contains($currentView, 'categor') ? 'active' : '' ?>" href="<?= BASE_URL . '/student/categories' ?>">
             <i class="fas fa-tags"></i> Student Categories
         </a>
     </li>

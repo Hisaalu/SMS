@@ -129,6 +129,44 @@ $router->group(['middleware' => ['auth']], function ($router) {
         $router->get('/academic/subjects/{id}/edit', ['SubjectController', 'edit']);
         $router->post('/academic/subjects/{id}', ['SubjectController', 'update']);
     });
+
+    $router->group(['middleware' => ['auth']], function ($router) {
+        // PHASE 7: Student Configs
+        $router->get('/student-categories', ['StudentCategoryController', 'index']);
+        $router->post('/student-categories', ['StudentCategoryController', 'store']);
+        $router->get('/student-statuses', ['StudentStatusController', 'index']);
+        $router->post('/student-statuses', ['StudentStatusController', 'store']);
+
+        // PHASE 8: Student Management
+        $router->get('/students', ['StudentController', 'index']);
+        $router->get('/students/create', ['StudentController', 'create']);
+        $router->post('/students/store', ['StudentController', 'store']);
+        $router->get('/students/show', ['StudentController', 'show']); 
+        $router->get('/students/edit', ['StudentController', 'edit']); 
+        $router->post('/students/update', ['StudentController', 'update']); 
+
+        // PHASE 9: Staff Configs
+        $router->get('/student-categories', ['StudentCategoryController', 'index']);
+        $router->get('/student/categories', ['StudentCategoryController', 'index']);
+        $router->get('/student-categories/create', ['StudentCategoryController', 'create']);
+        $router->get('/student/categories/create', ['StudentCategoryController', 'create']);
+        $router->post('/student-categories/store', ['StudentCategoryController', 'store']);
+        $router->post('/student/categories/store', ['StudentCategoryController', 'store']);
+        $router->get('/student-categories/edit', ['StudentCategoryController', 'edit']);
+        $router->post('/student-categories/update', ['StudentCategoryController', 'update']);
+        $router->post('/student-categories/delete', ['StudentCategoryController', 'delete']);
+
+        // PHASE 10: Staff Management
+        $router->get('/staff', ['StaffController', 'index']);
+        $router->get('/staff/create', ['StaffController', 'create']);
+        $router->post('/staff/store', ['StaffController', 'store']);
+        $router->get('/staff/{id}', ['StaffController', 'show']);
+
+        // PHASE 11: Teacher Assignments
+        $router->get('/teacher-assignments', ['TeacherAssignmentController', 'index']);
+        $router->post('/teacher-assignments/store', ['TeacherAssignmentController', 'store']);
+        $router->post('/teacher-assignments/{id}/terminate', ['TeacherAssignmentController', 'terminate']);
+    });
 });
 
 // ============================================
