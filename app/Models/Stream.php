@@ -1,0 +1,13 @@
+<?php
+namespace NexaT\Models;
+
+use NexaT\Core\Model;
+
+class Stream extends Model
+{
+    protected $table = 'streams';
+    protected $primaryKey = 'id';
+    protected $fillable = ['school_id', 'class_id', 'name'];
+    protected $guarded = ['id'];
+    protected $timestamps = true;
+}
