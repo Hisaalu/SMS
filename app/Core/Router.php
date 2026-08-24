@@ -1,5 +1,4 @@
 <?php
-// File: /app/Core/Router.php
 
 namespace NexaT\Core;
 
@@ -76,9 +75,7 @@ class Router
             $path = $prefix . '/' . trim($path, '/');
         }
         
-        // Remove base path from route if it starts with it
         $cleanPath = '/' . ltrim($path, '/');
-        
         $pattern = preg_replace('/{([^}]+)}/', '([^/]+)', $cleanPath);
         $pattern = '#^' . $pattern . '$#';
         
@@ -101,7 +98,6 @@ class Router
         $method = $_SERVER['REQUEST_METHOD'];
         $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         
-        // Remove base path from URI for matching
         if (BASE_URL && strpos($uri, BASE_URL) === 0) {
             $uri = substr($uri, strlen(BASE_URL));
         }
@@ -137,9 +133,17 @@ class Router
     private function executeHandler($handler, array $params): void
     {
         if (is_array($handler)) {
-            $controller = 'NexaT\\Controllers\\' . $handler[0];
+            $className = $handler[0];
+            $controller = 'NexaT\\Controllers\\' . $className;
             $method = $handler[1];
             
+            if (!class_exists($controller)) {
+                $file = dirname(__DIR__) . '/Controllers/' . $className . '.php';
+                if (file_exists($file)) {
+                    require_once $file;
+                }
+            }
+
             if (!class_exists($controller)) {
                 throw new \Exception("Controller {$controller} not found");
             }

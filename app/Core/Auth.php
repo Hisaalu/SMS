@@ -19,7 +19,8 @@ class Auth
     
     private function loadUser(): void
     {
-        $userId = $this->session->get(SESSION_USER_KEY);
+        $sessionKey = defined('SESSION_USER_KEY') ? \SESSION_USER_KEY : 'user_id';
+        $userId = $_SESSION[$sessionKey] ?? null;
         
         if ($userId && class_exists($this->userModel)) {
             $user = $this->userModel::find($userId);

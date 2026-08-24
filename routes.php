@@ -1,13 +1,8 @@
 <?php
-// File: /routes.php
 
 use NexaT\Core\Router;
 
 $router = Router::getInstance();
-
-// ============================================
-// PUBLIC ROUTES
-// ============================================
 
 $router->get('/', ['HomeController', 'index']);
 $router->get('/login', ['AuthController', 'login']);
@@ -21,15 +16,9 @@ $router->get('/test-route', function() {
     exit;
 });
 
-// ============================================
-// AUTHENTICATED ROUTES
-// ============================================
-
 $router->group(['middleware' => ['auth']], function ($router) {
-    
     $router->get('/dashboard', ['DashboardController', 'index']);
     
-    // User Management - uses permission middleware with parameter
     $router->group(['middleware' => ['permission:users.view']], function ($router) {
         $router->get('/users', ['UserController', 'index']);
         $router->get('/users/create', ['UserController', 'create']);
@@ -39,7 +28,6 @@ $router->group(['middleware' => ['auth']], function ($router) {
         $router->delete('/users/{id}', ['UserController', 'delete']);
     });
     
-    // Role Management
     $router->group(['middleware' => ['permission:roles.view']], function ($router) {
         $router->get('/roles', ['RoleController', 'index']);
         $router->get('/roles/create', ['RoleController', 'create']);
@@ -50,7 +38,6 @@ $router->group(['middleware' => ['auth']], function ($router) {
         $router->delete('/roles/{id}', ['RoleController', 'delete']);
     });
     
-    // Settings
     $router->group(['middleware' => ['permission:settings.view']], function ($router) {
         $router->get('/settings', ['SettingsController', 'index']);
         $router->get('/settings/school', ['SettingsController', 'school']);
@@ -62,116 +49,114 @@ $router->group(['middleware' => ['auth']], function ($router) {
         $router->post('/settings', ['SettingsController', 'update']);
     });
 
-    // Academic Years
-    $router->group(['middleware' => ['auth']], function ($router) {
-        $router->get('/academic/years', ['AcademicYearController', 'index']);
-        $router->get('/academic/years/create', ['AcademicYearController', 'create']);
-        $router->post('/academic/years', ['AcademicYearController', 'store']);
-        $router->get('/academic/years/{id}/edit', ['AcademicYearController', 'edit']);
-        $router->post('/academic/years/{id}', ['AcademicYearController', 'update']);
-        $router->delete('/academic/years/{id}', ['AcademicYearController', 'delete']);
+    $router->get('/academic/years', ['AcademicYearController', 'index']);
+    $router->get('/academic/years/create', ['AcademicYearController', 'create']);
+    $router->post('/academic/years', ['AcademicYearController', 'store']);
+    $router->get('/academic/years/{id}/edit', ['AcademicYearController', 'edit']);
+    $router->post('/academic/years/{id}', ['AcademicYearController', 'update']);
+    $router->delete('/academic/years/{id}', ['AcademicYearController', 'delete']);
 
-        // Terms
-        $router->get('/academic/terms', ['TermController', 'index']);
-        $router->get('/academic/terms/create', ['TermController', 'create']);
-        $router->post('/academic/terms', ['TermController', 'store']);
-        $router->get('/academic/terms/{id}/edit', ['TermController', 'edit']);
-        $router->post('/academic/terms/{id}', ['TermController', 'update']);
-    });
+    $router->get('/academic/terms', ['TermController', 'index']);
+    $router->get('/academic/terms/create', ['TermController', 'create']);
+    $router->post('/academic/terms', ['TermController', 'store']);
+    $router->get('/academic/terms/{id}/edit', ['TermController', 'edit']);
+    $router->post('/academic/terms/{id}', ['TermController', 'update']);
 
-    $router->group(['middleware' => ['auth']], function ($router) {
-        // Classes
-        $router->get('/academic/classes', ['ClassController', 'index']);
-        $router->get('/academic/classes/create', ['ClassController', 'create']);
-        $router->post('/academic/classes', ['ClassController', 'store']); 
-        $router->get('/academic/classes/{id}/edit', ['ClassController', 'edit']); 
-        $router->post('/academic/classes/{id}', ['ClassController', 'update']);
+    $router->get('/academic/classes', ['ClassController', 'index']);
+    $router->get('/academic/classes/create', ['ClassController', 'create']);
+    $router->post('/academic/classes', ['ClassController', 'store']); 
+    $router->get('/academic/classes/{id}/edit', ['ClassController', 'edit']); 
+    $router->post('/academic/classes/{id}', ['ClassController', 'update']);
 
-        // Streams
-        $router->get('/academic/streams', ['StreamController', 'index']);
-        $router->get('/academic/streams/create', ['StreamController', 'create']);
-        $router->post('/academic/streams', ['StreamController', 'store']);
+    $router->get('/academic/streams', ['StreamController', 'index']);
+    $router->get('/academic/streams/create', ['StreamController', 'create']);
+    $router->post('/academic/streams', ['StreamController', 'store']);
+    $router->get('/academic/streams/{id}/edit', ['StreamController', 'edit']);
+    $router->post('/academic/streams/{id}', ['StreamController', 'update']);
 
-        // Departments
-        $router->get('/academic/departments', ['DepartmentController', 'index']);
-        $router->get('/academic/departments/create', ['DepartmentController', 'create']);
-        $router->post('/academic/departments', ['DepartmentController', 'store']);
+    $router->get('/academic/departments', ['DepartmentController', 'index']);
+    $router->get('/academic/departments/create', ['DepartmentController', 'create']);
+    $router->post('/academic/departments', ['DepartmentController', 'store']);
+    $router->get('/academic/departments/{id}/edit', ['DepartmentController', 'edit']);
+    $router->post('/academic/departments/{id}', ['DepartmentController', 'update']);
 
-        // Subjects
-        $router->get('/academic/subjects', ['SubjectController', 'index']);
-        $router->get('/academic/subjects/create', ['SubjectController', 'create']);
-        $router->post('/academic/subjects', ['SubjectController', 'store']);
-    });
+    $router->get('/academic/subjects', ['SubjectController', 'index']);
+    $router->get('/academic/subjects/create', ['SubjectController', 'create']);
+    $router->post('/academic/subjects', ['SubjectController', 'store']);
+    $router->get('/academic/subjects/{id}/edit', ['SubjectController', 'edit']);
+    $router->post('/academic/subjects/{id}', ['SubjectController', 'update']);
 
-    $router->group(['middleware' => ['auth']], function ($router) {
-        // Streams
-        $router->get('/academic/streams', ['StreamController', 'index']);
-        $router->get('/academic/streams/create', ['StreamController', 'create']);
-        $router->post('/academic/streams', ['StreamController', 'store']);
-        $router->get('/academic/streams/{id}/edit', ['StreamController', 'edit']);
-        $router->post('/academic/streams/{id}', ['StreamController', 'update']);
-    });
+    $router->get('/student-categories', ['StudentCategoryController', 'index']);
+    $router->get('/student/categories', ['StudentCategoryController', 'index']);
+    $router->get('/student-categories/create', ['StudentCategoryController', 'create']);
+    $router->get('/student/categories/create', ['StudentCategoryController', 'create']);
+    $router->post('/student-categories', ['StudentCategoryController', 'store']);
+    $router->post('/student-categories/store', ['StudentCategoryController', 'store']);
+    $router->post('/student/categories/store', ['StudentCategoryController', 'store']);
+    $router->get('/student-categories/edit', ['StudentCategoryController', 'edit']);
+    $router->post('/student-categories/update', ['StudentCategoryController', 'update']);
+    $router->post('/student-categories/delete', ['StudentCategoryController', 'delete']);
 
-    $router->group(['middleware' => ['auth']], function ($router) {
-        // Departments
-        $router->get('/academic/departments', ['DepartmentController', 'index']);
-        $router->get('/academic/departments/create', ['DepartmentController', 'create']);
-        $router->post('/academic/departments', ['DepartmentController', 'store']);
-        $router->get('/academic/departments/{id}/edit', ['DepartmentController', 'edit']);
-        $router->post('/academic/departments/{id}', ['DepartmentController', 'update']);
-    });
+    $router->get('/student-statuses', ['StudentStatusController', 'index']);
+    $router->post('/student-statuses', ['StudentStatusController', 'store']);
 
-    $router->group(['middleware' => ['auth']], function ($router) {
-        // Subjects
-        $router->get('/academic/subjects', ['SubjectController', 'index']);
-        $router->get('/academic/subjects/create', ['SubjectController', 'create']);
-        $router->post('/academic/subjects', ['SubjectController', 'store']);
-        $router->get('/academic/subjects/{id}/edit', ['SubjectController', 'edit']);
-        $router->post('/academic/subjects/{id}', ['SubjectController', 'update']);
-    });
+    $router->get('/students', ['StudentController', 'index']);
+    $router->get('/students/create', ['StudentController', 'create']);
+    $router->post('/students/store', ['StudentController', 'store']);
+    $router->get('/students/show', ['StudentController', 'show']); 
+    $router->get('/students/edit', ['StudentController', 'edit']); 
+    $router->post('/students/update', ['StudentController', 'update']); 
+    $router->get('/students/delete', ['StudentController', 'delete']);
+    $router->get('/students/enrollments', ['StudentController', 'enrollments']);
+    $router->post('/students/enrollments/store', ['StudentController', 'storeEnrollment']);
 
-    $router->group(['middleware' => ['auth']], function ($router) {
-        // PHASE 7: Student Configs
-        $router->get('/student-categories', ['StudentCategoryController', 'index']);
-        $router->post('/student-categories', ['StudentCategoryController', 'store']);
-        $router->get('/student-statuses', ['StudentStatusController', 'index']);
-        $router->post('/student-statuses', ['StudentStatusController', 'store']);
+    $router->get('/student/show', ['StudentController', 'show']); 
+    $router->get('/student/edit', ['StudentController', 'edit']); 
+    $router->post('/student/update', ['StudentController', 'update']); 
+    $router->get('/student/enrollments', ['StudentController', 'enrollments']);
+    $router->post('/student/enrollments/store', ['StudentController', 'storeEnrollment']);
 
-        // PHASE 8: Student Management
-        $router->get('/students', ['StudentController', 'index']);
-        $router->get('/students/create', ['StudentController', 'create']);
-        $router->post('/students/store', ['StudentController', 'store']);
-        $router->get('/students/show', ['StudentController', 'show']); 
-        $router->get('/students/edit', ['StudentController', 'edit']); 
-        $router->post('/students/update', ['StudentController', 'update']); 
+    $router->get('/staff', ['StaffController', 'index']);
+    $router->get('/staff/create', ['StaffController', 'create']);
+    $router->post('/staff/store', ['StaffController', 'store']);
+    $router->get('/staff/show', ['StaffController', 'show']);
+    $router->get('/staff/edit', ['StaffController', 'edit']);
+    $router->post('/staff/update', ['StaffController', 'update']);
+    $router->post('/staff/change-status', ['StaffController', 'changeStatus']);
 
-        // PHASE 9: Staff Configs
-        $router->get('/student-categories', ['StudentCategoryController', 'index']);
-        $router->get('/student/categories', ['StudentCategoryController', 'index']);
-        $router->get('/student-categories/create', ['StudentCategoryController', 'create']);
-        $router->get('/student/categories/create', ['StudentCategoryController', 'create']);
-        $router->post('/student-categories/store', ['StudentCategoryController', 'store']);
-        $router->post('/student/categories/store', ['StudentCategoryController', 'store']);
-        $router->get('/student-categories/edit', ['StudentCategoryController', 'edit']);
-        $router->post('/student-categories/update', ['StudentCategoryController', 'update']);
-        $router->post('/student-categories/delete', ['StudentCategoryController', 'delete']);
+    $router->get('/staff/categories', ['StaffCategoryController', 'index']);
+    $router->post('/staff/categories/store', ['StaffCategoryController', 'store']);
+    $router->post('/staff/categories/update', ['StaffCategoryController', 'update']);
 
-        // PHASE 10: Staff Management
-        $router->get('/staff', ['StaffController', 'index']);
-        $router->get('/staff/create', ['StaffController', 'create']);
-        $router->post('/staff/store', ['StaffController', 'store']);
-        $router->get('/staff/{id}', ['StaffController', 'show']);
+    $router->get('/staff/statuses', ['StaffStatusController', 'index']);
+    $router->post('/staff/statuses/store', ['StaffStatusController', 'store']);
+    $router->post('/staff/statuses/update', ['StaffStatusController', 'update']);
+    $router->post('/staff/statuses/delete', ['StaffStatusController', 'delete']);
 
-        // PHASE 11: Teacher Assignments
-        $router->get('/teacher-assignments', ['TeacherAssignmentController', 'index']);
-        $router->post('/teacher-assignments/store', ['TeacherAssignmentController', 'store']);
-        $router->post('/teacher-assignments/{id}/terminate', ['TeacherAssignmentController', 'terminate']);
-    });
+    $router->get('/teacher-assignments', ['TeacherAssignmentController', 'index']);
+    $router->post('/teacher-assignments/store', ['TeacherAssignmentController', 'store']);
+    $router->post('/teacher-assignments/{id}/terminate', ['TeacherAssignmentController', 'terminate']);
+
+    $router->get('/attendance', [AttendanceController::class, 'index']);
+    $router->get('/attendance/take', [AttendanceController::class, 'take']);
+    $router->post('/attendance/save', [AttendanceController::class, 'save']);
+    $router->get('/attendance/view/{id}', [AttendanceController::class, 'view']);
+    $router->get('/attendance/edit/{id}', [AttendanceController::class, 'edit']);
+
+    $router->get('/attendance/statuses', ['AttendanceStatusController', 'index']);
+    $router->get('/attendance/statuses/create', ['AttendanceStatusController', 'create']);
+    $router->post('/attendance/statuses/store', ['AttendanceStatusController', 'store']);
+    $router->get('/attendance/statuses/{id}/edit', ['AttendanceStatusController', 'edit']);
+    $router->post('/attendance/statuses/{id}/update', ['AttendanceStatusController', 'update']);
+    $router->delete('/attendance/statuses/{id}', ['AttendanceStatusController', 'delete']);
+
+    $router->get('/attendance/sessions', ['AttendanceSessionController', 'index']);
+    $router->get('/attendance/sessions/create', ['AttendanceSessionController', 'create']);
+    $router->post('/attendance/sessions/store', ['AttendanceSessionController', 'store']);
+    $router->get('/attendance/sessions/{id}/edit', ['AttendanceSessionController', 'edit']);
+    $router->post('/attendance/sessions/{id}/update', ['AttendanceSessionController', 'update']);
+    $router->delete('/attendance/sessions/{id}', ['AttendanceSessionController', 'delete']);
 });
-
-// ============================================
-// API ROUTES
-// ============================================
 
 $router->group(['prefix' => '/api', 'middleware' => ['auth']], function ($router) {
     $router->get('/school-profile', ['ApiController', 'schoolProfile']);

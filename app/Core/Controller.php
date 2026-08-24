@@ -35,12 +35,34 @@ abstract class Controller
 
     protected function authorize(string $permission): void
     {
-        if (!$this->auth->check() || !$this->auth->user()->can($permission)) {
+        // 1. If not logged in at all, redirect to login page
+        if (!$this->auth->check()) {
+            header('Location: ' . BASE_URL . '/login');
+            exit;
+        }
+
+        $user = $this->auth->getUser();
+
+        // 2. If logged in but lacks permission
+        if (!$user || (method_exists($user, 'can') && !$user->can($permission))) {
             http_response_code(403);
-            if (file_exists(VIEWS_PATH . '/errors/403.php')) {
-                require VIEWS_PATH . '/errors/403.php';
+            
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+
+            $errorView = defined('VIEWS_PATH') 
+                ? VIEWS_PATH . '/errors/403.php' 
+                : ROOT_PATH . '/app/Views/errors/403.php';
+
+            if (file_exists($errorView)) {
+                require $errorView;
             } else {
-                echo "403 - Unauthorized Access";
+                echo "<div style='font-family:sans-serif; text-align:center; padding:50px;'>";
+                echo "<h1 style='color:#e74c3c;'>403 Access Denied</h1>";
+                echo "<p>You need the permission <strong>'{$permission}'</strong> to view this page.</p>";
+                echo "<a href='" . BASE_URL . "/dashboard' style='color:#3498db;'>Return to Dashboard</a>";
+                echo "</div>";
             }
             exit;
         }

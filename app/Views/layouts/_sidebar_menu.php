@@ -58,38 +58,53 @@
     <!-- Student Management -->
     <li class="nav-section">Students</li>
     <li class="nav-item">
-        <a class="nav-link <?= (str_contains($currentView, 'students') || str_contains($currentView, 'student/show') || str_contains($currentView, 'student/edit') || str_contains($currentView, 'student/create')) && !str_contains($currentView, 'categor') ? 'active' : '' ?>" href="<?= BASE_URL . '/students' ?>">
+        <a class="nav-link <?= (str_contains($currentView, 'students') || str_contains($currentView, 'student/show') || str_contains($currentView, 'student/edit') || str_contains($currentView, 'student/create')) && !str_contains($currentView, 'students/categories') && !str_contains($currentView, 'student/categories') && !str_contains($currentView, 'enroll') ? 'active' : '' ?>" href="<?= BASE_URL . '/students' ?>">
             <i class="fas fa-user-graduate"></i> Student Management
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'categor') ? 'active' : '' ?>" href="<?= BASE_URL . '/student/categories' ?>">
+        <a class="nav-link <?= str_contains($currentView, 'enroll') ? 'active' : '' ?>" href="<?= BASE_URL . '/student/enrollments' ?>">
+            <i class="fas fa-user-plus"></i> Student Enrollment
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?= str_contains($currentView, 'students/categories') || str_contains($currentView, 'student/categories') ? 'active' : '' ?>" href="<?= BASE_URL . '/student/categories' ?>">
             <i class="fas fa-tags"></i> Student Categories
         </a>
     </li>
 
     <!-- Staff Management -->
-    <li class="nav-section">Staff</li>
+    <li class="nav-section">Staff Management</li>
     <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'staff') ? 'active' : '' ?>" href="<?= BASE_URL . '/staff' ?>">
-            <i class="fas fa-chalkboard-teacher"></i> Staff Management
+        <a class="nav-link <?= str_contains($currentView, 'staff') && !str_contains($currentView, 'staff/categories') && !str_contains($currentView, 'staff/statuses') ? 'active' : '' ?>" href="<?= BASE_URL . '/staff' ?>">
+            <i class="fas fa-users"></i> Staff Directory
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'teacher/assignments') ? 'active' : '' ?>" href="<?= BASE_URL . '/teacher/assignments' ?>">
-            <i class="fas fa-user-cog"></i> Teacher Assignments
+        <a class="nav-link <?= str_contains($currentView, 'staff/categories') ? 'active' : '' ?>" href="<?= BASE_URL . '/staff/categories' ?>">
+            <i class="fas fa-tags"></i> Staff Categories
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?= str_contains($currentView, 'staff/statuses') ? 'active' : '' ?>" href="<?= BASE_URL . '/staff/statuses' ?>">
+            <i class="fas fa-toggle-on"></i> Staff Statuses
         </a>
     </li>
 
     <!-- Attendance -->
     <li class="nav-section">Attendance</li>
     <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'attendance') ? 'active' : '' ?>" href="<?= BASE_URL . '/attendance' ?>">
+        <a class="nav-link <?= str_contains($currentView, 'attendance') && !str_contains($currentView, 'attendance/statuses') && !str_contains($currentView, 'attendance/sessions') && !str_contains($currentView, 'reports/attendance') ? 'active' : '' ?>" href="<?= BASE_URL . '/attendance' ?>">
             <i class="fas fa-calendar-check"></i> Attendance
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'attendance/statuses') ? 'active' : '' ?>" href="<?= BASE_URL . '/attendance/statuses' ?>">
+        <a class="nav-link <?= str_contains($currentView, 'attendance/sessions') || str_contains($currentView, 'attendance/session') ? 'active' : '' ?>" href="<?= BASE_URL . '/attendance/sessions' ?>">
+            <i class="fas fa-clock"></i> Attendance Sessions
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?= str_contains($currentView, 'attendance/statuses') || str_contains($currentView, 'attendance/status') ? 'active' : '' ?>" href="<?= BASE_URL . '/attendance/statuses' ?>">
             <i class="fas fa-list-check"></i> Attendance Statuses
         </a>
     </li>

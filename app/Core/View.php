@@ -29,19 +29,40 @@ class View
             throw new \Exception("View not found: {$viewPath}");
         }
         
+        // Merge data
         $data = array_merge($this->sharedData, $this->data, $data);
         $data['view'] = $view;
         
+        // Extract variables for the view
         extract($data);
         
+        // Start output buffering
         ob_start();
+        
+        // Include the view file
         require $viewPath;
-        return ob_get_clean();
+        
+        // Get the content
+        $content = ob_get_clean();
+        
+        // If content is empty, return an error message for debugging
+        if (empty($content) && !$this->isLayoutRendering()) {
+            return "<!-- View rendered but output is empty: {$viewPath} -->";
+        }
+        
+        return $content;
     }
     
     public function renderWithLayout(string $view, string $layout = 'default', array $data = []): string
     {
+        // Render the view first
         $content = $this->render($view, $data);
+        
+        // If content is empty, show debug info
+        if (empty($content)) {
+            $content = "<!-- Content is empty for view: {$view} -->";
+        }
+        
         $data['content'] = $content;
         
         $layoutPath = $this->layoutPath . '/' . $layout . '.php';
@@ -56,6 +77,18 @@ class View
         ob_start();
         require $layoutPath;
         return ob_get_clean();
+    }
+    
+    private function isLayoutRendering(): bool
+    {
+        // Check if we're in the middle of rendering a layout
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+        foreach ($backtrace as $trace) {
+            if (isset($trace['function']) && $trace['function'] === 'renderWithLayout') {
+                return true;
+            }
+        }
+        return false;
     }
     
     public function share(string $key, $value): self

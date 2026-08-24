@@ -33,11 +33,15 @@ define('HTTP_METHOD_NOT_ALLOWED', 405);
 define('HTTP_UNPROCESSABLE_ENTITY', 422);
 define('HTTP_INTERNAL_ERROR', 500);
 
-// Security Constants
+// Security & Session Constants
 define('BCRYPT_COST', 12);
 define('CSRF_TOKEN_NAME', 'csrf_token');
-define('SESSION_USER_KEY', 'user_id');
-define('SESSION_ROLE_KEY', 'role_id');
+if (!defined('SESSION_USER_KEY')) {
+    define('SESSION_USER_KEY', 'user_id'); 
+}
+if (!defined('SESSION_ROLE_KEY')) {
+    define('SESSION_ROLE_KEY', 'role_id');
+}
 
 // File Upload Constants
 define('MAX_UPLOAD_SIZE', 5242880);

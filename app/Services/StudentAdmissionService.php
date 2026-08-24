@@ -19,7 +19,7 @@ class StudentAdmissionService
         $this->db->beginTransaction();
 
         try {
-            // 1. Create Student using explicit query binding
+            // 1. Create Student using explicit query binding (including all contact fields)
             $this->db->execute(
                 "INSERT INTO students (
                     school_id, 
@@ -28,8 +28,12 @@ class StudentAdmissionService
                     first_name, 
                     middle_name, 
                     last_name, 
+                    preferred_name,
                     gender, 
                     date_of_birth,
+                    phone,
+                    email,
+                    address,
                     photo_path, 
                     current_category_id, 
                     current_status_id, 
@@ -41,8 +45,12 @@ class StudentAdmissionService
                     :first_name, 
                     :middle_name, 
                     :last_name, 
+                    :preferred_name,
                     :gender, 
                     :date_of_birth,
+                    :phone,
+                    :email,
+                    :address,
                     :photo_path, 
                     :current_category_id, 
                     :current_status_id, 
@@ -55,8 +63,12 @@ class StudentAdmissionService
                     'first_name'          => $studentData['first_name'],
                     'middle_name'         => $studentData['middle_name'] ?? null,
                     'last_name'           => $studentData['last_name'],
+                    'preferred_name'      => $studentData['preferred_name'] ?? null,
                     'gender'              => $studentData['gender'],
                     'date_of_birth'       => $studentData['date_of_birth'] ?? null,
+                    'phone'               => $studentData['phone'] ?? null,
+                    'email'               => $studentData['email'] ?? null,
+                    'address'             => $studentData['address'] ?? null,
                     'photo_path'          => $studentData['photo_path'] ?? null,
                     'current_category_id' => $studentData['current_category_id'],
                     'current_status_id'   => $studentData['current_status_id'],
@@ -70,16 +82,16 @@ class StudentAdmissionService
                 throw new Exception("Failed to insert student core profile.");
             }
 
-            // 2. Create Guardian
+            // 2. Create Guardian (including optional Occupation and Address)
             $this->db->execute(
-                "INSERT INTO guardians (school_id, full_name, phone, email, address) 
-                 VALUES (:school_id, :full_name, :phone, :email, :address)",
+                "INSERT INTO guardians (school_id, full_name, phone, occupation, address) 
+                 VALUES (:school_id, :full_name, :phone, :occupation, :address)",
                 [
-                    'school_id' => $studentData['school_id'],
-                    'full_name' => $guardianData['full_name'],
-                    'phone'     => $guardianData['phone'],
-                    'email'     => $guardianData['email'] ?? null,
-                    'address'   => $guardianData['address'] ?? null
+                    'school_id'  => $studentData['school_id'],
+                    'full_name'  => $guardianData['full_name'],
+                    'phone'      => $guardianData['phone'],
+                    'occupation' => $guardianData['occupation'] ?? null,
+                    'address'    => $guardianData['address'] ?? null
                 ]
             );
 
@@ -121,5 +133,46 @@ class StudentAdmissionService
             $this->db->rollBack();
             throw $e;
         }
+    }
+
+    public function enrollStudent(int $studentId, array $enrollmentData, bool $autoDeactivatePrevious = true): int
+    {
+        // Check if active enrollment exists
+        $existingActive = $this->db->fetch(
+            "SELECT id FROM student_enrollments WHERE student_id = :student_id AND status = 'active'",
+            ['student_id' => $studentId]
+        );
+
+        if ($existingActive) {
+            if ($autoDeactivatePrevious) {
+                // Deactivate prior enrollment to preserve historical tracking
+                $this->db->execute(
+                    "UPDATE student_enrollments SET status = 'transferred', updated_at = NOW() WHERE id = :id",
+                    ['id' => $existingActive['id']]
+                );
+            } else {
+                throw new Exception("Student already has an active enrollment. Please deactivate or promote the student first.");
+            }
+        }
+
+        // Create new active enrollment
+        $this->db->execute(
+            "INSERT INTO student_enrollments 
+            (student_id, academic_year_id, academic_period_id, class_id, stream_id, student_category_id, student_status_id, enrollment_date, status) 
+            VALUES 
+            (:student_id, :academic_year_id, :academic_period_id, :class_id, :stream_id, :category_id, :status_id, :enrollment_date, 'active')",
+            [
+                'student_id'         => $studentId,
+                'academic_year_id'   => $enrollmentData['academic_year_id'],
+                'academic_period_id' => $enrollmentData['academic_period_id'] ?? null,
+                'class_id'           => $enrollmentData['class_id'],
+                'stream_id'          => $enrollmentData['stream_id'] ?? null,
+                'category_id'        => $enrollmentData['category_id'],
+                'status_id'          => $enrollmentData['status_id'],
+                'enrollment_date'    => $enrollmentData['enrollment_date'] ?? date('Y-m-d')
+            ]
+        );
+
+        return (int) $this->db->lastInsertId();
     }
 }
