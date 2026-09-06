@@ -112,7 +112,7 @@
     <!-- Examinations -->
     <li class="nav-section">Examinations</li>
     <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'examinations') ? 'active' : '' ?>" href="<?= BASE_URL . '/examinations' ?>">
+        <a class="nav-link <?= (str_contains($currentView, 'examinations') || str_contains($currentView, 'examination')) && !str_contains($currentView, 'grading') && !str_contains($currentView, 'assessment') && !str_contains($currentView, 'promotion') && !str_contains($currentView, 'marks') && !str_contains($currentView, 'results') ? 'active' : '' ?>" href="<?= BASE_URL . '/examinations' ?>">
             <i class="fas fa-file-signature"></i> Examinations
         </a>
     </li>
@@ -122,13 +122,24 @@
         </a>
     </li>
     <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'assessment/types') ? 'active' : '' ?>" href="<?= BASE_URL . '/assessment/types' ?>">
+        <a class="nav-link <?= str_contains($currentView, 'assessment') ? 'active' : '' ?>" href="<?= BASE_URL . '/assessment/types' ?>">
             <i class="fas fa-tasks"></i> Assessment Types
         </a>
     </li>
     <li class="nav-item">
         <a class="nav-link <?= str_contains($currentView, 'promotion') ? 'active' : '' ?>" href="<?= BASE_URL . '/promotion/rules' ?>">
             <i class="fas fa-arrow-up"></i> Promotion Rules
+        </a>
+    </li>
+    <!-- Marks Entry & Results -->
+    <li class="nav-item">
+        <a class="nav-link <?= str_contains($currentView, 'marks') ? 'active' : '' ?>" href="<?= BASE_URL . '/marks/entry' ?>">
+            <i class="fas fa-pencil-alt"></i> Marks Entry
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?= str_contains($currentView, 'results') ? 'active' : '' ?>" href="<?= BASE_URL . '/results/class' ?>">
+            <i class="fas fa-chart-bar"></i> View Results
         </a>
     </li>
 

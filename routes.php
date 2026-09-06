@@ -101,7 +101,7 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->post('/student-statuses', ['StudentStatusController', 'store']);
 
     $router->get('/students', ['StudentController', 'index']);
-    $router->get('/students/create', ['StudentController', 'create']);
+    $router->get('/student/create', ['StudentController', 'create']);
     $router->post('/students/store', ['StudentController', 'store']);
     $router->get('/students/show', ['StudentController', 'show']); 
     $router->get('/students/edit', ['StudentController', 'edit']); 
@@ -156,6 +156,52 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->get('/attendance/sessions/{id}/edit', ['AttendanceSessionController', 'edit']);
     $router->post('/attendance/sessions/{id}/update', ['AttendanceSessionController', 'update']);
     $router->delete('/attendance/sessions/{id}', ['AttendanceSessionController', 'delete']);
+
+    $router->get('/grading/systems', ['GradingSystemController', 'index']);
+    $router->get('/grading/systems/create', ['GradingSystemController', 'create']);
+    $router->post('/grading/systems', ['GradingSystemController', 'store']);
+    $router->get('/grading/systems/{id}/edit', ['GradingSystemController', 'edit']);
+    $router->post('/grading/systems/{id}', ['GradingSystemController', 'update']);
+    $router->delete('/grading/systems/{id}', ['GradingSystemController', 'delete']);
+
+    $router->get('/grading/systems/{id}/rules', ['GradingRuleController', 'index']);
+    $router->post('/grading/systems/{id}/rules', ['GradingRuleController', 'store']);
+    $router->post('/grading/systems/rules/{id}', ['GradingRuleController', 'update']);
+    $router->delete('/grading/systems/rules/{id}', ['GradingRuleController', 'delete']);
+
+    $router->get('/assessment/types', ['AssessmentTypeController', 'index']);
+    $router->get('/assessment/types/create', ['AssessmentTypeController', 'create']);
+    $router->post('/assessment/types', ['AssessmentTypeController', 'store']);
+    $router->get('/assessment/types/{id}/edit', ['AssessmentTypeController', 'edit']);
+    $router->post('/assessment/types/{id}', ['AssessmentTypeController', 'update']);
+    $router->delete('/assessment/types/{id}', ['AssessmentTypeController', 'delete']);
+
+    $router->get('/examinations', ['ExaminationController', 'index']);
+    $router->get('/examinations/create', ['ExaminationController', 'create']);
+    $router->post('/examinations', ['ExaminationController', 'store']);
+    $router->get('/examinations/{id}/edit', ['ExaminationController', 'edit']);
+    $router->post('/examinations/{id}/update', ['ExaminationController', 'update']);
+    $router->delete('/examinations/{id}', ['ExaminationController', 'delete']);
+
+    $router->get('/marks/entry', ['MarkController', 'entrySelector']);
+    $router->get('/marks/entry/{examinationId}/{subjectId}', ['MarkController', 'entry']);
+    $router->post('/marks/save', ['MarkController', 'save']);
+    $router->post('/marks/bulk-save', ['MarkController', 'bulkSave']);
+
+    $router->get('/results/class', ['ResultController', 'classResults']);
+    $router->get('/results/class/{examinationId}', ['ResultController', 'classResults']);
+    $router->get('/results/student/{studentId}', ['ResultController', 'studentResults']);
+    $router->post('/results/publish/{examinationId}', ['ResultController', 'publish']);
+
+    $router->get('/promotion/rules', ['PromotionRuleController', 'index']);
+    $router->get('/promotion/rules/create', ['PromotionRuleController', 'create']);
+    $router->post('/promotion/rules', ['PromotionRuleController', 'store']);
+    $router->get('/promotion/rules/{id}/edit', ['PromotionRuleController', 'edit']);
+    $router->post('/promotion/rules/{id}', ['PromotionRuleController', 'update']);
+    $router->delete('/promotion/rules/{id}', ['PromotionRuleController', 'delete']);
+
+    $router->get('/promotion/students', ['PromotionController', 'index']);
+    $router->post('/promotion/students', ['PromotionController', 'promote']);
 });
 
 $router->group(['prefix' => '/api', 'middleware' => ['auth']], function ($router) {
