@@ -239,61 +239,137 @@ class ResultController extends Controller
 
         $examinationId  = (int)($_GET['examination_id'] ?? $params['examinationId'] ?? 0);
         $classId        = (int)($_GET['class_id'] ?? 0);
+        $streamId       = (int)($_GET['stream_id'] ?? 0);
         $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
         $termId         = (int)($_GET['term_id'] ?? 0);
+        $subjectId      = $_GET['subject_id'] ?? 'all';
         
         $schoolId = $this->auth->getUser()->school_id ?? 1;
 
-        $examination = null;
-        $results = [];
+        $examination   = null;
+        $results       = [];
+        $students      = [];
+        $resultsMatrix = [];
 
-        if ($examinationId > 0) {
+        // Fetch dropdown filter options
+        $academicYears = $this->db->fetchAll("SELECT * FROM academic_years WHERE school_id = :school_id ORDER BY id DESC", ['school_id' => $schoolId]);
+        $terms         = $this->db->fetchAll("SELECT * FROM terms WHERE school_id = :school_id ORDER BY term_number ASC", ['school_id' => $schoolId]);
+        $classes       = $this->db->fetchAll("SELECT * FROM classes WHERE school_id = :school_id ORDER BY name ASC", ['school_id' => $schoolId]);
+        $streams       = $this->db->fetchAll("SELECT * FROM streams WHERE school_id = :school_id ORDER BY name ASC", ['school_id' => $schoolId]);
+        $examinations  = $this->db->fetchAll("SELECT * FROM examinations WHERE school_id = :school_id ORDER BY name ASC", ['school_id' => $schoolId]);
+        $subjects      = $this->db->fetchAll("SELECT * FROM subjects WHERE school_id = :school_id AND status = 'active' ORDER BY code ASC, name ASC", ['school_id' => $schoolId]);
+
+        if ($examinationId > 0 && $classId > 0) {
             $examination = $this->db->fetch(
                 "SELECT * FROM examinations WHERE id = :id AND school_id = :school_id",
                 ['id' => $examinationId, 'school_id' => $schoolId]
             );
 
             if ($examination) {
+                // Build Dynamic Enrollment Query (Handles Class & Optional Stream)
+                $enrollmentWhere = "se.academic_year_id = :academic_year_id 
+                                    AND se.class_id = :class_id 
+                                    AND se.status = 'active' 
+                                    AND s.school_id = :school_id";
+                
+                $enrollmentParams = [
+                    'academic_year_id' => $academicYearId,
+                    'class_id'         => $classId,
+                    'school_id'        => $schoolId
+                ];
 
-                $results = $this->db->fetchAll(
-                    "SELECT s.id as student_id, s.admission_number, s.first_name, s.last_name,
-                            m.marks_obtained, m.remarks, sub.name as subject_name
-                    FROM marks m
-                    INNER JOIN students s ON m.student_id = s.id
-                    INNER JOIN subjects sub ON m.subject_id = sub.id
-                    INNER JOIN student_enrollments se ON s.id = se.student_id AND se.status = 'active'
-                    LEFT JOIN examination_subjects es ON m.examination_subject_id = es.id
-                    WHERE (es.examination_id = :examination_id OR m.term_id = :term_id)
-                    AND m.school_id = :school_id
-                    " . ($classId > 0 ? "AND se.class_id = :class_id " : "") . "
+                if ($streamId > 0) {
+                    $enrollmentWhere .= " AND se.stream_id = :stream_id";
+                    $enrollmentParams['stream_id'] = $streamId;
+                }
+
+                // 1. Fetch Students enrolled in this Class (and Stream if selected)
+                $students = $this->db->fetchAll(
+                    "SELECT s.id, s.admission_number, s.first_name, s.last_name, s.gender
+                    FROM students s
+                    INNER JOIN student_enrollments se ON s.id = se.student_id
+                    WHERE {$enrollmentWhere}
                     ORDER BY s.last_name ASC, s.first_name ASC",
-                    array_merge(
-                        [
-                            'examination_id' => $examinationId, 
-                            'term_id'        => $termId,
-                            'school_id'      => $schoolId
-                        ],
-                        $classId > 0 ? ['class_id' => $classId] : []
-                    )
+                    $enrollmentParams
                 );
-            } else {
-                $_SESSION['flash_error'] = 'Examination not found.';
+
+                if (!empty($students)) {
+                    $studentIds   = array_column($students, 'id');
+                    $placeholders = implode(',', array_fill(0, count($studentIds), '?'));
+
+                    if ($subjectId !== 'all' && (int)$subjectId > 0) {
+                        // 2A. Single Subject View
+                        $results = $this->db->fetchAll(
+                            "SELECT m.*, s.admission_number, s.first_name, s.last_name, s.gender, sub.name as subject_name
+                            FROM marks m
+                            INNER JOIN students s ON m.student_id = s.id
+                            INNER JOIN subjects sub ON m.subject_id = sub.id
+                            WHERE m.academic_year_id = ?
+                            AND m.term_id = ?
+                            AND m.subject_id = ?
+                            AND m.student_id IN ({$placeholders})
+                            AND m.school_id = ?
+                            ORDER BY s.last_name ASC, s.first_name ASC",
+                            array_merge([$academicYearId, $termId, (int)$subjectId], $studentIds, [$schoolId])
+                        );
+                    } else {
+                        // 2B. All Subjects Grid Matrix View
+                        $rawMarks = $this->db->fetchAll(
+                            "SELECT m.student_id, m.subject_id, m.marks_obtained
+                            FROM marks m
+                            WHERE m.academic_year_id = ?
+                            AND m.term_id = ?
+                            AND m.student_id IN ({$placeholders})
+                            AND m.school_id = ?",
+                            array_merge([$academicYearId, $termId], $studentIds, [$schoolId])
+                        );
+
+                        foreach ($rawMarks as $row) {
+                            $resultsMatrix[$row['student_id']][$row['subject_id']] = $row['marks_obtained'];
+                        }
+                    }
+                }
             }
         }
-
-        $academicYears = $this->db->fetchAll("SELECT * FROM academic_years WHERE school_id = :school_id ORDER BY id DESC", ['school_id' => $schoolId]);
-        $terms         = $this->db->fetchAll("SELECT * FROM terms WHERE school_id = :school_id ORDER BY term_number ASC", ['school_id' => $schoolId]);
-        $classes       = $this->db->fetchAll("SELECT * FROM classes WHERE school_id = :school_id ORDER BY name ASC", ['school_id' => $schoolId]);
-        $examinations  = $this->db->fetchAll("SELECT * FROM examinations WHERE school_id = :school_id ORDER BY name ASC", ['school_id' => $schoolId]);
 
         echo $this->view->renderWithLayout('examinations/results/selector', 'default', [
             'title'         => 'Class Results',
             'academicYears' => $academicYears,
             'terms'         => $terms,
             'classes'       => $classes,
+            'streams'       => $streams,
             'examinations'  => $examinations,
+            'subjects'      => $subjects,
             'examination'   => $examination,
-            'results'       => $results
+            'students'      => $students,
+            'results'       => $results,
+            'resultsMatrix' => $resultsMatrix
         ]);
+    }
+
+    public function getStreamsByClass($params = []): void
+    {
+        header('Content-Type: application/json');
+
+        if (!$this->auth->check()) {
+            echo json_encode([]);
+            exit;
+        }
+
+        $classId  = (int)($_GET['class_id'] ?? 0);
+        $schoolId = $this->auth->getUser()->school_id ?? 1;
+
+        if ($classId <= 0) {
+            echo json_encode([]);
+            exit;
+        }
+
+        $streams = $this->db->fetchAll(
+            "SELECT id, name FROM streams WHERE class_id = :class_id AND school_id = :school_id ORDER BY name ASC",
+            ['class_id' => $classId, 'school_id' => $schoolId]
+        );
+
+        echo json_encode($streams ?: []);
+        exit;
     }
 }

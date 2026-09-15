@@ -1,107 +1,113 @@
 <!-- File: /app/Views/examinations/marks/entry.php -->
-<div class="container-fluid px-0">
+<div class="container-fluid px-3 py-3 bg-white border">
     <form id="marksForm" onsubmit="return false;">
-        <!-- Hidden input for foreign key requirement -->
-        <input type="hidden" name="examination_subject_id" value="<?= (int)($examinationSubjectId ?? 0) ?>">
 
-        <!-- Top Sticky Header Action Bar -->
-        <div class="card mb-3 sticky-top shadow-sm" style="top: 10px; z-index: 1020; background-color: #ffffff;">
-            <div class="card-body py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <!-- Compact Header & Subject Filter Bar -->
+        <div class="card mb-3 bg-light border">
+            <div class="card-body p-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
-                    <h5 class="mb-0 fw-bold">Enter Marks</h5>
+                    <h6 class="mb-0 fw-bold d-inline-block me-2">Marks Entry Form</h6>
                     <small class="text-muted">
                         <?= htmlspecialchars($academicYear['name'] ?? '') ?> | 
                         <?= htmlspecialchars($term['name'] ?? '') ?> | 
-                        <span class="badge bg-secondary"><?= htmlspecialchars($examination['name'] ?? 'Exam') ?></span> |
                         <strong><?= htmlspecialchars($class['name'] ?? '') ?></strong>
-                        <?= !empty($stream) ? ' (' . htmlspecialchars($stream['name']) . ')' : '' ?> | 
-                        <span class="badge bg-primary"><?= htmlspecialchars($subject['name'] ?? '') ?></span>
+                        <?= !empty($stream) ? ' (' . htmlspecialchars($stream['name']) . ')' : '' ?>
                     </small>
                 </div>
+
+                <!-- Subject Filter Dropdown & Action Controls -->
                 <div class="d-flex align-items-center gap-2">
-                    <span id="autoSaveStatus" class="small text-muted me-2">
+                    <label for="subjectSelect" class="fw-bold me-1 mb-0 text-nowrap small">Subject:</label>
+                    <select id="subjectSelect" class="form-select form-select-sm" style="width: 160px;" onchange="switchSubject(this.value)">
+                        <option value="all" <?= empty($selectedSubject) ? 'selected' : '' ?>>-- All Subjects --</option>
+                        <?php foreach ($allSubjects as $subj): ?>
+                            <option value="<?= $subj['id'] ?>" <?= (!empty($selectedSubject) && $selectedSubject['id'] == $subj['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($subj['code'] ?? $subj['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+
+                    <span id="autoSaveStatus" class="small text-muted ms-2 me-1">
                         <i class="fas fa-clock me-1"></i> Auto-save active
                     </span>
-                    <button type="button" class="btn btn-success btn-save-marks" onclick="saveMarks(false)">
+                    <button type="button" class="btn btn-sm btn-primary fw-bold text-nowrap btn-save-marks" onclick="saveMarks(false)">
                         <i class="fas fa-save me-1"></i> Save Marks
                     </button>
-                    <a href="<?= BASE_URL ?>/marks/entry" class="btn btn-secondary">
+                    <a href="<?= BASE_URL ?>/marks/entry" class="btn btn-sm btn-outline-secondary">
                         <i class="fas fa-arrow-left me-1"></i> Back
                     </a>
                 </div>
             </div>
         </div>
 
-        <?php if (empty($examinationSubjectId)): ?>
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle me-1"></i> 
-                This subject is not assigned to an active examination schedule for this academic year. Please schedule the examination paper first.
-            </div>
-        <?php endif; ?>
-
-        <div class="card">
-            <div class="card-body">
-                <?php if (empty($students)): ?>
-                    <div class="text-center py-4 text-muted">
-                        <i class="fas fa-users fa-2x mb-2 d-block"></i>
-                        <p>No students found for this class and stream selection.</p>
-                    </div>
-                <?php else: ?>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Admission No.</th>
-                                    <th>Student Name</th>
-                                    <th>Stream</th>
-                                    <th>Marks (Max: <?= $subject['max_marks'] ?? 100 ?>)</th>
-                                    <th>Remarks</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($students as $index => $student): ?>
-                                    <tr>
-                                        <td><?= $index + 1 ?></td>
-                                        <td><?= htmlspecialchars($student['admission_number']) ?></td>
-                                        <td><?= htmlspecialchars(($student['last_name'] ?? '') . ' ' . ($student['first_name'] ?? '')) ?></td>
-                                        <td><?= htmlspecialchars($student['stream_name'] ?? 'N/A') ?></td>
-                                        <td>
-                                            <input type="number" 
-                                                   name="marks[<?= $student['id'] ?>][marks_obtained]" 
-                                                   class="form-control form-control-sm mark-input" 
-                                                   style="width: 120px;"
-                                                   min="0" 
-                                                   max="<?= $subject['max_marks'] ?? 100 ?>"
-                                                   value="<?= htmlspecialchars($existingMarks[$student['id']]['marks_obtained'] ?? '') ?>"
-                                                   step="0.01">
-                                        </td>
-                                        <td>
-                                            <input type="text" 
-                                                   name="marks[<?= $student['id'] ?>][remarks]" 
-                                                   class="form-control form-control-sm"
-                                                   placeholder="Optional remarks"
-                                                   value="<?= htmlspecialchars($existingMarks[$student['id']]['remarks'] ?? '') ?>"
-                                                   style="width: 220px;">
-                                        </td>
-                                    </tr>
+        <!-- Student Marks Grid -->
+        <div class="table-responsive border" style="max-height: 550px; overflow-y: auto;">
+            <?php if (empty($students)): ?>
+                <div class="text-center py-4 text-muted">
+                    <p class="mb-0">No students found for this selection.</p>
+                </div>
+            <?php else: ?>
+                <table class="table table-bordered table-hover align-middle mb-0 text-nowrap small">
+                    <thead class="table-secondary sticky-top">
+                        <tr>
+                            <th style="width: 40px;">No</th>
+                            <th style="width: 110px;">Student No</th>
+                            <th>Name</th>
+                            <th style="width: 40px;" class="text-center">Sex</th>
+                            <?php foreach ($subjects as $subj): ?>
+                                <th style="width: 75px;" class="text-center" title="<?= htmlspecialchars($subj['name']) ?>">
+                                    <?= htmlspecialchars($subj['code'] ?? $subj['name']) ?>
+                                </th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($students as $index => $student): ?>
+                            <?php 
+                                $rawSex = strtoupper(trim($student['gender'] ?? $student['sex'] ?? ''));
+                                if (in_array($rawSex, ['F', 'FEMALE', '2'])) {
+                                    $sexDisplay = 'F';
+                                } elseif (in_array($rawSex, ['M', 'MALE', '1'])) {
+                                    $sexDisplay = 'M';
+                                } else {
+                                    $sexDisplay = '-';
+                                }
+                            ?>
+                            <tr>
+                                <td><?= $index + 1 ?></td>
+                                <td class="fw-semibold"><?= htmlspecialchars($student['admission_number']) ?></td>
+                                <td class="fw-bold text-uppercase"><?= htmlspecialchars(($student['last_name'] ?? '') . ' ' . ($student['first_name'] ?? '')) ?></td>
+                                <td class="text-center"><?= $sexDisplay ?></td>
+                                <?php foreach ($subjects as $subj): ?>
+                                    <?php 
+                                        $val = $existingMarks[$student['id']][$subj['id']]['marks_obtained'] ?? '';
+                                    ?>
+                                    <td class="p-1 text-center">
+                                        <input type="number" 
+                                               name="marks[<?= $student['id'] ?>][<?= $subj['id'] ?>]" 
+                                               class="form-control form-control-sm text-center mark-input py-0" 
+                                               min="0" 
+                                               max="<?= $subj['max_marks'] ?? 100 ?>"
+                                               value="<?= htmlspecialchars($val) ?>"
+                                               step="0.01">
+                                    </td>
                                 <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="mt-3 d-flex justify-content-end">
-                        <button type="button" class="btn btn-success btn-save-marks" onclick="saveMarks(false)">
-                            <i class="fas fa-save me-1"></i> Save All Marks
-                        </button>
-                    </div>
-                <?php endif; ?>
-            </div>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
         </div>
     </form>
 </div>
 
 <script>
+function switchSubject(subjectId) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('subject_id', subjectId);
+    window.location.href = url.toString();
+}
+
 function saveMarks(isAutoSave = false) {
     const form = document.getElementById('marksForm');
     const statusEl = document.getElementById('autoSaveStatus');
@@ -110,31 +116,26 @@ function saveMarks(isAutoSave = false) {
     const formData = new FormData(form);
     const marks = {};
     let hasData = false;
-    const maxMarks = <?= (float)($subject['max_marks'] ?? 100) ?>;
-    const examSubjId = parseInt(formData.get('examination_subject_id') || 0);
 
     document.querySelectorAll('.mark-input').forEach(input => {
         const val = input.value.trim();
         if (val !== '') {
-            const numVal = parseFloat(val);
-            if (numVal >= 0 && numVal <= maxMarks) {
-                hasData = true;
-            }
+            hasData = true;
         }
     });
 
-    if (!hasData) {
-        if (!isAutoSave) alert('Please enter at least one mark before saving.');
+    if (!hasData && !isAutoSave) {
+        alert('Please enter at least one mark before saving.');
         return;
     }
 
     formData.forEach((value, key) => {
-        const match = key.match(/marks\[(\d+)\]\[(marks_obtained|remarks)\]/);
+        const match = key.match(/marks\[(\d+)\]\[(\d+)\]/);
         if (match) {
             const studentId = match[1];
-            const field = match[2];
+            const subjectId = match[2];
             if (!marks[studentId]) marks[studentId] = {};
-            marks[studentId][field] = value;
+            marks[studentId][subjectId] = value;
         }
     });
 
@@ -156,10 +157,8 @@ function saveMarks(isAutoSave = false) {
         },
         body: JSON.stringify({ 
             marks: marks,
-            examination_subject_id: examSubjId,
             academic_year_id: <?= (int)($academicYear['id'] ?? 0) ?>,
-            term_id: <?= (int)($term['id'] ?? 0) ?>,
-            subject_id: <?= (int)($subject['id'] ?? 0) ?>
+            term_id: <?= (int)($term['id'] ?? 0) ?>
         })
     })
     .then(async res => {
@@ -167,7 +166,7 @@ function saveMarks(isAutoSave = false) {
         try {
             return JSON.parse(text);
         } catch (e) {
-            throw new Error('Server returned HTML instead of JSON. Check backend controller.');
+            throw new Error('Server returned invalid response.');
         }
     })
     .then(data => {

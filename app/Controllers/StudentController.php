@@ -674,59 +674,80 @@ class StudentController extends Controller
         $schoolId = $this->auth->getUser()->school_id;
         $db = Database::getInstance();
 
-        // Selected filters for student lookup
-        $selectedYear   = isset($_GET['academic_year_id']) ? (int)$_GET['academic_year_id'] : 0;
-        $selectedClass  = isset($_GET['class_id']) ? (int)$_GET['class_id'] : 0;
-        $filterStatus   = $_GET['filter'] ?? 'unenrolled'; // 'unenrolled' or 'previous_class'
-        $previousClassId = isset($_GET['previous_class_id']) ? (int)$_GET['previous_class_id'] : 0;
+        // 1. Capture filter selections (Academic Year, Class, Term)
+        $selectedYear  = isset($_GET['academic_year_id']) ? (int)$_GET['academic_year_id'] : 0;
+        $selectedClass = isset($_GET['class_id']) ? (int)$_GET['class_id'] : 0;
+        $selectedTerm  = isset($_GET['term_id']) ? (int)$_GET['term_id'] : 0;
 
-        // Metadata dropdowns
+        // 2. Fetch dropdown metadata
         $academicYears = $db->fetchAll("SELECT id, name FROM academic_years WHERE school_id = :s ORDER BY id DESC", ['s' => $schoolId]);
-        $terms = $db->fetchAll("SELECT id, name FROM terms WHERE school_id = :s ORDER BY id ASC", ['s' => $schoolId]);
         $classes       = $db->fetchAll("SELECT id, name FROM classes WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]);
-        $streams       = $db->fetchAll("SELECT id, name, class_id FROM streams WHERE school_id = :s", ['s' => $schoolId]);
+        $terms         = $db->fetchAll("SELECT id, name FROM terms WHERE school_id = :s ORDER BY term_number ASC", ['s' => $schoolId]);
+        $streams       = $db->fetchAll("SELECT id, name FROM streams WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]);
         $categories    = $db->fetchAll("SELECT id, name FROM student_categories WHERE school_id = :s AND status = 'active'", ['s' => $schoolId]);
         $statuses      = $db->fetchAll("SELECT id, name FROM student_statuses WHERE school_id = :s AND status = 'active'", ['s' => $schoolId]);
 
-        // Load candidates for batch enrollment
-        $candidateStudents = [];
-        if ($filterStatus === 'previous_class' && $previousClassId > 0) {
-            // Get students currently enrolled in the previous selected class
-            $candidateStudents = $db->fetchAll(
-                "SELECT s.id, s.admission_number, s.first_name, s.last_name, s.gender, cl.name as current_class
-                 FROM students s
-                 INNER JOIN student_enrollments se ON se.student_id = s.id AND se.status = 'active'
-                 INNER JOIN classes cl ON se.class_id = cl.id
-                 WHERE s.school_id = :s AND se.class_id = :prev_class_id
-                 ORDER BY s.first_name ASC",
-                ['s' => $schoolId, 'prev_class_id' => $previousClassId]
-            );
-        } else {
-            // Get all active students without an active enrollment in the selected academic year
-            $candidateStudents = $db->fetchAll(
-                "SELECT s.id, s.admission_number, s.first_name, s.last_name, s.gender, 'Unassigned' as current_class
-                 FROM students s
-                 WHERE s.school_id = :s 
-                 AND s.id NOT IN (
-                     SELECT student_id FROM student_enrollments WHERE academic_year_id = :year_id AND status = 'active'
-                 )
-                 ORDER BY s.first_name ASC",
-                ['s' => $schoolId, 'year_id' => $selectedYear]
-            );
+        // Get selected term details for display
+        $selectedTermName = '-';
+        if ($selectedTerm > 0) {
+            $termRow = $db->fetch("SELECT name FROM terms WHERE id = :id AND school_id = :s", ['id' => $selectedTerm, 's' => $schoolId]);
+            if ($termRow) {
+                $selectedTermName = $termRow['name'];
+            }
+        }
+
+        // 3. Query enrolled students dynamically based on filters
+        $whereConditions = ["s.school_id = :s", "se.status = 'active'"];
+        $queryParams = ['s' => $schoolId];
+
+        if ($selectedYear > 0) {
+            $whereConditions[] = "se.academic_year_id = :year_id";
+            $queryParams['year_id'] = $selectedYear;
+        }
+
+        if ($selectedClass > 0) {
+            $whereConditions[] = "se.class_id = :class_id";
+            $queryParams['class_id'] = $selectedClass;
+        }
+
+        $whereClause = implode(" AND ", $whereConditions);
+
+        $candidateStudents = $db->fetchAll(
+            "SELECT 
+                s.id, s.admission_number, s.first_name, s.last_name, s.gender,
+                cl.name as class_name,
+                str.name as stream_name,
+                sc.name as section_name, -- Category (Day / Boarding) maps to Section
+                st.name as status_name,
+                ay.name as academic_year_name
+            FROM student_enrollments se
+            INNER JOIN students s ON se.student_id = s.id
+            LEFT JOIN classes cl ON se.class_id = cl.id
+            LEFT JOIN streams str ON se.stream_id = str.id
+            LEFT JOIN student_categories sc ON se.student_category_id = sc.id
+            LEFT JOIN student_statuses st ON se.student_status_id = st.id
+            LEFT JOIN academic_years ay ON se.academic_year_id = ay.id
+            WHERE {$whereClause}
+            ORDER BY s.last_name ASC, s.first_name ASC",
+            $queryParams
+        );
+
+        // Inject selected term name into each student record for column display
+        foreach ($candidateStudents as &$student) {
+            $student['term_name'] = $selectedTermName;
         }
 
         echo $this->view->renderWithLayout('students/enrollment', 'default', [
             'academicYears'     => $academicYears,
-            'terms'             => $terms,
             'classes'           => $classes,
+            'terms'             => $terms,
             'streams'           => $streams,
             'categories'        => $categories,
             'statuses'          => $statuses,
             'candidateStudents' => $candidateStudents,
             'selectedYear'      => $selectedYear,
             'selectedClass'     => $selectedClass,
-            'previousClassId'   => $previousClassId,
-            'filterStatus'      => $filterStatus
+            'selectedTerm'      => $selectedTerm
         ]);
     }
 
@@ -739,18 +760,16 @@ class StudentController extends Controller
         }
 
         $studentIds     = $_POST['student_ids'] ?? [];
-        $academicYearId = (int)($_POST['academic_year_id'] ?? 0);
-        $classId        = (int)($_POST['class_id'] ?? 0);
-        $streamId       = !empty($_POST['stream_id']) ? (int)$_POST['stream_id'] : null;
-        $categoryId     = (int)($_POST['category_id'] ?? 0);
-        $statusId       = (int)($_POST['status_id'] ?? 0);
-        $enrollmentDate = $_POST['enrollment_date'] ?? date('Y-m-d');
+        $academicYearId = !empty($_POST['academic_year_id']) ? (int)$_POST['academic_year_id'] : 0;
+        $classId        = !empty($_POST['class_id']) ? (int)$_POST['class_id'] : 0;
+        $enrollmentDate = !empty($_POST['enrollment_date']) ? $_POST['enrollment_date'] : date('Y-m-d');
 
         if (empty($studentIds) || !$academicYearId || !$classId) {
             $_SESSION['flash_error'] = 'Please select an Academic Year, Class, and at least one student.';
-            header('Location: ' . BASE_URL . '/students/enrollments');
+            header('Location: ' . BASE_URL . '/students/enrollments?academic_year_id=' . $academicYearId . '&class_id=' . $classId);
             exit;
         }
+
         $db = Database::getInstance();
 
         try {
@@ -760,13 +779,26 @@ class StudentController extends Controller
             foreach ($studentIds as $studentId) {
                 $studentId = (int)$studentId;
 
+                // Fetch previous enrollment parameters so category & status aren't lost or set to 0
+                $lastEnrollment = $db->fetch(
+                    "SELECT stream_id, student_category_id, student_status_id 
+                    FROM student_enrollments 
+                    WHERE student_id = :student_id 
+                    ORDER BY id DESC LIMIT 1",
+                    ['student_id' => $studentId]
+                );
+
+                $streamId   = !empty($_POST['stream_id']) ? (int)$_POST['stream_id'] : ($lastEnrollment['stream_id'] ?? null);
+                $categoryId = !empty($_POST['category_id']) ? (int)$_POST['category_id'] : ($lastEnrollment['student_category_id'] ?? null);
+                $statusId   = !empty($_POST['status_id']) ? (int)$_POST['status_id'] : ($lastEnrollment['student_status_id'] ?? null);
+
                 // Deactivate previous active enrollment
                 $db->execute(
                     "UPDATE student_enrollments SET status = 'completed' WHERE student_id = :student_id AND status = 'active'",
                     ['student_id' => $studentId]
                 );
 
-                // Insert new enrollment (without term_id)
+                // Insert new enrollment row with null-safe foreign key values
                 $db->execute(
                     "INSERT INTO student_enrollments 
                     (student_id, academic_year_id, class_id, stream_id, student_category_id, student_status_id, enrollment_date, status) 
@@ -792,7 +824,7 @@ class StudentController extends Controller
             $_SESSION['flash_error'] = 'Bulk enrollment failed: ' . $e->getMessage();
         }
 
-        header('Location: ' . BASE_URL . '/students/enrollments');
+        header('Location: ' . BASE_URL . '/students/enrollments?academic_year_id=' . $academicYearId . '&class_id=' . $classId);
         exit;
     }
 }

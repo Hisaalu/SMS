@@ -1,199 +1,209 @@
-<!-- File: /app/Views/layouts/_sidebar_menu.php -->
 <?php 
+// File: /app/Views/layouts/_sidebar_menu.php
+
     $currentView = $view ?? ''; 
-    
-    // Ensure branding settings are accessible if instantiated inside sidebar context
-    if (!isset($settingsService)) {
-        $settingsService = new \NexaT\Core\SettingsService();
-    }
-    
-    $sidebarLogo     = $settingsService->get('branding.logo', '');
-    $sidebarLogoPath = !empty($sidebarLogo) ? ROOT_PATH . '/public/' . ltrim($sidebarLogo, '/') : '';
-    if (!empty($sidebarLogo) && !file_exists($sidebarLogoPath)) {
-        $sidebarLogoPath = ROOT_PATH . '/' . ltrim($sidebarLogo, '/');
-    }
+    $menuGroups = [
+        [
+            'type' => 'single',
+            'title' => 'Dashboard',
+            'icon' => 'fas fa-chart-pie',
+            'url' => '/dashboard',
+            'active' => ($currentView === 'dashboard/index' || $currentView === 'dashboard')
+        ],
+        [
+            'type' => 'group',
+            'id' => 'menuAcademic',
+            'title' => 'Academics',
+            'icon' => 'fas fa-university',
+            'routes' => ['academic/years', 'academic/terms', 'academic/classes', 'academic/streams', 'academic/departments', 'academic/subjects'],
+            'items' => [
+                ['title' => 'Academic Years', 'icon' => 'fas fa-calendar-alt', 'url' => '/academic/years', 'route' => 'academic/years'],
+                ['title' => 'Terms', 'icon' => 'fas fa-calendar-week', 'url' => '/academic/terms', 'route' => 'academic/terms'],
+                ['title' => 'Classes', 'icon' => 'fas fa-chalkboard', 'url' => '/academic/classes', 'route' => 'academic/classes'],
+                ['title' => 'Streams', 'icon' => 'fas fa-layer-group', 'url' => '/academic/streams', 'route' => 'academic/streams'],
+                ['title' => 'Departments', 'icon' => 'fas fa-building', 'url' => '/academic/departments', 'route' => 'academic/departments'],
+                ['title' => 'Subjects', 'icon' => 'fas fa-book', 'url' => '/academic/subjects', 'route' => 'academic/subjects'],
+            ]
+        ],
+        [
+            'type' => 'group',
+            'id' => 'menuStudents',
+            'title' => 'Students',
+            'icon' => 'fas fa-user-graduate',
+            'routes' => ['students', 'student/show', 'student/edit', 'student/create', 'enroll', 'student/categories', 'students/categories'],
+            'items' => [
+                ['title' => 'Student Directory', 'icon' => 'fas fa-list', 'url' => '/students', 'check' => fn($v) => (str_contains($v, 'students') || str_contains($v, 'student/show') || str_contains($v, 'student/edit') || str_contains($v, 'student/create')) && !str_contains($v, 'categories') && !str_contains($v, 'enroll')],
+                ['title' => 'Enrollments', 'icon' => 'fas fa-user-plus', 'url' => '/student/enrollments', 'route' => 'enroll'],
+                ['title' => 'Categories', 'icon' => 'fas fa-tags', 'url' => '/student/categories', 'check' => fn($v) => str_contains($v, 'categories') && str_contains($v, 'student')],
+            ]
+        ],
+        [
+            'type' => 'group',
+            'id' => 'menuStaff',
+            'title' => 'Staff',
+            'icon' => 'fas fa-users-cog',
+            'routes' => ['staff'],
+            'items' => [
+                ['title' => 'Staff Directory', 'icon' => 'fas fa-address-book', 'url' => '/staff', 'check' => fn($v) => str_contains($v, 'staff') && !str_contains($v, 'categories') && !str_contains($v, 'statuses')],
+                ['title' => 'Staff Categories', 'icon' => 'fas fa-tags', 'url' => '/staff/categories', 'route' => 'staff/categories'],
+                ['title' => 'Staff Statuses', 'icon' => 'fas fa-toggle-on', 'url' => '/staff/statuses', 'route' => 'staff/statuses'],
+            ]
+        ],
+        [
+            'type' => 'group',
+            'id' => 'menuAttendance',
+            'title' => 'Attendance',
+            'icon' => 'fas fa-calendar-check',
+            'routes' => ['attendance'],
+            'items' => [
+                ['title' => 'Take Attendance', 'icon' => 'fas fa-check-circle', 'url' => '/attendance', 'check' => fn($v) => str_contains($v, 'attendance') && !str_contains($v, 'statuses') && !str_contains($v, 'sessions')],
+                ['title' => 'Sessions', 'icon' => 'fas fa-clock', 'url' => '/attendance/sessions', 'route' => 'attendance/sessions'],
+                ['title' => 'Statuses', 'icon' => 'fas fa-list-check', 'url' => '/attendance/statuses', 'route' => 'attendance/statuses'],
+            ]
+        ],
+        [
+            'type' => 'group',
+            'id' => 'menuExaminations',
+            'title' => 'Examinations',
+            'icon' => 'fas fa-file-signature',
+            'routes' => ['examination', 'grading', 'assessment', 'promotion', 'marks', 'results'],
+            'items' => [
+                ['title' => 'Marks Entry', 'icon' => 'fas fa-edit', 'url' => '/marks/entry', 'route' => 'marks'],
+                ['title' => 'Class Results', 'icon' => 'fas fa-chart-line', 'url' => '/results/class', 'route' => 'results'],
+                ['title' => 'Exam Schedules', 'icon' => 'fas fa-list-alt', 'url' => '/examinations', 'check' => fn($v) => str_contains($v, 'examinations') && !str_contains($v, 'grading') && !str_contains($v, 'assessment') && !str_contains($v, 'promotion') && !str_contains($v, 'marks') && !str_contains($v, 'results')],
+                ['title' => 'Grading Systems', 'icon' => 'fas fa-percent', 'url' => '/grading/systems', 'route' => 'grading'],
+                ['title' => 'Assessment Types', 'icon' => 'fas fa-tasks', 'url' => '/assessment/types', 'route' => 'assessment'],
+                ['title' => 'Promotion Rules', 'icon' => 'fas fa-arrow-up', 'url' => '/promotion/rules', 'route' => 'promotion'],
+            ]
+        ],
+        [
+            'type' => 'group',
+            'id' => 'menuFinance',
+            'title' => 'Finance',
+            'icon' => 'fas fa-wallet',
+            'routes' => ['fees', 'payments', 'billing'],
+            'items' => [
+                ['title' => 'Fee Structures', 'icon' => 'fas fa-money-check-alt', 'url' => '/fees', 'route' => 'fees'],
+                ['title' => 'Payments', 'icon' => 'fas fa-receipt', 'url' => '/payments', 'route' => 'payments'],
+                ['title' => 'Student Billing', 'icon' => 'fas fa-file-invoice', 'url' => '/billing', 'route' => 'billing'],
+            ]
+        ],
+        [
+            'type' => 'group',
+            'id' => 'menuReports',
+            'title' => 'Reports',
+            'icon' => 'fas fa-chart-bar',
+            'routes' => ['reports'],
+            'items' => [
+                ['title' => 'Academic', 'icon' => 'fas fa-graduation-cap', 'url' => '/reports/academic', 'route' => 'reports/academic'],
+                ['title' => 'Financial', 'icon' => 'fas fa-coins', 'url' => '/reports/finance', 'route' => 'reports/finance'],
+                ['title' => 'Attendance', 'icon' => 'fas fa-user-clock', 'url' => '/reports/attendance', 'route' => 'reports/attendance'],
+            ]
+        ],
+        [
+            'type' => 'group',
+            'id' => 'menuAdmin',
+            'title' => 'Administration',
+            'icon' => 'fas fa-sliders-h',
+            'routes' => ['users', 'settings', 'audit'],
+            'items' => [
+                ['title' => 'Users & Roles', 'icon' => 'fas fa-users-cog', 'url' => '/users', 'route' => 'users'],
+                ['title' => 'System Settings', 'icon' => 'fas fa-cog', 'url' => '/settings', 'route' => 'settings'],
+                ['title' => 'Audit Logs', 'icon' => 'fas fa-history', 'url' => '/audit', 'route' => 'audit'],
+            ]
+        ]
+    ];
 ?>
 
-<ul class="nav flex-column">
-    <!-- Dashboard -->
-    <li class="nav-item">
-        <a class="nav-link <?= $currentView === 'dashboard/index' ? 'active' : '' ?>" href="<?= BASE_URL . '/dashboard' ?>">
-            <i class="fas fa-chart-pie"></i> Dashboard
-        </a>
-    </li>
-    
-    <!-- Academic Management -->
-    <li class="nav-section">Academics</li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'academic/years') ? 'active' : '' ?>" href="<?= BASE_URL . '/academic/years' ?>">
-            <i class="fas fa-calendar-alt"></i> Academic Years
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'academic/terms') ? 'active' : '' ?>" href="<?= BASE_URL . '/academic/terms' ?>">
-            <i class="fas fa-calendar-week"></i> Terms
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'academic/classes') ? 'active' : '' ?>" href="<?= BASE_URL . '/academic/classes' ?>">
-            <i class="fas fa-chalkboard"></i> Classes
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'academic/streams') ? 'active' : '' ?>" href="<?= BASE_URL . '/academic/streams' ?>">
-            <i class="fas fa-layer-group"></i> Streams
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'academic/departments') ? 'active' : '' ?>" href="<?= BASE_URL . '/academic/departments' ?>">
-            <i class="fas fa-building"></i> Departments
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'academic/subjects') ? 'active' : '' ?>" href="<?= BASE_URL . '/academic/subjects' ?>">
-            <i class="fas fa-book"></i> Subjects
-        </a>
-    </li>
-
-    <!-- Student Management -->
-    <li class="nav-section">Students</li>
-    <li class="nav-item">
-        <a class="nav-link <?= (str_contains($currentView, 'students') || str_contains($currentView, 'student/show') || str_contains($currentView, 'student/edit') || str_contains($currentView, 'student/create')) && !str_contains($currentView, 'students/categories') && !str_contains($currentView, 'student/categories') && !str_contains($currentView, 'enroll') ? 'active' : '' ?>" href="<?= BASE_URL . '/students' ?>">
-            <i class="fas fa-user-graduate"></i> Student Management
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'enroll') ? 'active' : '' ?>" href="<?= BASE_URL . '/student/enrollments' ?>">
-            <i class="fas fa-user-plus"></i> Student Enrollment
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'students/categories') || str_contains($currentView, 'student/categories') ? 'active' : '' ?>" href="<?= BASE_URL . '/student/categories' ?>">
-            <i class="fas fa-tags"></i> Student Categories
-        </a>
-    </li>
-
-    <!-- Staff Management -->
-    <li class="nav-section">Staff Management</li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'staff') && !str_contains($currentView, 'staff/categories') && !str_contains($currentView, 'staff/statuses') ? 'active' : '' ?>" href="<?= BASE_URL . '/staff' ?>">
-            <i class="fas fa-users"></i> Staff Directory
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'staff/categories') ? 'active' : '' ?>" href="<?= BASE_URL . '/staff/categories' ?>">
-            <i class="fas fa-tags"></i> Staff Categories
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'staff/statuses') ? 'active' : '' ?>" href="<?= BASE_URL . '/staff/statuses' ?>">
-            <i class="fas fa-toggle-on"></i> Staff Statuses
-        </a>
-    </li>
-
-    <!-- Attendance -->
-    <li class="nav-section">Attendance</li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'attendance') && !str_contains($currentView, 'attendance/statuses') && !str_contains($currentView, 'attendance/sessions') && !str_contains($currentView, 'reports/attendance') ? 'active' : '' ?>" href="<?= BASE_URL . '/attendance' ?>">
-            <i class="fas fa-calendar-check"></i> Attendance
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'attendance/sessions') || str_contains($currentView, 'attendance/session') ? 'active' : '' ?>" href="<?= BASE_URL . '/attendance/sessions' ?>">
-            <i class="fas fa-clock"></i> Attendance Sessions
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'attendance/statuses') || str_contains($currentView, 'attendance/status') ? 'active' : '' ?>" href="<?= BASE_URL . '/attendance/statuses' ?>">
-            <i class="fas fa-list-check"></i> Attendance Statuses
-        </a>
-    </li>
-
-    <!-- Examinations -->
-    <li class="nav-section">Examinations</li>
-    <li class="nav-item">
-        <a class="nav-link <?= (str_contains($currentView, 'examinations') || str_contains($currentView, 'examination')) && !str_contains($currentView, 'grading') && !str_contains($currentView, 'assessment') && !str_contains($currentView, 'promotion') && !str_contains($currentView, 'marks') && !str_contains($currentView, 'results') ? 'active' : '' ?>" href="<?= BASE_URL . '/examinations' ?>">
-            <i class="fas fa-file-signature"></i> Examinations
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'grading') ? 'active' : '' ?>" href="<?= BASE_URL . '/grading/systems' ?>">
-            <i class="fas fa-percent"></i> Grading Systems
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'assessment') ? 'active' : '' ?>" href="<?= BASE_URL . '/assessment/types' ?>">
-            <i class="fas fa-tasks"></i> Assessment Types
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'promotion') ? 'active' : '' ?>" href="<?= BASE_URL . '/promotion/rules' ?>">
-            <i class="fas fa-arrow-up"></i> Promotion Rules
-        </a>
-    </li>
-    <!-- Marks Entry & Results -->
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'marks') ? 'active' : '' ?>" href="<?= BASE_URL . '/marks/entry' ?>">
-            <i class="fas fa-pencil-alt"></i> Marks Entry
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'results') ? 'active' : '' ?>" href="<?= BASE_URL . '/results/class' ?>">
-            <i class="fas fa-chart-bar"></i> View Results
-        </a>
-    </li>
-
-    <!-- Finance -->
-    <li class="nav-section">Finance</li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'fees') ? 'active' : '' ?>" href="<?= BASE_URL . '/fees' ?>">
-            <i class="fas fa-wallet"></i> Fee Management
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'payments') ? 'active' : '' ?>" href="<?= BASE_URL . '/payments' ?>">
-            <i class="fas fa-receipt"></i> Payments
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'billing') ? 'active' : '' ?>" href="<?= BASE_URL . '/billing' ?>">
-            <i class="fas fa-file-invoice"></i> Student Billing
-        </a>
-    </li>
-
-    <!-- Reports -->
-    <li class="nav-section">Reports</li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'reports/academic') ? 'active' : '' ?>" href="<?= BASE_URL . '/reports/academic' ?>">
-            <i class="fas fa-chart-bar"></i> Academic Reports
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'reports/finance') ? 'active' : '' ?>" href="<?= BASE_URL . '/reports/finance' ?>">
-            <i class="fas fa-coins"></i> Financial Reports
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'reports/attendance') ? 'active' : '' ?>" href="<?= BASE_URL . '/reports/attendance' ?>">
-            <i class="fas fa-user-clock"></i> Attendance Reports
-        </a>
-    </li>
-
-    <!-- Administration -->
-    <li class="nav-section">Administration</li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'users') ? 'active' : '' ?>" href="<?= BASE_URL . '/users' ?>">
-            <i class="fas fa-users-cog"></i> Users & Roles
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'settings') ? 'active' : '' ?>" href="<?= BASE_URL . '/settings' ?>">
-            <i class="fas fa-sliders-h"></i> System Settings
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= str_contains($currentView, 'audit') ? 'active' : '' ?>" href="<?= BASE_URL . '/audit' ?>">
-            <i class="fas fa-history"></i> Audit Logs
-        </a>
-    </li>
+<ul class="nav flex-column px-2">
+    <?php foreach ($menuGroups as $group): ?>
+        <li class="nav-item mb-1">
+            <?php if ($group['type'] === 'single'): ?>
+                <a class="nav-link rounded-2 page-navigation <?= $group['active'] ? 'active' : '' ?>"href="<?= BASE_URL . $group['url'] ?>">
+                    <i class="<?= $group['icon'] ?> me-2"></i> <span><?= $group['title'] ?></span>
+                </a>
+            <?php else: 
+                $isActiveGroup = false;
+                foreach ($group['routes'] as $route) {
+                    if (str_contains($currentView, $route)) {
+                        $isActiveGroup = true;
+                        break;
+                    }
+                }
+            ?>
+                <a class="nav-link rounded-2 d-flex align-items-center justify-content-between <?= $isActiveGroup ? 'text-primary fw-bold' : 'text-dark' ?>" 
+                   data-bs-toggle="collapse" 
+                   href="#<?= $group['id'] ?>" 
+                   role="button" 
+                   aria-expanded="<?= $isActiveGroup ? 'true' : 'false' ?>">
+                    <span><i class="<?= $group['icon'] ?> me-2"></i> <?= $group['title'] ?></span>
+                    <i class="fas fa-chevron-down fs-7 transition-icon"></i>
+                </a>
+                
+                <div class="collapse <?= $isActiveGroup ? 'show' : '' ?>" id="<?= $group['id'] ?>">
+                    <ul class="nav flex-column ps-3 mt-1 small">
+                        <?php foreach ($group['items'] as $item): 
+                            $isItemActive = false;
+                            if (isset($item['check'])) {
+                                $isItemActive = $item['check']($currentView);
+                            } elseif (isset($item['route'])) {
+                                $isItemActive = str_contains($currentView, $item['route']);
+                            }
+                        ?>
+                            <li class="nav-item">
+                                <a class="nav-link py-1 rounded-2 page-navigation <?= $isItemActive ? 'active' : '' ?>"href="<?= BASE_URL . $item['url'] ?>">
+                                    <i class="<?= $item['icon'] ?> me-2"></i> <?= $item['title'] ?>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+        </li>
+    <?php endforeach; ?>
 </ul>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const mobileSidebar = document.getElementById('mobileSidebar');
+
+    if (!mobileSidebar) {
+        return;
+    }
+const collapseLinks = mobileSidebar.querySelectorAll(
+        '.nav-link[data-bs-toggle="collapse"]'
+    );
+
+    collapseLinks.forEach(function (link) {
+
+        link.addEventListener('click', function (event) {
+
+            event.stopPropagation();
+
+        }, false);
+
+    });
+
+    const pageLinks = mobileSidebar.querySelectorAll(
+        '.page-navigation'
+    );
+
+    pageLinks.forEach(function (link) {
+
+        link.addEventListener('click', function () {
+
+            const instance =
+                bootstrap.Offcanvas.getInstance(mobileSidebar) ||
+                bootstrap.Offcanvas.getOrCreateInstance(mobileSidebar);
+
+            if (instance) {
+                instance.hide();
+            }
+
+        });
+
+    });
+
+});
+</script>

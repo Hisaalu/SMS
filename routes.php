@@ -209,3 +209,10 @@ $router->group(['prefix' => '/api', 'middleware' => ['auth']], function ($router
     $router->get('/theme-settings', ['ApiController', 'themeSettings']);
     $router->post('/settings', ['ApiController', 'updateSetting']);
 });
+
+$router->group(['prefix' => '/api', 'middleware' => ['auth']], function ($router) {
+    $router->get('/school-profile', ['ApiController', 'schoolProfile']);
+    $router->get('/theme-settings', ['ApiController', 'themeSettings']);
+    $router->post('/settings', ['ApiController', 'updateSetting']);
+    $router->get('/streams-by-class', ['ResultController', 'getStreamsByClass']);
+});
