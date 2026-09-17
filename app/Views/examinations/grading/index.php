@@ -3,7 +3,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h4 class="mb-0">Grading Systems</h4>
-            <small class="text-muted">Configure grading systems and rules</small>
+            <small class="text-muted">Configure grading systems per class or school-wide</small>
         </div>
         <a href="<?= BASE_URL ?>/grading/systems/create" class="btn btn-sm btn-primary">
             <i class="fas fa-plus me-1"></i> New Grading System
@@ -13,89 +13,81 @@
     <?php if (isset($_SESSION['flash_success'])): ?>
         <div class="alert alert-success"><?= htmlspecialchars($_SESSION['flash_success']); unset($_SESSION['flash_success']); ?></div>
     <?php endif; ?>
-
     <?php if (isset($_SESSION['flash_error'])): ?>
         <div class="alert alert-danger"><?= htmlspecialchars($_SESSION['flash_error']); unset($_SESSION['flash_error']); ?></div>
     <?php endif; ?>
 
     <div class="card">
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Name</th>
+                        <th>Applies To</th>
+                        <th>Academic Year</th>
+                        <th>Rules</th>
+                        <th>Status</th>
+                        <th>Default</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($systems)): ?>
                         <tr>
-                            <th>Name</th>
-                            <th>Description</th>
-                            <th>Rules</th>
-                            <th>Status</th>
-                            <th class="text-end">Actions</th>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                No grading systems found.
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($systems) || count($systems) === 0): ?>
-                            <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">
-                                    <i class="fas fa-percent fa-2x mb-2 d-block"></i>
-                                    No grading systems found.
-                                    <br>
-                                    <a href="<?= BASE_URL ?>/grading/systems/create" class="btn btn-sm btn-primary mt-2">Create Your First Grading System</a>
-                                </td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($systems as $system): ?>
-                                <tr>
-                                    <td><strong><?= htmlspecialchars($system['name']) ?></strong></td>
-                                    <td><?= htmlspecialchars($system['description'] ?? '-') ?></td>
-                                    <td>
-                                        <a href="<?= BASE_URL ?>/grading/systems/<?= $system['id'] ?>/rules" class="btn btn-sm btn-outline-info">
-                                            <i class="fas fa-list me-1"></i> Manage Rules
-                                        </a>
-                                    </td>
-                                    <td>
-                                        <?php if ($system['status'] ?? 'active' === 'active'): ?>
-                                            <span class="badge bg-success">Active</span>
-                                        <?php else: ?>
-                                            <span class="badge bg-secondary">Inactive</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="text-end">
-                                        <a href="<?= BASE_URL ?>/grading/systems/<?= $system['id'] ?>/edit" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <button onclick="deleteSystem(<?= $system['id'] ?>)" class="btn btn-sm btn-outline-danger">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+                    <?php else: foreach ($systems as $s): ?>
+                        <tr>
+                            <td><strong><?= htmlspecialchars($s['name']) ?></strong>
+                                <br><small class="text-muted"><?= htmlspecialchars($s['description'] ?? '') ?></small>
+                            </td>
+                            <td>
+                                <?php if (!empty($s['class_name'])): ?>
+                                    <span class="badge bg-primary"><?= htmlspecialchars($s['class_name']) ?></span>
+                                <?php else: ?>
+                                    <span class="badge bg-secondary">All Classes</span>
+                                <?php endif; ?>
+                            </td>
+                            <td><?= htmlspecialchars($s['academic_year_name'] ?? 'All Years') ?></td>
+                            <td>
+                                <a href="<?= BASE_URL ?>/grading/systems/<?= $s['id'] ?>/rules" class="btn btn-sm btn-outline-info">
+                                    <i class="fas fa-list"></i> <?= (int)($s['rule_count'] ?? 0) ?> rules
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-<?= ($s['status'] ?? 'active') === 'active' ? 'success' : 'secondary' ?>">
+                                    <?= htmlspecialchars($s['status'] ?? 'active') ?>
+                                </span>
+                            </td>
+                            <td>
+                                <?php if (!empty($s['is_default'])): ?>
+                                    <span class="badge bg-primary">Default</span>
+                                <?php endif; ?>
+                            </td>
+                            <td class="text-end">
+                                <a href="<?= BASE_URL ?>/grading/systems/<?= $s['id'] ?>/edit" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button onclick="deleteSystem(<?= $s['id'] ?>)" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
 <script>
 function deleteSystem(id) {
-    if (confirm('Are you sure you want to delete this grading system?')) {
-        fetch('<?= BASE_URL ?>/grading/systems/' + id, {
-            method: 'DELETE',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.reload();
-            } else {
-                alert(data.error || 'Failed to delete grading system');
-            }
-        })
-        .catch(error => {
-            alert('An error occurred');
-        });
-    }
+    if (!confirm('Delete this grading system?')) return;
+    fetch('<?= BASE_URL ?>/grading/systems/' + id, { method: 'DELETE', headers: {'X-Requested-With':'XMLHttpRequest'} })
+        .then(r => r.json())
+        .then(d => d.success ? location.reload() : alert(d.error || 'Failed'))
+        .catch(() => alert('Error'));
 }
 </script>

@@ -8,6 +8,7 @@
                 <div>
                     <h6 class="mb-0 fw-bold d-inline-block me-2">Marks Entry Form</h6>
                     <small class="text-muted">
+                        <span class="badge bg-primary"><?= htmlspecialchars($examination['name'] ?? 'N/A') ?></span>
                         <?= htmlspecialchars($academicYear['name'] ?? '') ?> | 
                         <?= htmlspecialchars($term['name'] ?? '') ?> | 
                         <strong><?= htmlspecialchars($class['name'] ?? '') ?></strong>
@@ -158,7 +159,8 @@ function saveMarks(isAutoSave = false) {
         body: JSON.stringify({ 
             marks: marks,
             academic_year_id: <?= (int)($academicYear['id'] ?? 0) ?>,
-            term_id: <?= (int)($term['id'] ?? 0) ?>
+            term_id: <?= (int)($term['id'] ?? 0) ?>,
+            examination_id: <?= (int)($examination['id'] ?? 0) ?>
         })
     })
     .then(async res => {

@@ -173,15 +173,16 @@ class MarkController extends Controller
         if (!empty($students)) {
             $studentIds = array_column($students, 'id');
             $placeholders = implode(',', array_fill(0, count($studentIds), '?'));
-            
+
             $marks = $this->db->fetchAll(
                 "SELECT m.* FROM marks m
-                 WHERE m.academic_year_id = ? 
-                   AND m.term_id = ?
-                   AND m.student_id IN ({$placeholders})",
-                array_merge([$academicYearId, $termId], $studentIds)
+                WHERE m.academic_year_id = ? 
+                AND m.term_id = ?
+                AND m.examination_id = ?
+                AND m.student_id IN ({$placeholders})",
+                array_merge([$academicYearId, $termId, $examinationId], $studentIds)
             );
-            
+
             foreach ($marks as $mark) {
                 $existingMarks[$mark['student_id']][$mark['subject_id']] = $mark;
             }
@@ -222,13 +223,14 @@ class MarkController extends Controller
         $schoolId = $this->auth->getUser()->school_id ?? 1;
         $input    = json_decode(file_get_contents('php://input'), true);
         
-        $marksData      = $input['marks'] ?? []; // Structured as [student_id][subject_id] => marks_obtained
+        $marksData      = $input['marks'] ?? [];
         $academicYearId = (int)($input['academic_year_id'] ?? 0);
         $termId         = (int)($input['term_id'] ?? 0);
-        
-        if (empty($marksData)) {
+        $examinationId  = (int)($input['examination_id'] ?? 0);
+
+        if (!$examinationId) {
             http_response_code(400);
-            echo json_encode(['error' => 'No marks submitted']);
+            echo json_encode(['error' => 'Examination ID is required.']);
             exit;
         }
         
@@ -255,15 +257,17 @@ class MarkController extends Controller
 
                     $existing = $this->db->fetch(
                         "SELECT id FROM marks 
-                         WHERE student_id = :student_id 
-                           AND subject_id = :subject_id 
-                           AND academic_year_id = :academic_year_id
-                           AND term_id = :term_id",
+                        WHERE student_id = :student_id 
+                        AND subject_id = :subject_id 
+                        AND academic_year_id = :academic_year_id
+                        AND term_id = :term_id
+                        AND examination_id = :examination_id",
                         [
                             'student_id'       => $studentId,
                             'subject_id'       => $subjectId,
                             'academic_year_id' => $academicYearId,
-                            'term_id'          => $termId
+                            'term_id'          => $termId,
+                            'examination_id'   => $examinationId
                         ]
                     );
                     
@@ -275,18 +279,19 @@ class MarkController extends Controller
                         ], ['id' => $existing['id']]);
                     } else {
                         $this->db->insert('marks', [
-                            'school_id'             => $schoolId,
-                            'student_enrollment_id' => $studentEnrollmentId,
-                            'academic_year_id'      => $academicYearId,
-                            'term_id'               => $termId,
-                            'subject_id'            => $subjectId,
-                            'student_id'            => $studentId,
-                            'marks_obtained'        => $marksObtained,
-                            'entered_by'            => $this->auth->id(),
-                            'entered_at'            => date('Y-m-d H:i:s'),
-                            'created_at'            => date('Y-m-d H:i:s'),
-                            'updated_at'            => date('Y-m-d H:i:s')
-                        ]);
+                        'school_id'             => $schoolId,
+                        'student_enrollment_id' => $studentEnrollmentId,
+                        'academic_year_id'      => $academicYearId,
+                        'term_id'               => $termId,
+                        'examination_id'        => $examinationId,   // ← ADD THIS
+                        'subject_id'            => $subjectId,
+                        'student_id'            => $studentId,
+                        'marks_obtained'        => $marksObtained,
+                        'entered_by'            => $this->auth->id(),
+                        'entered_at'            => date('Y-m-d H:i:s'),
+                        'created_at'            => date('Y-m-d H:i:s'),
+                        'updated_at'            => date('Y-m-d H:i:s')
+                    ]);
                     }
                 }
             }

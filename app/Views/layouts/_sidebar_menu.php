@@ -95,9 +95,13 @@
             'icon' => 'fas fa-chart-bar',
             'routes' => ['reports'],
             'items' => [
-                ['title' => 'Academic', 'icon' => 'fas fa-graduation-cap', 'url' => '/reports/academic', 'route' => 'reports/academic'],
-                ['title' => 'Financial', 'icon' => 'fas fa-coins', 'url' => '/reports/finance', 'route' => 'reports/finance'],
-                ['title' => 'Attendance', 'icon' => 'fas fa-user-clock', 'url' => '/reports/attendance', 'route' => 'reports/attendance'],
+                ['title' => 'Academic Dashboard', 'icon' => 'fas fa-chart-pie', 'url' => '/reports/academic', 'check' => fn($v) => $v === 'reports/academic/dashboard' || $v === 'reports/academic' || $v === 'reports/academic/index'],
+                ['title' => 'Report Cards', 'icon' => 'fas fa-file-alt', 'url' => '/reports/academic/report-cards', 'check' => fn($v) => str_contains($v, 'report-cards') && !str_contains($v, 'batch')],
+                ['title' => 'Batch Report Cards', 'icon' => 'fas fa-print', 'url' => '/reports/academic/batch-report-cards', 'check' => fn($v) => str_contains($v, 'batch-report-cards')],
+                ['title' => 'Class Analysis', 'icon' => 'fas fa-users', 'url' => '/reports/academic/class-analysis', 'check' => fn($v) => str_contains($v, 'class-analysis')],
+                ['title' => 'Subject Analysis', 'icon' => 'fas fa-book', 'url' => '/reports/academic/subject-analysis', 'check' => fn($v) => str_contains($v, 'subject-analysis')],
+                ['title' => 'Financial Reports', 'icon' => 'fas fa-coins', 'url' => '/reports/finance', 'check' => fn($v) => str_contains($v, 'reports/finance')],
+                ['title' => 'Attendance Reports', 'icon' => 'fas fa-user-clock', 'url' => '/reports/attendance', 'check' => fn($v) => str_contains($v, 'reports/attendance')],
             ]
         ],
         [
