@@ -17,7 +17,7 @@ class GradingSystem extends Model
     {
         $db = $this->db;
         return $db->fetchAll(
-            "SELECT * FROM grading_rules WHERE grading_system_id = :system_id ORDER BY min_mark DESC",
+            "SELECT * FROM grading_rules WHERE system_id = :system_id ORDER BY min_mark DESC",
             ['system_id' => $this->id]
         );
     }

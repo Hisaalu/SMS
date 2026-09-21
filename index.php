@@ -10,7 +10,7 @@ error_reporting(E_ALL);
 require_once __DIR__ . '/constants.php';
 require_once ROOT_PATH . '/vendor/autoload.php';
 
-// 3. Load Environment Variables BEFORE starting sessions or setting timezone
+// 3. Load Environment Variables
 require_once APP_PATH . '/Core/Environment.php';
 $dotenv = new \NexaT\Core\Environment();
 $dotenv->load(ROOT_PATH . '/.env');
@@ -20,7 +20,7 @@ define('DEBUG_MODE', getenv('APP_DEBUG') === 'true');
 
 date_default_timezone_set(getenv('APP_TIMEZONE') ?: 'Africa/Kampala');
 
-// File: index.php
+// 4. Start Session
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
         'lifetime' => 86400,
@@ -45,6 +45,16 @@ require_once APP_PATH . '/Core/View.php';
 require_once APP_PATH . '/Core/ErrorHandler.php';
 require_once APP_PATH . '/Core/SettingsService.php';
 require_once APP_PATH . '/Core/Model.php';
+
+// ============================================================
+// TEMPORARY DEBUG BYPASS — REMOVE AFTER DEBUGGING
+// Stop here if we're running the debug script.
+// At this point, Database, Model, and all core classes are loaded.
+// ============================================================
+if (defined('MY_DEBUG_SCRIPT')) {
+    return;
+}
+// ============================================================
 
 // 6. Boot and Run Application
 use NexaT\Core\Application;

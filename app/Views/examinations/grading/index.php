@@ -10,6 +10,15 @@
         </a>
     </div>
 
+    <div class="d-flex gap-2">
+        <a href="<?= BASE_URL ?>/grading/divisions" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-layer-group me-1"></i> Divisions
+        </a>
+        <a href="<?= BASE_URL ?>/grading/systems/create" class="btn btn-sm btn-primary">
+            <i class="fas fa-plus me-1"></i> New Grading System
+        </a>
+    </div>
+
     <?php if (isset($_SESSION['flash_success'])): ?>
         <div class="alert alert-success"><?= htmlspecialchars($_SESSION['flash_success']); unset($_SESSION['flash_success']); ?></div>
     <?php endif; ?>

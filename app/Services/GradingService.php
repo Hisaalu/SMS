@@ -175,23 +175,26 @@ class GradingService
         return $this->findGrade($mark, $this->gradingSystem['rules']);
     }
 
-    /**
-     * Internal: find grade in a set of rules
-     */
     private function findGrade(float $mark, array $rules): ?array
     {
         foreach ($rules as $rule) {
             if ($mark >= $rule['min_mark'] && $mark <= $rule['max_mark']) {
                 return [
-                    'grade' => $rule['grade'],
+                    'grade'       => $rule['grade'],
                     'description' => $rule['description'] ?? '',
-                    'points' => $rule['points'] ?? 0,
-                    'pass' => $rule['pass'] ?? false,
-                    'min_mark' => $rule['min_mark'],
-                    'max_mark' => $rule['max_mark'],
+                    'score'       => $rule['score'] ?? 0,  // ← renamed from points
+                    'pass'        => $rule['pass'] ?? false,
+                    'min_mark'    => $rule['min_mark'],
+                    'max_mark'    => $rule['max_mark'],
                 ];
             }
         }
         return null;
+    }
+
+    public function getDivisionForAggregate(float $aggregate, int $schoolId): ?array
+    {
+        $divisionService = new DivisionService();
+        return $divisionService->getDivisionForAggregate($aggregate, $schoolId);
     }
 }

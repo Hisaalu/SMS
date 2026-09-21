@@ -66,12 +66,12 @@ class GradingRuleController extends Controller
             exit;
         }
         
-        $grade = trim($_POST['grade'] ?? '');
-        $minMark = (float)($_POST['min_mark'] ?? 0);
-        $maxMark = (float)($_POST['max_mark'] ?? 0);
-        $points = (float)($_POST['points'] ?? 0);
+        $grade       = trim($_POST['grade'] ?? '');
+        $minMark     = (float)($_POST['min_mark'] ?? 0);
+        $maxMark     = (float)($_POST['max_mark'] ?? 0);
+        $score       = (float)($_POST['score'] ?? 0);
         $description = trim($_POST['description'] ?? '');
-        $pass = isset($_POST['pass']) ? 1 : 0;
+        $pass        = isset($_POST['pass']) ? 1 : 0;
         
         if (empty($grade) || $minMark > $maxMark) {
             $_SESSION['flash_error'] = 'Grade is required and min mark must be less than max mark.';
@@ -79,17 +79,12 @@ class GradingRuleController extends Controller
             exit;
         }
         
-        // Check for overlapping ranges
         $overlap = $this->db->fetch(
             "SELECT id FROM grading_rules 
-             WHERE system_id = :system_id 
-             AND min_mark <= :max_mark 
-             AND max_mark >= :min_mark",
-            [
-                'system_id' => $systemId,
-                'min_mark' => $minMark,
-                'max_mark' => $maxMark
-            ]
+            WHERE system_id = :system_id 
+            AND min_mark <= :max_mark 
+            AND max_mark >= :min_mark",
+            ['system_id' => $systemId, 'min_mark' => $minMark, 'max_mark' => $maxMark]
         );
         
         if ($overlap) {
@@ -99,36 +94,31 @@ class GradingRuleController extends Controller
         }
         
         $ruleId = $this->db->insert('grading_rules', [
-            'system_id' => $systemId,
-            'grade' => $grade,
-            'min_mark' => $minMark,
-            'max_mark' => $maxMark,
-            'points' => $points,
+            'system_id'   => $systemId,
+            'grade'       => $grade,
+            'min_mark'    => $minMark,
+            'max_mark'    => $maxMark,
+            'score'       => $score,
             'description' => $description,
-            'pass' => $pass,
-            'created_at' => date('Y-m-d H:i:s'),
-            'updated_at' => date('Y-m-d H:i:s')
+            'pass'        => $pass,
+            'created_at'  => date('Y-m-d H:i:s'),
+            'updated_at'  => date('Y-m-d H:i:s')
         ]);
         
         if ($ruleId) {
             if ($this->audit) {
-                $this->audit->log(
-                    $this->auth->id(),
-                    'Grading Rule Created',
-                    'examinations',
-                    "Created grading rule: {$grade} ({$minMark}-{$maxMark})"
-                );
+                $this->audit->log($this->auth->id(), 'Grading Rule Created', 'examinations',
+                    "Created grading rule: {$grade} ({$minMark}-{$maxMark})");
             }
             $_SESSION['flash_success'] = 'Grading rule created successfully.';
-            header('Location: ' . BASE_URL . '/grading/systems/' . $systemId . '/rules');
-            exit;
+        } else {
+            $_SESSION['flash_error'] = 'Failed to create grading rule.';
         }
         
-        $_SESSION['flash_error'] = 'Failed to create grading rule.';
         header('Location: ' . BASE_URL . '/grading/systems/' . $systemId . '/rules');
         exit;
     }
-    
+
     public function update($params): void
     {
         if (!$this->auth->check() || !$this->auth->getUser()->hasPermission('grading.manage')) {
@@ -149,12 +139,12 @@ class GradingRuleController extends Controller
             exit;
         }
         
-        $grade = trim($_POST['grade'] ?? '');
-        $minMark = (float)($_POST['min_mark'] ?? 0);
-        $maxMark = (float)($_POST['max_mark'] ?? 0);
-        $points = (float)($_POST['points'] ?? 0);
+        $grade       = trim($_POST['grade'] ?? '');
+        $minMark     = (float)($_POST['min_mark'] ?? 0);
+        $maxMark     = (float)($_POST['max_mark'] ?? 0);
+        $score       = (float)($_POST['score'] ?? 0);
         $description = trim($_POST['description'] ?? '');
-        $pass = isset($_POST['pass']) ? 1 : 0;
+        $pass        = isset($_POST['pass']) ? 1 : 0;
         
         if (empty($grade) || $minMark > $maxMark) {
             $_SESSION['flash_error'] = 'Grade is required and min mark must be less than max mark.';
@@ -163,30 +153,25 @@ class GradingRuleController extends Controller
         }
         
         $result = $this->db->update('grading_rules', [
-            'grade' => $grade,
-            'min_mark' => $minMark,
-            'max_mark' => $maxMark,
-            'points' => $points,
+            'grade'       => $grade,
+            'min_mark'    => $minMark,
+            'max_mark'    => $maxMark,
+            'score'       => $score,
             'description' => $description,
-            'pass' => $pass,
-            'updated_at' => date('Y-m-d H:i:s')
+            'pass'        => $pass,
+            'updated_at'  => date('Y-m-d H:i:s')
         ], ['id' => $ruleId]);
         
         if ($result !== false) {
             if ($this->audit) {
-                $this->audit->log(
-                    $this->auth->id(),
-                    'Grading Rule Updated',
-                    'examinations',
-                    "Updated grading rule: {$grade}"
-                );
+                $this->audit->log($this->auth->id(), 'Grading Rule Updated', 'examinations',
+                    "Updated grading rule: {$grade}");
             }
             $_SESSION['flash_success'] = 'Grading rule updated successfully.';
-            header('Location: ' . BASE_URL . '/grading/systems/' . $rule['system_id'] . '/rules');
-            exit;
+        } else {
+            $_SESSION['flash_error'] = 'Failed to update grading rule.';
         }
         
-        $_SESSION['flash_error'] = 'Failed to update grading rule.';
         header('Location: ' . BASE_URL . '/grading/systems/' . $rule['system_id'] . '/rules');
         exit;
     }

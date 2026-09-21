@@ -49,7 +49,7 @@
                     <label class="form-label fw-semibold text-dark small">Assign Roles</label>
                     <select class="form-select form-select-lg fs-6" name="roles[]" multiple style="min-height: 110px;">
                         <?php foreach ($roles as $role): ?>
-                            <option value="<?= $role->id ?>"><?= htmlspecialchars($role->name) ?></option>
+                            <option value="<?= $role['id'] ?>"><?= htmlspecialchars($role['name']) ?></option>
                         <?php endforeach; ?>
                     </select>
                     <small class="text-muted mt-1 d-block"><i class="fas fa-info-circle me-1"></i> Hold <kbd>Ctrl</kbd> or <kbd>Cmd</kbd> to select multiple roles.</small>

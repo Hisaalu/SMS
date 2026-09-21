@@ -21,11 +21,12 @@
         <input type="hidden" name="id" value="<?= $staff['id'] ?>">
 
         <div class="row g-3">
-            <!-- Personal Details -->
+            <!-- Left Column: Personal + Employment + Assignments -->
             <div class="col-md-8">
+                <!-- Personal Information -->
                 <div class="card mb-3">
                     <div class="card-header bg-light">
-                        <h6 class="mb-0">Personal Information</h6>
+                        <h6 class="mb-0"><i class="fas fa-user me-1"></i> Personal Information</h6>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
@@ -44,7 +45,6 @@
                                 <input type="text" name="last_name" class="form-control form-control-sm" required 
                                        value="<?= htmlspecialchars($staff['last_name'] ?? '') ?>">
                             </div>
-
                             <div class="col-md-4">
                                 <label class="form-label small fw-semibold">Gender</label>
                                 <select name="gender" class="form-select form-select-sm">
@@ -67,7 +67,6 @@
                                     <option value="widowed" <?= (($staff['marital_status'] ?? '') === 'widowed') ? 'selected' : '' ?>>Widowed</option>
                                 </select>
                             </div>
-
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">Phone Number</label>
                                 <input type="text" name="phone" class="form-control form-control-sm" 
@@ -78,7 +77,6 @@
                                 <input type="text" name="alt_phone" class="form-control form-control-sm" 
                                        value="<?= htmlspecialchars($staff['alt_phone'] ?? '') ?>">
                             </div>
-
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">Email Address</label>
                                 <input type="email" name="email" class="form-control form-control-sm" 
@@ -93,9 +91,10 @@
                     </div>
                 </div>
 
+                <!-- Employment Information -->
                 <div class="card mb-3">
                     <div class="card-header bg-light">
-                        <h6 class="mb-0">Employment Information</h6>
+                        <h6 class="mb-0"><i class="fas fa-briefcase me-1"></i> Employment Information</h6>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
@@ -132,7 +131,6 @@
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-
                             <div class="col-md-4">
                                 <label class="form-label small fw-semibold">Position / Title</label>
                                 <input type="text" name="position" class="form-control form-control-sm" 
@@ -155,13 +153,69 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Teaching Assignments -->
+                <div class="card mb-3" id="assignments">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-chalkboard-teacher me-1"></i> Teaching Assignments</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addAssignmentRow()">
+                            <i class="fas fa-plus me-1"></i> Add Class/Subject
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small mb-2">
+                            Manage this staff member's teaching assignments. Mark an existing one for removal, or add a new one below.
+                        </p>
+
+                        <!-- Existing Assignments -->
+                        <?php if (!empty($teacherAssignments)): ?>
+                            <div class="table-responsive mb-3">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Class</th>
+                                            <th>Stream</th>
+                                            <th>Subject</th>
+                                            <th>Type</th>
+                                            <th>Status</th>
+                                            <th width="80">Remove</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($teacherAssignments as $a): ?>
+                                            <tr>
+                                                <td><?= htmlspecialchars($a['class_name'] ?? '-') ?></td>
+                                                <td><?= htmlspecialchars($a['stream_name'] ?? 'All') ?></td>
+                                                <td><?= htmlspecialchars($a['subject_name'] ?? '-') ?></td>
+                                                <td><?= htmlspecialchars($a['assignment_type_name'] ?? '-') ?></td>
+                                                <td>
+                                                    <span class="badge bg-<?= $a['status'] === 'active' ? 'success' : 'secondary' ?>">
+                                                        <?= htmlspecialchars($a['status']) ?>
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <input type="checkbox" name="remove_assignments[]" value="<?= $a['id'] ?>">
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <p class="text-muted small mb-2">No teaching assignments yet. Add one below.</p>
+                        <?php endif; ?>
+
+                        <!-- New Assignments -->
+                        <div id="assignment-list"></div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Profile Photo & Actions -->
+            <!-- Right Column: Photo & Actions -->
             <div class="col-md-4">
                 <div class="card mb-3">
                     <div class="card-header bg-light">
-                        <h6 class="mb-0">Profile Picture</h6>
+                        <h6 class="mb-0"><i class="fas fa-camera me-1"></i> Profile Picture</h6>
                     </div>
                     <div class="card-body text-center">
                         <?php if (!empty($staff['photo_path']) && file_exists(ROOT_PATH . '/public/' . $staff['photo_path'])): ?>
@@ -190,3 +244,62 @@
         </div>
     </form>
 </div>
+
+<!-- Assignment Row Template -->
+<template id="assignment-template">
+    <div class="row g-2 mb-2 assignment-row align-items-end border-top pt-2">
+        <div class="col-md-3">
+            <label class="form-label small">Class</label>
+            <select name="assignments[INDEX][class_id]" class="form-select form-select-sm" required>
+                <option value="">Select Class</option>
+                <?php foreach ($classes as $c): ?>
+                    <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Stream</label>
+            <select name="assignments[INDEX][stream_id]" class="form-select form-select-sm">
+                <option value="">All Streams</option>
+                <?php foreach ($streams as $st): ?>
+                    <option value="<?= $st['id'] ?>"><?= htmlspecialchars($st['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small">Subject</label>
+            <select name="assignments[INDEX][subject_id]" class="form-select form-select-sm" required>
+                <option value="">Select Subject</option>
+                <?php foreach ($subjects as $s): ?>
+                    <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">Assignment Type</label>
+            <select name="assignments[INDEX][assignment_type_id]" class="form-select form-select-sm">
+                <option value="">Select Type</option>
+                <?php foreach ($assignmentTypes as $type): ?>
+                    <option value="<?= $type['id'] ?>"><?= htmlspecialchars($type['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="button" class="btn btn-sm btn-outline-danger w-100"
+                    onclick="this.closest('.assignment-row').remove()">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    </div>
+</template>
+
+<script>
+let assignmentIndex = 0;
+
+function addAssignmentRow() {
+    const tpl = document.getElementById('assignment-template').innerHTML.replace(/INDEX/g, assignmentIndex++);
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = tpl.trim();
+    document.getElementById('assignment-list').appendChild(wrapper.firstElementChild);
+}
+</script>

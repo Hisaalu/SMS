@@ -194,7 +194,7 @@ class StudentController extends Controller
             $targetFile = $uploadDir . $filename;
 
             if (move_uploaded_file($_FILES['photo']['tmp_name'], $targetFile)) {
-                $photoPath = 'uploads/students/' . $filename;
+                $photoPath = 'public/uploads/students/' . $filename;
             }
         }
 
@@ -418,7 +418,7 @@ class StudentController extends Controller
                 if (!empty($existingStudent['photo_path']) && file_exists(__DIR__ . '/../../public/' . $existingStudent['photo_path'])) {
                     unlink(__DIR__ . '/../../public/' . $existingStudent['photo_path']);
                 }
-                $photoPath = 'uploads/students/' . $filename;
+                $photoPath = 'public/uploads/students/' . $filename;
             }
         }
 

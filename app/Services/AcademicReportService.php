@@ -653,32 +653,24 @@ class AcademicReportService
         array $examinationIds = [],
         array $options = []
     ): array {
-        // ============================================================
-        // STEP 1: Load student
-        // ============================================================
+        // ---- Student ----
         $student = $this->safeFetch(
             "SELECT s.* FROM students s WHERE s.id = :id AND s.school_id = :school_id",
             ['id' => $studentId, 'school_id' => $schoolId]
         );
         if (!$student) return [];
 
-        // ============================================================
-        // STEP 2: Enrollment — pick the one for the requested year
-        // ============================================================
+        // ---- Enrollment ----
         $enrollment = $this->safeFetch(
             "SELECT se.class_id, se.stream_id
             FROM student_enrollments se
-            WHERE se.student_id = :student_id
-            AND se.academic_year_id = :year_id
+            WHERE se.student_id = :student_id AND se.academic_year_id = :year_id
             ORDER BY se.id DESC LIMIT 1",
             ['student_id' => $studentId, 'year_id' => $academicYearId]
         );
         $student['class_id']  = $enrollment['class_id']  ?? null;
         $student['stream_id'] = $enrollment['stream_id'] ?? null;
 
-        // ============================================================
-        // STEP 3: Class / Stream names
-        // ============================================================
         $student['class_name'] = null;
         if (!empty($student['class_id'])) {
             $r = $this->safeFetch("SELECT name FROM classes WHERE id = :id", ['id' => $student['class_id']]);
@@ -690,9 +682,7 @@ class AcademicReportService
             $student['stream_name'] = $r['name'] ?? null;
         }
 
-        // ============================================================
-        // STEP 4: Load grading system for this class
-        // ============================================================
+        // ---- Grading system ----
         $gradingSystem = null;
         if (!empty($student['class_id'])) {
             $gradingSystem = $this->gradingService->getSystemForClass(
@@ -702,38 +692,30 @@ class AcademicReportService
             $gradingSystem = $this->gradingService->getDefaultSystem($schoolId);
         }
 
-        // ============================================================
-        // STEP 5: Load the exams to include
-        // ============================================================
+        // ---- Exams ----
         $exams = [];
         if (!empty($examinationIds)) {
             $placeholders = implode(',', array_fill(0, count($examinationIds), '?'));
             $exams = $this->safeFetchAll(
-                "SELECT * FROM examinations 
-                WHERE id IN ({$placeholders})
-                ORDER BY id ASC",
+                "SELECT * FROM examinations WHERE id IN ({$placeholders}) ORDER BY id ASC",
                 $examinationIds
             );
         }
 
-        // ============================================================
-        // STEP 6: Fetch marks for the student for all selected exams
-        // ============================================================
-        $marksByExam   = [];  // [exam_id][subject_id] => mark row
-        $subjectsSeen  = [];  // [subject_id] => subject info
+        // ---- Marks ----
+        $marksByExam  = [];
+        $subjectsSeen = [];
 
         if (!empty($exams)) {
             $examIds = array_column($exams, 'id');
-            $placeholders = implode(',', array_fill(0, count($examIds), '?'));
+            $ph = implode(',', array_fill(0, count($examIds), '?'));
 
             $rows = $this->safeFetchAll(
                 "SELECT m.*, sub.name AS subject_name, sub.code AS subject_code
                 FROM marks m
                 LEFT JOIN subjects sub ON m.subject_id = sub.id
-                WHERE m.student_id = ?
-                AND m.academic_year_id = ?
-                AND m.term_id = ?
-                AND m.examination_id IN ({$placeholders})
+                WHERE m.student_id = ? AND m.academic_year_id = ? AND m.term_id = ?
+                AND m.examination_id IN ({$ph})
                 ORDER BY sub.name ASC",
                 array_merge([$studentId, $academicYearId, $termId], $examIds)
             );
@@ -748,42 +730,38 @@ class AcademicReportService
             }
         }
 
-        // ============================================================
-        // STEP 7: Grade every mark (per-exam)
-        // ============================================================
+        // ---- Grade each mark ----
         foreach ($marksByExam as $examId => &$subjectMarks) {
             foreach ($subjectMarks as $subjectId => &$mark) {
                 $markVal = (float)($mark['marks_obtained'] ?? 0);
                 if ($gradingSystem && !empty($gradingSystem['id'])) {
                     $grade = $this->gradingService->getGradeFromSystem($markVal, (int)$gradingSystem['id']);
-                    $mark['grade']        = $grade['grade'] ?? '-';
-                    $mark['grade_points'] = $grade['points'] ?? 0;
-                    $mark['remark']       = $grade['description'] ?? '-';
+                    $mark['grade']  = $grade['grade'] ?? '-';
+                    $mark['score']  = $grade['score'] ?? 0;
+                    $mark['remark'] = $grade['description'] ?? '-';
                 } else {
-                    $mark['grade']        = '-';
-                    $mark['grade_points'] = 0;
-                    $mark['remark']       = '-';
+                    $mark['grade']  = '-';
+                    $mark['score']  = 0;
+                    $mark['remark'] = '-';
                 }
             }
             unset($mark);
         }
         unset($subjectMarks);
 
-        // ============================================================
-        // STEP 8: Compute per-exam totals
-        // ============================================================
+        // ---- Exam totals ----
         $examTotals = [];
         foreach ($exams as $exam) {
             $examId = $exam['id'];
-            $total = 0; $count = 0;
+            $total  = 0; $count = 0; $totalScore = 0;
 
             foreach ($marksByExam[$examId] ?? [] as $mark) {
                 $total += (float)$mark['marks_obtained'];
+                $totalScore += (float)($mark['score'] ?? 0);
                 $count++;
             }
 
-            $avg = $count > 0 ? round($total / $count, 2) : 0;
-
+            $avg = $count > 0 ? round($total / $count, 0) : 0;
             $overallGrade = null;
             if ($gradingSystem && $count > 0 && !empty($gradingSystem['id'])) {
                 $overallGrade = $this->gradingService->getGradeFromSystem($avg, (int)$gradingSystem['id']);
@@ -793,64 +771,390 @@ class AcademicReportService
                 'total'   => $total,
                 'average' => $avg,
                 'count'   => $count,
+                'score'   => $totalScore,
                 'grade'   => $overallGrade['grade'] ?? '-',
-                'points'  => $overallGrade['points'] ?? 0,
             ];
         }
 
-        // ============================================================
-        // STEP 9: Compute per-subject AVERAGES and GRADES
-        //         (this is what the views read)
-        // ============================================================
-        $subjectAverages = []; // [subject_id] => ['mark'=>, 'grade'=>, 'points'=>]
+        // ---- Teacher initials per subject ----
+        $teacherInitials = [];
+        if (!empty($student['class_id']) && !empty($subjectsSeen)) {
+            foreach ($subjectsSeen as $subj) {
+                $sid = (int)$subj['id'];
 
+                $teacher = null;
+                if (!empty($student['stream_id'])) {
+                    $teacher = $this->safeFetch(
+                        "SELECT st.first_name, st.last_name
+                        FROM teacher_assignments ta
+                        INNER JOIN staff st ON ta.staff_id = st.id
+                        WHERE ta.school_id = :school_id
+                        AND ta.subject_id = :subject_id
+                        AND ta.class_id = :class_id
+                        AND ta.stream_id = :stream_id
+                        AND ta.status = 'active'
+                        LIMIT 1",
+                        [
+                            'school_id'  => $schoolId,
+                            'subject_id' => $sid,
+                            'class_id'   => $student['class_id'],
+                            'stream_id'  => $student['stream_id'],
+                        ]
+                    );
+                }
+                if (!$teacher) {
+                    $teacher = $this->safeFetch(
+                        "SELECT st.first_name, st.last_name
+                        FROM teacher_assignments ta
+                        INNER JOIN staff st ON ta.staff_id = st.id
+                        WHERE ta.school_id = :school_id
+                        AND ta.subject_id = :subject_id
+                        AND ta.class_id = :class_id
+                        AND ta.stream_id IS NULL
+                        AND ta.status = 'active'
+                        LIMIT 1",
+                        [
+                            'school_id'  => $schoolId,
+                            'subject_id' => $sid,
+                            'class_id'   => $student['class_id'],
+                        ]
+                    );
+                }
+
+                if ($teacher) {
+                    $f = strtoupper(substr(trim($teacher['first_name']), 0, 1));
+                    $l = strtoupper(substr(trim($teacher['last_name']),  0, 1));
+                    $teacherInitials[$sid] = $f . '.' . $l;
+                } else {
+                    $teacherInitials[$sid] = '';
+                }
+            }
+        }
+
+        // ============================================================
+        // DETERMINE SOURCE EXAM(S)
+        // ============================================================
+        $finalGradeMethod = $options['final_grade_method'] ?? 'average';
+        $allExamIds       = array_column($exams, 'id');
+
+        $studentExamAverages = [];
+        foreach ($examTotals as $exId => $t) {
+            if ($t['count'] > 0) {
+                $studentExamAverages[$exId] = $t['average'];
+            }
+        }
+
+        $sourceExamIds = [];
+        $sourceLabel   = 'average';
+
+        if ($finalGradeMethod === 'average' || empty($finalGradeMethod)) {
+            $sourceExamIds = $allExamIds;
+            $sourceLabel   = 'average';
+        } elseif ($finalGradeMethod === 'best_set') {
+            if (!empty($studentExamAverages)) {
+                arsort($studentExamAverages);
+                $bestId = array_key_first($studentExamAverages);
+                $sourceExamIds = [$bestId];
+                $sourceLabel   = 'best_set';
+            } else {
+                $sourceExamIds = $allExamIds;
+            }
+        } elseif ($finalGradeMethod === 'worst_set') {
+            if (!empty($studentExamAverages)) {
+                asort($studentExamAverages);
+                $worstId = array_key_first($studentExamAverages);
+                $sourceExamIds = [$worstId];
+                $sourceLabel   = 'worst_set';
+            } else {
+                $sourceExamIds = $allExamIds;
+            }
+        } elseif (strpos($finalGradeMethod, 'exam:') === 0) {
+            $sourceExamIds = [(int)substr($finalGradeMethod, 5)];
+            $sourceLabel   = 'exam';
+        } else {
+            $sourceExamIds = $allExamIds;
+        }
+
+        // ---- Per-subject final mark from source ----
+        $subjectAverages = [];
         foreach ($subjectsSeen as $subj) {
             $sid  = $subj['id'];
             $vals = [];
 
-            foreach ($exams as $exam) {
-                $row = $marksByExam[$exam['id']][$sid] ?? null;
-                if ($row) {
-                    $vals[] = (float)$row['marks_obtained'];
-                }
+            foreach ($sourceExamIds as $srcId) {
+                $row = $marksByExam[$srcId][$sid] ?? null;
+                if ($row) $vals[] = (float)$row['marks_obtained'];
             }
 
-            $avg       = count($vals) ? round(array_sum($vals) / count($vals), 1) : 0;
-            $avgGrade  = '-';
-            $avgPoints = 0;
+            $finalMark = 0;
+            if (!empty($vals)) {
+                $finalMark = round(array_sum($vals) / count($vals), 0);
+            }
 
-            if ($avg > 0 && $gradingSystem && !empty($gradingSystem['id'])) {
-                $g = $this->gradingService->getGradeFromSystem($avg, (int)$gradingSystem['id']);
+            $finalScore = 0; $finalRemark = ''; $finalGrade = '-';
+            if ($finalMark > 0 && $gradingSystem && !empty($gradingSystem['id'])) {
+                $g = $this->gradingService->getGradeFromSystem($finalMark, (int)$gradingSystem['id']);
                 if (is_array($g) && !empty($g['grade'])) {
-                    $avgGrade  = $g['grade'];
-                    $avgPoints = $g['points'] ?? 0;
+                    $finalGrade  = $g['grade'];
+                    $finalScore  = $g['score'] ?? 0;
+                    $finalRemark = $g['description'] ?? '';
                 }
             }
 
             $subjectAverages[$sid] = [
-                'mark'   => $avg,
-                'grade'  => $avgGrade,
-                'points' => $avgPoints,
+                'mark'     => $finalMark,
+                'grade'    => $finalGrade,
+                'score'    => $finalScore,
+                'remark'   => $finalRemark,
+                'initials' => $teacherInitials[$sid] ?? '',
             ];
         }
 
-        // ============================================================
-        // STEP 10: Sort subjects by name
-        // ============================================================
         usort($subjectsSeen, fn($a, $b) => strcmp($a['name'], $b['name']));
 
+        // ---- Total Score / Aggregate / Division from source ----
+        $totalScore     = 0;
+        $totalAggregate = 0;
+        foreach ($subjectAverages as $sa) {
+            $totalScore     += (float)$sa['mark'];
+            $totalAggregate += (float)$sa['score'];
+        }
+
+        $divisionCode = null;
+        try {
+            $divisionService = new DivisionService();
+            $division = $divisionService->getDivisionForAggregate($totalAggregate, $schoolId);
+            if ($division) {
+                $divisionCode = preg_replace('/^D/i', '', $division['code']);
+            }
+        } catch (\Exception $e) {}
+
         // ============================================================
-        // STEP 11: Return everything
+        // POSITION — with tie-breaking chain
+        //   1. Primary: chosen `position_ranking` (aggregate / total / average)
+        //   2. Secondary: total (higher is better)
+        //   3. Tertiary: average (higher is better)
+        // Only a FULL tie on all three shares the same position.
+        //
+        // IMPORTANT: For ranking we ALWAYS use all selected exams (not the
+        // per-student "best_set" / "worst_set") so every student is compared
+        // on the same set of data. Otherwise a student's rank changes
+        // depending on which exam THEY personally did best in.
         // ============================================================
+        $positionRanking = $options['position_ranking'] ?? 'aggregate';
+        $position = null; $classSize = 0;
+
+        // Ranking always uses every selected exam
+        $rankingExamIds = !empty($allExamIds) ? $allExamIds : $sourceExamIds;
+
+        if (!empty($rankingExamIds) && !empty($student['class_id'])) {
+            $classMates = $this->safeFetchAll(
+                "SELECT DISTINCT s.id FROM students s
+                INNER JOIN student_enrollments se ON s.id = se.student_id
+                WHERE se.status = 'active'
+                AND se.academic_year_id = :year_id
+                AND se.class_id = :class_id
+                AND s.school_id = :school_id",
+                [
+                    'year_id'   => $academicYearId,
+                    'class_id'  => $student['class_id'],
+                    'school_id' => $schoolId,
+                ]
+            );
+            $classSize = count($classMates);
+
+            if ($classSize > 0) {
+                $ids = array_column($classMates, 'id');
+                $ph  = implode(',', array_fill(0, count($rankingExamIds), '?'));
+
+                // Build ranking tuples per classmate
+                $rankings = [];   // [cid => ['aggregate' => X, 'total' => Y, 'average' => Z]]
+
+                foreach ($ids as $cid) {
+                    $cmMarks = $this->safeFetchAll(
+                        "SELECT m.marks_obtained
+                        FROM marks m
+                        WHERE m.student_id = ?
+                        AND m.academic_year_id = ?
+                        AND m.term_id = ?
+                        AND m.examination_id IN ({$ph})",
+                        array_merge([$cid, $academicYearId, $termId], $rankingExamIds)
+                    );
+
+                    $sumMarks  = 0;
+                    $countMark = 0;
+                    $sumScores = 0;
+
+                    foreach ($cmMarks as $m) {
+                        $sumMarks  += (float)$m['marks_obtained'];
+                        $countMark++;
+
+                        if ($gradingSystem && !empty($gradingSystem['id'])) {
+                            $g = $this->gradingService->getGradeFromSystem(
+                                (float)$m['marks_obtained'],
+                                (int)$gradingSystem['id']
+                            );
+                            $sumScores += (float)($g['score'] ?? 0);
+                        }
+                    }
+
+                    $avg = $countMark > 0 ? $sumMarks / $countMark : 0;
+
+                    $rankings[$cid] = [
+                        'aggregate' => $sumScores,
+                        'total'     => $sumMarks,
+                        'average'   => $avg,
+                    ];
+                }
+
+                // Sort with tie-breaking chain
+                uasort($rankings, function ($a, $b) use ($positionRanking) {
+                    switch ($positionRanking) {
+                        case 'total':
+                            $cmp = $b['total'] <=> $a['total'];
+                            break;
+                        case 'average':
+                            $cmp = $b['average'] <=> $a['average'];
+                            break;
+                        case 'aggregate':
+                        default:
+                            $cmp = $a['aggregate'] <=> $b['aggregate'];
+                            break;
+                    }
+                    if ($cmp !== 0) return $cmp;
+
+                    $cmp = $b['total'] <=> $a['total'];
+                    if ($cmp !== 0) return $cmp;
+
+                    $cmp = $b['average'] <=> $a['average'];
+                    if ($cmp !== 0) return $cmp;
+
+                    return 0;
+                });
+
+                // Assign competition ranking (only full ties share)
+                $sortedIds = array_keys($rankings);
+                $prevVals  = null;
+                $rank      = 1;
+
+                foreach ($sortedIds as $index => $cid) {
+                    $vals = $rankings[$cid];
+
+                    if ($prevVals === null) {
+                        $currentRank = 1;
+                    } else {
+                        $sameAggregate = ((float)$vals['aggregate'] === (float)$prevVals['aggregate']);
+                        $sameTotal     = ((float)$vals['total']     === (float)$prevVals['total']);
+                        $sameAverage   = ((float)$vals['average']   === (float)$prevVals['average']);
+
+                        if ($sameAggregate && $sameTotal && $sameAverage) {
+                            $currentRank = $rank;
+                        } else {
+                            $currentRank = $index + 1;
+                        }
+                    }
+
+                    $rank = $currentRank;
+
+                    if ((int)$cid === $studentId) {
+                        $position = $currentRank;
+                        break;
+                    }
+
+                    $prevVals = $vals;
+                }
+            }
+        }
+
+        // ---- Class teacher comment ----
+        $ctRemark = '';
+        $ctCommentMode = $options['ct_comment'] ?? 'auto';
+        if ($ctCommentMode !== 'no' && !empty($subjectAverages)) {
+            $avgOfFinal = 0;
+            foreach ($subjectAverages as $sa) $avgOfFinal += (float)$sa['mark'];
+            $avgOfFinal = count($subjectAverages) > 0 ? $avgOfFinal / count($subjectAverages) : 0;
+            $ctRemark = $this->remarkFromAverage($avgOfFinal, 'average');
+        }
+
+        $nextTerm = $this->safeFetch(
+            "SELECT name, start_date, end_date FROM terms
+            WHERE school_id = :s AND start_date > CURDATE()
+            ORDER BY start_date ASC LIMIT 1",
+            ['s' => $schoolId]
+        );
+
         return [
-            'student'          => $student,
-            'exams'            => $exams,
-            'subjects'         => $subjectsSeen,
-            'marks_by_exam'    => $marksByExam,
-            'exam_totals'      => $examTotals,
-            'subject_averages' => $subjectAverages,   // ← NOW DEFINED
-            'grading_system'   => $gradingSystem,
-            'options'          => $options,
+            'student'            => $student,
+            'exams'              => $exams,
+            'subjects'           => $subjectsSeen,
+            'marks_by_exam'      => $marksByExam,
+            'exam_totals'        => $examTotals,
+            'subject_averages'   => $subjectAverages,
+            'grading_system'     => $gradingSystem,
+            'options'            => $options,
+            'total_score'        => $totalScore,
+            'total_aggregate'    => $totalAggregate,
+            'division_code'      => $divisionCode,
+            'position'           => $position,
+            'class_size'         => $classSize,
+            'ct_remark'          => $ctRemark,
+            'next_term'          => $nextTerm,
+            'final_grade_method' => $finalGradeMethod,
+            'final_source_label' => $sourceLabel,
+            'source_exam_ids'    => $sourceExamIds,
+            'position_ranking'   => $positionRanking,
         ];
+    }
+
+    /**
+     * Comment derived from mark + method.
+     */
+    private function remarkFromAverage(float $average, string $method = 'average'): string
+    {
+        if ($method === 'best') {
+            if ($average >= 80) return 'Outstanding performance. Keep shining!';
+            if ($average >= 70) return 'Excellent work. Very promising.';
+            if ($average >= 60) return 'Good performance. Well done.';
+            if ($average >= 50) return 'Satisfactory. Aim higher.';
+            return 'Has potential. Needs more effort.';
+        }
+
+        if ($method === 'worst') {
+            if ($average >= 70) return 'Committed effort. Keep it up.';
+            if ($average >= 60) return 'Consistent worker. More focus needed.';
+            if ($average >= 50) return 'Room to grow. Apply yourself.';
+            return 'Needs serious attention and support.';
+        }
+
+        // average
+        if ($average >= 80) return 'Excellent performance. Keep it up!';
+        if ($average >= 70) return 'Very good work. Aim higher.';
+        if ($average >= 60) return 'Good effort. Put in more work.';
+        if ($average >= 50) return 'Fair performance. Improve.';
+        if ($average >= 40) return 'Below average. Needs attention.';
+        return 'Needs serious improvement.';
+    }
+
+    /**
+     * Remark derived from aggregate score.
+     */
+    private function remarkFromAggregate(float $aggregate, int $schoolId): string
+    {
+        try {
+            $service = new DivisionService();
+            $div = $service->getDivisionForAggregate($aggregate, $schoolId);
+            if ($div) {
+                $code = strtoupper($div['code']);
+                $map = [
+                    'D1' => 'Excellent performance. Keep it up!',
+                    'D2' => 'Very good work. Aim higher.',
+                    'D3' => 'Good effort. Put in more work.',
+                    'D4' => 'Fair performance. Improve.',
+                    'D0' => 'Needs serious improvement.',
+                ];
+                return $map[$code] ?? 'Keep working hard.';
+            }
+        } catch (\Exception $e) {}
+        return 'Keep working hard.';
     }
 }

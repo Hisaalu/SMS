@@ -74,6 +74,7 @@ class ResultCalculationService
         if (!$config) {
             // Default configuration
             $config = [
+                'school_id' => $schoolId,
                 'calculation_type' => 'average',
                 'best_subjects_count' => 0,
                 'use_grade_points' => false,
@@ -155,17 +156,15 @@ class ResultCalculationService
         return $studentMarks;
     }
     
-    /**
-     * Calculate result for a single student
-     */
     private function calculateStudentResult(array $student, array $marks, array $subjects): array
     {
-        $subjectResults = [];
-        $totalMarks = 0;
-        $subjectCount = 0;
-        $passedSubjects = 0;
-        $failedSubjects = 0;
-        
+        $subjectResults  = [];
+        $totalMarks      = 0;
+        $totalScore      = 0;   // Aggregate of scores
+        $subjectCount    = 0;
+        $passedSubjects  = 0;
+        $failedSubjects  = 0;
+
         foreach ($subjects as $subject) {
             $mark = null;
             foreach ($marks as $m) {
@@ -174,59 +173,69 @@ class ResultCalculationService
                     break;
                 }
             }
-            
+
             $subjectResult = [
-                'subject_id' => $subject['subject_id'],
-                'subject_name' => $subject['subject_name'],
-                'max_marks' => $subject['max_marks'],
+                'subject_id'     => $subject['subject_id'],
+                'subject_name'   => $subject['subject_name'],
+                'max_marks'      => $subject['max_marks'],
                 'marks_obtained' => $mark ? $mark['marks_obtained'] : null,
-                'grade' => null,
-                'grade_points' => null,
-                'pass' => null,
-                'remarks' => $mark ? $mark['remarks'] : null
+                'grade'          => null,
+                'score'          => null,   // renamed from grade_points
+                'pass'           => null,
+                'remarks'        => $mark ? $mark['remarks'] : null
             ];
-            
+
             if ($mark !== null) {
                 $grade = $this->gradingService->getGrade($mark['marks_obtained']);
                 if ($grade) {
                     $subjectResult['grade'] = $grade['grade'];
-                    $subjectResult['grade_points'] = $grade['points'];
-                    $subjectResult['pass'] = $grade['pass'];
-                    
+                    $subjectResult['score'] = $grade['score'];   // renamed
+                    $subjectResult['pass']  = $grade['pass'];
+
                     if ($grade['pass']) {
                         $passedSubjects++;
                     } else {
                         $failedSubjects++;
                     }
+                    $totalScore += (float)$grade['score'];
                 }
-                
+
                 $totalMarks += $mark['marks_obtained'];
                 $subjectCount++;
             }
-            
+
             $subjectResults[] = $subjectResult;
         }
-        
+
         $average = $subjectCount > 0 ? round($totalMarks / $subjectCount, 2) : 0;
-        
-        // Determine overall pass/fail
-        $overallPass = $failedSubjects === 0 && $subjectCount > 0;
-        
-        // Get overall grade
+
+        $overallPass  = $failedSubjects === 0 && $subjectCount > 0;
         $overallGrade = $this->gradingService->getGrade($average);
-        
+
+        // Look up division
+        $divisionService = new \NexaT\Services\DivisionService();
+        $division = $divisionService->getDivisionForAggregate($totalScore, $this->getSchoolId());
+
         return [
-            'student' => $student,
-            'subjects' => $subjectResults,
-            'total_marks' => $totalMarks,
-            'average' => $average,
+            'student'         => $student,
+            'subjects'        => $subjectResults,
+            'total_marks'     => $totalMarks,
+            'total_score'     => $totalScore,
+            'average'         => $average,
             'subjects_passed' => $passedSubjects,
             'subjects_failed' => $failedSubjects,
-            'overall_pass' => $overallPass,
-            'overall_grade' => $overallGrade ? $overallGrade['grade'] : null,
-            'grade_points' => $overallGrade ? $overallGrade['points'] : null,
-            'position' => null
+            'overall_pass'    => $overallPass,
+            'overall_grade'   => $overallGrade ? $overallGrade['grade'] : null,
+            'score'           => $overallGrade ? $overallGrade['score'] : null,   // renamed
+            'division'        => $division,
+            'position'        => null
         ];
+    }
+
+    private function getSchoolId(): int
+    {
+        if (!$this->config) return 1;
+        return (int)($this->config['school_id'] ?? 1);
     }
     
     /**
@@ -248,7 +257,7 @@ class ResultCalculationService
             'total_marks' => $result['total_marks'],
             'average_marks' => $result['average'],
             'grade' => $result['overall_grade'],
-            'grade_points' => $result['grade_points'],
+            'score'              => $result['score'],
             'result_status' => $result['overall_pass'] ? 'passed' : 'failed',
             'calculated_at' => date('Y-m-d H:i:s')
         ];

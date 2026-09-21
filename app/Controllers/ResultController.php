@@ -243,13 +243,18 @@ class ResultController extends Controller
         $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
         $termId         = (int)($_GET['term_id'] ?? 0);
         $subjectId      = $_GET['subject_id'] ?? 'all';
-        
+
         $schoolId = $this->auth->getUser()->school_id ?? 1;
 
         $examination   = null;
         $results       = [];
         $students      = [];
-        $resultsMatrix = [];
+        $resultsMatrix = [];        // [student_id][subject_id] => raw mark
+        $scoreMatrix   = [];        // [student_id][subject_id] => score (from grading_rules)
+        $studentTotals = [];        // [student_id] => ['total'=>..., 'avg'=>..., 'ta'=>..., 'div'=>...]
+        $subjects      = [];
+        $divisions     = [];
+        $gradingSystem = null;
 
         // Fetch dropdown filter options
         $academicYears = $this->db->fetchAll("SELECT * FROM academic_years WHERE school_id = :school_id ORDER BY id DESC", ['school_id' => $schoolId]);
@@ -257,7 +262,7 @@ class ResultController extends Controller
         $classes       = $this->db->fetchAll("SELECT * FROM classes WHERE school_id = :school_id ORDER BY name ASC", ['school_id' => $schoolId]);
         $streams       = $this->db->fetchAll("SELECT * FROM streams WHERE school_id = :school_id ORDER BY name ASC", ['school_id' => $schoolId]);
         $examinations  = $this->db->fetchAll("SELECT * FROM examinations WHERE school_id = :school_id ORDER BY name ASC", ['school_id' => $schoolId]);
-        $subjects      = $this->db->fetchAll("SELECT * FROM subjects WHERE school_id = :school_id AND status = 'active' ORDER BY code ASC, name ASC", ['school_id' => $schoolId]);
+        $allSubjects   = $this->db->fetchAll("SELECT * FROM subjects WHERE school_id = :school_id AND status = 'active' ORDER BY code ASC, name ASC", ['school_id' => $schoolId]);
 
         if ($examinationId > 0 && $classId > 0) {
             $examination = $this->db->fetch(
@@ -266,12 +271,35 @@ class ResultController extends Controller
             );
 
             if ($examination) {
-                // Build Dynamic Enrollment Query (Handles Class & Optional Stream)
-                $enrollmentWhere = "se.academic_year_id = :academic_year_id 
-                                    AND se.class_id = :class_id 
-                                    AND se.status = 'active' 
+                // ---- Load grading system for this class ----
+                $gradingService = new \NexaT\Services\GradingService();
+                $gradingSystem = $gradingService->getSystemForClass($classId, $schoolId, $academicYearId ?: null);
+
+                // ---- Load divisions ----
+                $divisionService = new \NexaT\Services\DivisionService();
+                $divisions = $divisionService->getAll($schoolId, true);
+
+                // ---- Restrict subject list for this examination (if configured) ----
+                $examSubjects = $this->db->fetchAll(
+                    "SELECT s.id, s.name, s.code FROM examination_subjects es
+                    INNER JOIN subjects s ON es.subject_id = s.id
+                    WHERE es.examination_id = :exam_id
+                    ORDER BY s.code ASC, s.name ASC",
+                    ['exam_id' => $examinationId]
+                );
+                $subjects = !empty($examSubjects) ? $examSubjects : $allSubjects;
+
+                // If a single subject is selected, narrow down
+                if ($subjectId !== 'all' && (int)$subjectId > 0) {
+                    $filtered = array_values(array_filter($subjects, fn($s) => $s['id'] == (int)$subjectId));
+                    if (!empty($filtered)) $subjects = $filtered;
+                }
+
+                // ---- Fetch enrolled students ----
+                $enrollmentWhere  = "se.academic_year_id = :academic_year_id
+                                    AND se.class_id = :class_id
+                                    AND se.status = 'active'
                                     AND s.school_id = :school_id";
-                
                 $enrollmentParams = [
                     'academic_year_id' => $academicYearId,
                     'class_id'         => $classId,
@@ -283,7 +311,6 @@ class ResultController extends Controller
                     $enrollmentParams['stream_id'] = $streamId;
                 }
 
-                // 1. Fetch Students enrolled in this Class (and Stream if selected)
                 $students = $this->db->fetchAll(
                     "SELECT s.id, s.admission_number, s.first_name, s.last_name, s.gender
                     FROM students s
@@ -297,8 +324,78 @@ class ResultController extends Controller
                     $studentIds   = array_column($students, 'id');
                     $placeholders = implode(',', array_fill(0, count($studentIds), '?'));
 
+                    // ---- Fetch marks ----
+                    $rawMarks = $this->db->fetchAll(
+                        "SELECT m.student_id, m.subject_id, m.marks_obtained
+                        FROM marks m
+                        WHERE m.academic_year_id = ?
+                        AND m.term_id = ?
+                        AND m.examination_id = ?
+                        AND m.student_id IN ({$placeholders})
+                        AND m.school_id = ?",
+                        array_merge([$academicYearId, $termId, $examinationId], $studentIds, [$schoolId])
+                    );
+
+                    foreach ($rawMarks as $row) {
+                        $resultsMatrix[$row['student_id']][$row['subject_id']] = $row['marks_obtained'];
+                    }
+
+                    // ---- Build score matrix by looking up grading_rules for each mark ----
+                    $rules = $gradingSystem['rules'] ?? [];
+                    foreach ($resultsMatrix as $sid => $subjectMarks) {
+                        foreach ($subjectMarks as $subjId => $mark) {
+                            $scoreMatrix[$sid][$subjId] = $this->resolveScore($mark, $rules);
+                        }
+                    }
+
+                    // ---- Compute aggregates & divisions per student ----
+                    foreach ($students as $s) {
+                        $sid = $s['id'];
+                        $total = 0;
+                        $ta    = 0;
+                        $count = 0;
+
+                        foreach ($subjects as $subj) {
+                            $raw = $resultsMatrix[$sid][$subj['id']] ?? null;
+                            if ($raw !== null) {
+                                $total += (float)$raw;
+                                $ta    += (float)($scoreMatrix[$sid][$subj['id']] ?? 0);
+                                $count++;
+                            }
+                        }
+
+                        $avg = $count > 0 ? round($total / $count, 2) : 0;
+                        $div = $this->resolveDivision($ta, $divisions);
+
+                        $studentTotals[$sid] = [
+                            'total'   => $total,
+                            'avg'     => $avg,
+                            'ta'      => $ta,
+                            'div'     => $div,   // array or null
+                            'count'   => $count,
+                        ];
+                    }
+
+                    // ---- Sort students by T.A ascending (best first) ----
+                    usort($students, function($a, $b) use ($studentTotals) {
+                        $taA = $studentTotals[$a['id']]['ta'] ?? PHP_INT_MAX;
+                        $taB = $studentTotals[$b['id']]['ta'] ?? PHP_INT_MAX;
+                        if ($taA == $taB) {
+                            // Tie-breaker: higher total marks wins
+                            return ($studentTotals[$b['id']]['total'] ?? 0) <=> ($studentTotals[$a['id']]['total'] ?? 0);
+                        }
+                        return $taA <=> $taB;
+                    });
+
+                    // ---- Assign rank / position ----
+                    $rank = 1;
+                    foreach ($students as &$s) {
+                        $studentTotals[$s['id']]['position'] = $rank++;
+                    }
+                    unset($s);
+
+                    // If single subject was selected, keep the flat results array for backward-compat
                     if ($subjectId !== 'all' && (int)$subjectId > 0) {
-                        // 2A. Single Subject View
                         $results = $this->db->fetchAll(
                             "SELECT m.*, s.admission_number, s.first_name, s.last_name, s.gender, sub.name as subject_name
                             FROM marks m
@@ -306,45 +403,62 @@ class ResultController extends Controller
                             INNER JOIN subjects sub ON m.subject_id = sub.id
                             WHERE m.academic_year_id = ?
                             AND m.term_id = ?
+                            AND m.examination_id = ?
                             AND m.subject_id = ?
                             AND m.student_id IN ({$placeholders})
                             AND m.school_id = ?
-                            ORDER BY s.last_name ASC, s.first_name ASC",
-                            array_merge([$academicYearId, $termId, (int)$subjectId], $studentIds, [$schoolId])
+                            ORDER BY s.last_name ASC",
+                            array_merge([$academicYearId, $termId, $examinationId, (int)$subjectId], $studentIds, [$schoolId])
                         );
-                    } else {
-                        // 2B. All Subjects Grid Matrix View
-                        $rawMarks = $this->db->fetchAll(
-                            "SELECT m.student_id, m.subject_id, m.marks_obtained
-                            FROM marks m
-                            WHERE m.academic_year_id = ?
-                            AND m.term_id = ?
-                            AND m.student_id IN ({$placeholders})
-                            AND m.school_id = ?",
-                            array_merge([$academicYearId, $termId], $studentIds, [$schoolId])
-                        );
-
-                        foreach ($rawMarks as $row) {
-                            $resultsMatrix[$row['student_id']][$row['subject_id']] = $row['marks_obtained'];
-                        }
                     }
                 }
             }
         }
 
         echo $this->view->renderWithLayout('examinations/results/selector', 'default', [
-            'title'         => 'Class Results',
-            'academicYears' => $academicYears,
-            'terms'         => $terms,
-            'classes'       => $classes,
-            'streams'       => $streams,
-            'examinations'  => $examinations,
-            'subjects'      => $subjects,
-            'examination'   => $examination,
-            'students'      => $students,
-            'results'       => $results,
-            'resultsMatrix' => $resultsMatrix
+            'title'          => 'Class Results',
+            'academicYears'  => $academicYears,
+            'terms'          => $terms,
+            'classes'        => $classes,
+            'streams'        => $streams,
+            'examinations'   => $examinations,
+            'subjects'       => $subjects,
+            'examination'    => $examination,
+            'students'       => $students,
+            'results'        => $results,
+            'resultsMatrix'  => $resultsMatrix,
+            'scoreMatrix'    => $scoreMatrix,
+            'studentTotals'  => $studentTotals,
+            'divisions'      => $divisions,
+            'gradingSystem'  => $gradingSystem,
         ]);
+    }
+
+    /**
+     * Resolve score for a given mark using grading rules.
+     * Returns the `score` field from the matching rule, or 0 if none.
+     */
+    private function resolveScore(float $mark, array $rules): float
+    {
+        foreach ($rules as $rule) {
+            if ($mark >= (float)$rule['min_mark'] && $mark <= (float)$rule['max_mark']) {
+                return (float)($rule['score'] ?? 0);
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Find division from divisions array for a given aggregate.
+     */
+    private function resolveDivision(float $aggregate, array $divisions): ?array
+    {
+        foreach ($divisions as $d) {
+            if ($aggregate >= (int)$d['min_aggregate'] && $aggregate <= (int)$d['max_aggregate']) {
+                return $d;
+            }
+        }
+        return null;
     }
 
     public function getStreamsByClass($params = []): void

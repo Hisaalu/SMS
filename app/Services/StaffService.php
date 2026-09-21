@@ -98,7 +98,7 @@ class StaffService
     {
         $data['school_id'] = $schoolId;
         
-        // Check if username is provided and unique across both staff AND users
+        // Check username uniqueness — but skip if this is the user we just created
         if (!empty($data['username'])) {
             // Check in staff table
             $existingStaff = $this->db->fetch(
@@ -109,12 +109,14 @@ class StaffService
                 throw new \Exception("Username '{$data['username']}' is already taken by another staff member.");
             }
             
-            // Check in users table (system users)
+            // Check in users table — allow if it matches the user_id we just created
             $existingUser = $this->db->fetch(
                 "SELECT id FROM users WHERE username = :username",
                 ['username' => $data['username']]
             );
-            if ($existingUser) {
+            
+            $linkedUserId = $data['user_id'] ?? null;
+            if ($existingUser && (empty($linkedUserId) || (int)$existingUser['id'] !== (int)$linkedUserId)) {
                 throw new \Exception("Username '{$data['username']}' is already taken by a system user.");
             }
         }
@@ -123,35 +125,36 @@ class StaffService
                     school_id, staff_number, username, first_name, middle_name, last_name, 
                     gender, date_of_birth, marital_status, phone, alt_phone, email, address, 
                     photo_path, staff_category_id, staff_status_id, department_id, position, 
-                    employment_date, employment_type
+                    employment_date, employment_type, user_id
                 ) VALUES (
                     :school_id, :staff_number, :username, :first_name, :middle_name, :last_name, 
                     :gender, :dob, :marital_status, :phone, :alt_phone, :email, :address, 
                     :photo_path, :category_id, :status_id, :department_id, :position, 
-                    :emp_date, :emp_type
+                    :emp_date, :emp_type, :user_id
                 )";
         
         $params = [
-            'school_id' => (int)$data['school_id'],
-            'staff_number' => $data['staff_number'],
-            'username' => $data['username'] ?? null,
-            'first_name' => $data['first_name'],
-            'middle_name' => !empty($data['middle_name']) ? $data['middle_name'] : null,
-            'last_name' => $data['last_name'],
-            'gender' => $data['gender'] ?? 'male',
-            'dob' => !empty($data['dob']) ? $data['dob'] : null,
+            'school_id'      => (int)$data['school_id'],
+            'staff_number'   => $data['staff_number'],
+            'username'       => $data['username'] ?? null,
+            'first_name'     => $data['first_name'],
+            'middle_name'    => !empty($data['middle_name']) ? $data['middle_name'] : null,
+            'last_name'      => $data['last_name'],
+            'gender'         => $data['gender'] ?? 'male',
+            'dob'            => !empty($data['dob']) ? $data['dob'] : null,
             'marital_status' => $data['marital_status'] ?? 'single',
-            'phone' => !empty($data['phone']) ? $data['phone'] : null,
-            'alt_phone' => !empty($data['alt_phone']) ? $data['alt_phone'] : null,
-            'email' => !empty($data['email']) ? $data['email'] : null,
-            'address' => !empty($data['address']) ? $data['address'] : null,
-            'photo_path' => !empty($data['photo_path']) ? $data['photo_path'] : null,
-            'category_id' => (int)$data['category_id'],
-            'status_id' => (int)$data['status_id'],
-            'department_id' => !empty($data['department_id']) ? (int)$data['department_id'] : null,
-            'position' => !empty($data['position']) ? $data['position'] : null,
-            'emp_date' => !empty($data['emp_date']) ? $data['emp_date'] : null,
-            'emp_type' => $data['emp_type'] ?? 'full_time'
+            'phone'          => !empty($data['phone']) ? $data['phone'] : null,
+            'alt_phone'      => !empty($data['alt_phone']) ? $data['alt_phone'] : null,
+            'email'          => !empty($data['email']) ? $data['email'] : null,
+            'address'        => !empty($data['address']) ? $data['address'] : null,
+            'photo_path'     => !empty($data['photo_path']) ? $data['photo_path'] : null,
+            'category_id'    => (int)$data['category_id'],
+            'status_id'      => (int)$data['status_id'],
+            'department_id'  => !empty($data['department_id']) ? (int)$data['department_id'] : null,
+            'position'       => !empty($data['position']) ? $data['position'] : null,
+            'emp_date'       => !empty($data['emp_date']) ? $data['emp_date'] : null,
+            'emp_type'       => $data['emp_type'] ?? 'full_time',
+            'user_id'        => !empty($data['user_id']) ? (int)$data['user_id'] : null,
         ];
         
         $this->db->execute($sql, $params);
@@ -162,7 +165,7 @@ class StaffService
                 "INSERT INTO staff_status_history (staff_id, old_status_id, new_status_id, effective_date, reason, changed_by)
                 VALUES (:staff_id, NULL, :new_status, CURDATE(), 'Initial Employment Registration', :changed_by)",
                 [
-                    'staff_id' => $staffId,
+                    'staff_id'   => $staffId,
                     'new_status' => (int)$data['status_id'],
                     'changed_by' => $userId
                 ]
@@ -464,5 +467,137 @@ public function updateCategory(int $id, array $data, int $schoolId): bool
                 'status' => $data['status'] ?? 'active'
             ]
         );
+    }
+    
+    public function getLinkedUser(int $staffId, int $schoolId): ?array
+    {
+        return $this->db->fetch(
+            "SELECT u.id, u.username, u.email, u.first_name, u.last_name, u.status,
+                    (SELECT GROUP_CONCAT(r.name SEPARATOR ', ') 
+                    FROM user_roles ur 
+                    JOIN roles r ON ur.role_id = r.id 
+                    WHERE ur.user_id = u.id) AS role_names
+            FROM users u
+            INNER JOIN staff st ON st.user_id = u.id
+            WHERE st.id = :staff_id AND st.school_id = :school_id
+            LIMIT 1",
+            ['staff_id' => $staffId, 'school_id' => $schoolId]
+        ) ?: null;
+    }
+
+    public function getTeacherAssignments(int $staffId, int $schoolId): array
+    {
+        return $this->db->fetchAll(
+            "SELECT ta.*, 
+                    c.name AS class_name, 
+                    s.name AS subject_name,
+                    st.name AS stream_name,
+                    tat.name AS assignment_type_name
+            FROM teacher_assignments ta
+            LEFT JOIN classes c ON ta.class_id = c.id
+            LEFT JOIN subjects s ON ta.subject_id = s.id
+            LEFT JOIN streams st ON ta.stream_id = st.id
+            LEFT JOIN teacher_assignment_types tat ON ta.assignment_type_id = tat.id
+            WHERE ta.staff_id = :staff_id AND ta.school_id = :school_id
+            ORDER BY c.name, s.name",
+            ['staff_id' => $staffId, 'school_id' => $schoolId]
+        );
+    }
+
+    /**
+     * Create a user account and link it to a staff member.
+     */
+    public function createUserForStaff(
+        int $staffId,
+        array $userData,
+        int $roleId,
+        int $schoolId
+    ): int {
+        // Validate
+        if (empty($userData['username']) || empty($userData['email']) || empty($userData['password'])) {
+            throw new \Exception('Username, email, and password are required.');
+        }
+        if (!$this->checkUsernameAvailability($userData['username'], $schoolId)) {
+            throw new \Exception("Username '{$userData['username']}' is already taken.");
+        }
+
+        // Create user
+        $userId = $this->db->insert('users', [
+            'school_id'  => $schoolId,
+            'username'   => $userData['username'],
+            'email'      => $userData['email'],
+            'password'   => password_hash($userData['password'], PASSWORD_BCRYPT),
+            'first_name' => $userData['first_name'] ?? '',
+            'last_name'  => $userData['last_name']  ?? '',
+            'status'     => 'active',
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        if (!$userId) {
+            throw new \Exception('Failed to create user account.');
+        }
+
+        // Assign role
+        if ($roleId) {
+            $this->db->insert('user_roles', [
+                'user_id'    => $userId,
+                'role_id'    => $roleId,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        // Link to staff
+        $this->db->update('staff', ['user_id' => $userId], ['id' => $staffId]);
+
+        return $userId;
+    }
+
+    /**
+     * Update the linked user account.
+     */
+    public function updateLinkedUser(
+        int $staffId,
+        array $userData,
+        ?int $roleId,
+        int $schoolId
+    ): void {
+        $user = $this->getLinkedUser($staffId, $schoolId);
+        if (!$user) {
+            throw new \Exception('No linked user account found.');
+        }
+
+        $update = [
+            'email'      => $userData['email']      ?? $user['email'],
+            'first_name' => $userData['first_name'] ?? $user['first_name'],
+            'last_name'  => $userData['last_name']  ?? $user['last_name'],
+            'updated_at' => date('Y-m-d H:i:s'),
+        ];
+
+        if (!empty($userData['password'])) {
+            $update['password'] = password_hash($userData['password'], PASSWORD_BCRYPT);
+        }
+
+        $this->db->update('users', $update, ['id' => $user['id']]);
+
+        // Update role if provided
+        if ($roleId) {
+            $this->db->execute("DELETE FROM user_roles WHERE user_id = :uid", ['uid' => $user['id']]);
+            $this->db->insert('user_roles', [
+                'user_id'    => $user['id'],
+                'role_id'    => $roleId,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+    }
+
+    /**
+     * Unlink the user account from staff.
+     */
+    public function unlinkUser(int $staffId, int $schoolId): void
+    {
+        $this->db->update('staff', ['user_id' => null], [
+            'id' => $staffId, 'school_id' => $schoolId
+        ]);
     }
 }

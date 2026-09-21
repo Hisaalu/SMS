@@ -4,7 +4,6 @@
     $customFavicon   = $settingsService->get('branding.favicon', '');
     $customLogo      = $settingsService->get('branding.logo', '');
 
-    // Helper to locate absolute file path on disk regardless of public folder setup
     $resolveDiskPath = function(?string $relativePath): ?string {
         if (empty($relativePath)) return null;
         $relativePath = ltrim($relativePath, '/');
@@ -22,7 +21,6 @@
         return null;
     };
 
-    // Helper to build web-accessible URL
     $resolveUrl = function(string $relativePath): string {
         $cleanPath = ltrim($relativePath, '/');
         if (file_exists(ROOT_PATH . '/public/' . $cleanPath) && !str_contains(BASE_URL, '/public')) {
@@ -165,12 +163,24 @@
             min-height: calc(100vh - 58px);
         }
 
-        /* Modern Box Shadow Utility */
+        /* Subtle Modern Box Shadow Utility */
         .card, .card-shadow { 
             background: var(--surface-color); 
-            border: 1px solid rgba(0, 0, 0, 0.05) !important; 
-            border-radius: 0.75rem; 
-            box-shadow: 0 2px 16px rgba(0,0,0,0.05); 
+            border: 1px solid rgba(0, 0, 0, 0.08) !important; 
+            border-radius: 0.5rem; 
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); 
+        }
+
+        /* Subtle Form Inputs */
+        .form-control, .form-select {
+            box-shadow: none !important;
+            border-color: #dee2e6;
+            font-size: 0.85rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.15rem rgba(29, 155, 240, 0.15) !important;
         }
 
         /* Mobile Offcanvas */

@@ -225,3 +225,8 @@ $router->get('/reports/academic/class-analysis', ['AcademicReportController', 'c
 
 $router->get('/reports/academic/batch-report-cards', ['AcademicReportController', 'batchReportCards']);
 $router->get('/reports/academic/batch-report-cards/view', ['AcademicReportController', 'generateBatchReportCards']);
+// Divisions (Grading)
+$router->get('/grading/divisions', ['DivisionController', 'index']);
+$router->post('/grading/divisions', ['DivisionController', 'store']);
+$router->post('/grading/divisions/{id}', ['DivisionController', 'update']);
+$router->delete('/grading/divisions/{id}', ['DivisionController', 'delete']);

@@ -39,11 +39,13 @@ class AcademicReportController extends Controller
         $reportFilters = $this->reportService->getReportFilters($schoolId);
         $stats = $this->reportService->getDashboardStats($schoolId, $filters);
 
-        echo $this->view->renderWithLayout('reports/academic/dashboard', 'default', [
-            'title' => 'Academic Reports Dashboard',
-            'filters' => $reportFilters,
-            'stats' => $stats,
-            'selectedFilters' => $filters,
+        echo $this->view->render('reports/academic/report_card_view', [
+            'data'             => $data,
+            'academicYearId'   => $academicYearId,
+            'termId'           => $termId,
+            'academicYearName' => $academicYear['name'] ?? '',
+            'termName'         => $term['name'] ?? '',
+            'options'          => $options,
         ]);
     }
 
@@ -116,28 +118,34 @@ class AcademicReportController extends Controller
             $examinationIds = array_map('intval', $examSelection);
         }
 
-        // Report options
         $options = [
-            'report_name'      => $_GET['report_name']      ?? 'End of Term Report',
-            'report_color'     => $_GET['report_color']     ?? 'bw',
-            'report_format'    => $_GET['report_format']    ?? 'progression',
-            'show_positions'   => ($_GET['show_positions']  ?? 'no') === 'yes',
-            'show_photo'       => ($_GET['show_photo']      ?? 'no') === 'yes',
-            'show_division'    => ($_GET['show_division']   ?? 'no') === 'yes',
-            'show_grades'      => ($_GET['show_grades']     ?? 'no') === 'yes',
-            'grades_per_exam'  => ($_GET['grades_per_exam'] ?? 'no') === 'yes',
-            'grade_format'     => $_GET['grade_format']     ?? 'default',
-            'opt_comments'     => ($_GET['opt_comments']    ?? 'no') === 'yes',
-            'show_skills'      => ($_GET['show_skills']     ?? 'no') === 'yes',
-            'hm_comment'       => $_GET['hm_comment']       ?? 'no',
-            'ct_comment'       => $_GET['ct_comment']       ?? 'no',
-            'show_names'       => ($_GET['show_names']      ?? 'no') === 'yes',
-            'auto_signatures'  => ($_GET['auto_signatures'] ?? 'no') === 'yes',
-            'show_fees'        => ($_GET['show_fees']       ?? 'no') === 'yes',
-            'show_next_term'   => ($_GET['show_next_term']  ?? 'no') === 'yes',
-            'show_remarks'     => ($_GET['show_remarks']    ?? 'no') === 'yes',
-            'show_performance' => ($_GET['show_performance']?? 'no') === 'yes',
-            'mark_sheet'       => $_GET['mark_sheet']       ?? null,
+            'report_name'        => $_GET['report_name']        ?? 'End of Term Report',
+            'report_color'       => $_GET['report_color']       ?? 'bw',
+            'report_format'      => $_GET['report_format']      ?? 'progression',
+
+            // Defaults must match _report_config.php
+            'show_positions'     => ($_GET['show_positions']    ?? 'no')  === 'yes',
+            'show_photo'         => ($_GET['show_photo']        ?? 'yes') === 'yes',
+            'show_division'      => ($_GET['show_division']     ?? 'no')  === 'yes',
+            'show_grades'        => ($_GET['show_grades']       ?? 'yes') === 'yes',
+            'grades_per_exam'    => ($_GET['grades_per_exam']   ?? 'yes') === 'yes',
+            'show_initials'      => ($_GET['show_initials']     ?? 'yes') === 'yes',
+
+            'grade_format'       => $_GET['grade_format']       ?? 'default',
+            'opt_comments'       => ($_GET['opt_comments']      ?? 'yes') === 'yes',
+            'show_skills'        => ($_GET['show_skills']       ?? 'no')  === 'yes',
+            'hm_comment'         => $_GET['hm_comment']         ?? 'auto',
+            'ct_comment'         => $_GET['ct_comment']         ?? 'auto',
+            'show_names'         => ($_GET['show_names']        ?? 'no')  === 'yes',
+            'auto_signatures'    => ($_GET['auto_signatures']   ?? 'no')  === 'yes',
+            'show_fees'          => ($_GET['show_fees']         ?? 'no')  === 'yes',
+            'show_next_term'     => ($_GET['show_next_term']    ?? 'no')  === 'yes',
+            'show_remarks'       => ($_GET['show_remarks']      ?? 'no')  === 'yes',
+            'show_performance'   => ($_GET['show_performance']  ?? 'no')  === 'yes',
+            'mark_sheet'         => $_GET['mark_sheet']         ?? null,
+
+            'final_grade_method' => $_GET['final_grade_method'] ?? 'average',
+            'position_ranking'   => $_GET['position_ranking']   ?? 'aggregate',
         ];
 
         $data = $this->reportService->getMultiExamReportCard(
@@ -315,6 +323,9 @@ class AcademicReportController extends Controller
             'show_next_term'   => ($_GET['show_next_term']  ?? 'no') === 'yes',
             'show_remarks'     => ($_GET['show_remarks']    ?? 'no') === 'yes',
             'show_performance' => ($_GET['show_performance']?? 'no') === 'yes',
+            'final_grade_method' => $_GET['final_grade_method'] ?? 'average',
+            'position_ranking'   => $_GET['position_ranking']   ?? 'aggregate',
+            'show_initials'      => ($_GET['show_initials'] ?? 'yes') === 'yes',
         ];
 
         // ----------------------------------------------

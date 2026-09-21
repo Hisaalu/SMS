@@ -48,6 +48,9 @@ class Auth
     
     public function login($user): void
     {
+        $_SESSION['school_id'] = $user->school_id; 
+        $_SESSION['user_id']   = $user->id;
+        $_SESSION['username']  = $user->username;
         $this->session->regenerate();
         $this->session->set(SESSION_USER_KEY, $user->id);
         

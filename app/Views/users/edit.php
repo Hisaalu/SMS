@@ -11,9 +11,16 @@
         </a>
     </div>
 
-    <?php if ($flash = $this->getFlash('error')): ?>
+    <?php if (isset($_SESSION['flash_error'])): ?>
         <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-3" role="alert">
-            <i class="fas fa-exclamation-circle me-2"></i><?= $flash ?>
+            <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($_SESSION['flash_error']); unset($_SESSION['flash_error']); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_SESSION['flash_success'])): ?>
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-3" role="alert">
+            <i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($_SESSION['flash_success']); unset($_SESSION['flash_success']); ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
@@ -26,28 +33,31 @@
             <div class="row g-4">
                 <div class="col-md-6">
                     <label class="form-label fw-semibold text-dark small">First Name <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control form-control-lg fs-6" name="first_name" value="<?= htmlspecialchars($user->first_name) ?>" required>
+                    <input type="text" class="form-control form-control-lg fs-6" name="first_name" 
+                           value="<?= htmlspecialchars($user->first_name) ?>" required>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold text-dark small">Last Name <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control form-control-lg fs-6" name="last_name" value="<?= htmlspecialchars($user->last_name) ?>" required>
+                    <input type="text" class="form-control form-control-lg fs-6" name="last_name" 
+                           value="<?= htmlspecialchars($user->last_name) ?>" required>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold text-dark small">Username</label>
+                    <label class="form-label fw-semibold text-dark small">Username <span class="text-danger">*</span></label>
                     <div class="input-group">
                         <span class="input-group-text bg-light text-muted">@</span>
-                        <input type="text" class="form-control form-control-lg fs-6 bg-light text-muted" value="<?= htmlspecialchars($user->username) ?>" disabled>
+                        <input type="text" class="form-control form-control-lg fs-6" name="username" 
+                               value="<?= htmlspecialchars($user->username) ?>" required>
                     </div>
-                    <input type="hidden" name="username" value="<?= htmlspecialchars($user->username) ?>">
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label fw-semibold text-dark small">Email Address</label>
-                    <input type="email" class="form-control form-control-lg fs-6 bg-light text-muted" value="<?= htmlspecialchars($user->email) ?>" disabled>
-                    <input type="hidden" name="email" value="<?= htmlspecialchars($user->email) ?>">
+                    <label class="form-label fw-semibold text-dark small">Email Address <span class="text-danger">*</span></label>
+                    <input type="email" class="form-control form-control-lg fs-6" name="email" 
+                           value="<?= htmlspecialchars($user->email) ?>" required>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold text-dark small">New Password</label>
-                    <input type="password" class="form-control form-control-lg fs-6" name="password" minlength="8" placeholder="Leave blank to keep current password">
+                    <input type="password" class="form-control form-control-lg fs-6" name="password" minlength="8" 
+                           placeholder="Leave blank to keep current password">
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold text-dark small">Account Status</label>
@@ -61,12 +71,14 @@
                     <label class="form-label fw-semibold text-dark small">Assigned Roles</label>
                     <select class="form-select form-select-lg fs-6" name="roles[]" multiple style="min-height: 120px;">
                         <?php foreach ($roles as $role): ?>
-                            <option value="<?= $role->id ?>" <?= in_array($role->id, $userRoles) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($role->name) ?>
+                            <option value="<?= $role['id'] ?>" <?= in_array($role['id'], $userRoles) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($role['name']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <small class="text-muted mt-1 d-block"><i class="fas fa-info-circle me-1"></i> Hold <kbd>Ctrl</kbd> or <kbd>Cmd</kbd> to select multiple roles.</small>
+                    <small class="text-muted mt-1 d-block">
+                        <i class="fas fa-info-circle me-1"></i> Hold <kbd>Ctrl</kbd> or <kbd>Cmd</kbd> to select multiple roles.
+                    </small>
                 </div>
             </div>
             

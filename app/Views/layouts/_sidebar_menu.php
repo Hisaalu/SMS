@@ -96,10 +96,10 @@
             'routes' => ['reports'],
             'items' => [
                 ['title' => 'Academic Dashboard', 'icon' => 'fas fa-chart-pie', 'url' => '/reports/academic', 'check' => fn($v) => $v === 'reports/academic/dashboard' || $v === 'reports/academic' || $v === 'reports/academic/index'],
-                ['title' => 'Report Cards', 'icon' => 'fas fa-file-alt', 'url' => '/reports/academic/report-cards', 'check' => fn($v) => str_contains($v, 'report-cards') && !str_contains($v, 'batch')],
-                ['title' => 'Batch Report Cards', 'icon' => 'fas fa-print', 'url' => '/reports/academic/batch-report-cards', 'check' => fn($v) => str_contains($v, 'batch-report-cards')],
-                ['title' => 'Class Analysis', 'icon' => 'fas fa-users', 'url' => '/reports/academic/class-analysis', 'check' => fn($v) => str_contains($v, 'class-analysis')],
-                ['title' => 'Subject Analysis', 'icon' => 'fas fa-book', 'url' => '/reports/academic/subject-analysis', 'check' => fn($v) => str_contains($v, 'subject-analysis')],
+                ['title' => 'Report Cards', 'icon' => 'fas fa-file-alt', 'url' => '/reports/academic/report-cards', 'check' => fn($v) => (str_contains($v, 'report-card') || str_contains($v, 'report_card')) && !str_contains($v, 'batch')],
+                ['title' => 'Batch Report Cards', 'icon' => 'fas fa-print', 'url' => '/reports/academic/batch-report-cards', 'check' => fn($v) => str_contains($v, 'batch')],
+                ['title' => 'Class Analysis', 'icon' => 'fas fa-users', 'url' => '/reports/academic/class-analysis', 'check' => fn($v) => str_contains($v, 'class-analysis') || str_contains($v, 'class_analysis') || str_contains($v, 'classAnalysis')],
+                ['title' => 'Subject Analysis', 'icon' => 'fas fa-book', 'url' => '/reports/academic/subject-analysis', 'check' => fn($v) => str_contains($v, 'subject-analysis') || str_contains($v, 'subject_analysis') || str_contains($v, 'subjectAnalysis')],
                 ['title' => 'Financial Reports', 'icon' => 'fas fa-coins', 'url' => '/reports/finance', 'check' => fn($v) => str_contains($v, 'reports/finance')],
                 ['title' => 'Attendance Reports', 'icon' => 'fas fa-user-clock', 'url' => '/reports/attendance', 'check' => fn($v) => str_contains($v, 'reports/attendance')],
             ]
@@ -123,7 +123,7 @@
     <?php foreach ($menuGroups as $group): ?>
         <li class="nav-item mb-1">
             <?php if ($group['type'] === 'single'): ?>
-                <a class="nav-link rounded-2 page-navigation <?= $group['active'] ? 'active' : '' ?>"href="<?= BASE_URL . $group['url'] ?>">
+                <a class="nav-link rounded-2 page-navigation <?= $group['active'] ? 'active' : '' ?>" href="<?= BASE_URL . $group['url'] ?>">
                     <i class="<?= $group['icon'] ?> me-2"></i> <span><?= $group['title'] ?></span>
                 </a>
             <?php else: 
@@ -155,7 +155,7 @@
                             }
                         ?>
                             <li class="nav-item">
-                                <a class="nav-link py-1 rounded-2 page-navigation <?= $isItemActive ? 'active' : '' ?>"href="<?= BASE_URL . $item['url'] ?>">
+                                <a class="nav-link py-1 rounded-2 page-navigation <?= $isItemActive ? 'active' : '' ?>" href="<?= BASE_URL . $item['url'] ?>">
                                     <i class="<?= $item['icon'] ?> me-2"></i> <?= $item['title'] ?>
                                 </a>
                             </li>
@@ -169,45 +169,22 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-
     const mobileSidebar = document.getElementById('mobileSidebar');
+    if (!mobileSidebar) return;
 
-    if (!mobileSidebar) {
-        return;
-    }
-const collapseLinks = mobileSidebar.querySelectorAll(
-        '.nav-link[data-bs-toggle="collapse"]'
-    );
-
+    const collapseLinks = mobileSidebar.querySelectorAll('.nav-link[data-bs-toggle="collapse"]');
     collapseLinks.forEach(function (link) {
-
         link.addEventListener('click', function (event) {
-
             event.stopPropagation();
-
         }, false);
-
     });
 
-    const pageLinks = mobileSidebar.querySelectorAll(
-        '.page-navigation'
-    );
-
+    const pageLinks = mobileSidebar.querySelectorAll('.page-navigation');
     pageLinks.forEach(function (link) {
-
         link.addEventListener('click', function () {
-
-            const instance =
-                bootstrap.Offcanvas.getInstance(mobileSidebar) ||
-                bootstrap.Offcanvas.getOrCreateInstance(mobileSidebar);
-
-            if (instance) {
-                instance.hide();
-            }
-
+            const instance = bootstrap.Offcanvas.getInstance(mobileSidebar) || bootstrap.Offcanvas.getOrCreateInstance(mobileSidebar);
+            if (instance) instance.hide();
         });
-
     });
-
 });
 </script>
