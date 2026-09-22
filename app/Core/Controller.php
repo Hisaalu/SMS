@@ -10,15 +10,14 @@ abstract class Controller
     protected $auth;
     protected $settings;
     protected $audit;
-    
+
     public function __construct()
     {
-        $this->view = View::getInstance();
-        $this->db = Database::getInstance();
-        $this->auth = new Auth();
+        $this->view     = View::getInstance();
+        $this->db       = Database::getInstance();
+        $this->auth     = new Auth();
         $this->settings = new SettingsService();
-        
-        // Safely check if Audit model or service exists before instantiating
+
         if (class_exists('\\NexaT\\Models\\AuditLog')) {
             $this->audit = new \NexaT\Models\AuditLog();
         } elseif (class_exists('\\NexaT\\Services\\AuditLog')) {
@@ -26,7 +25,7 @@ abstract class Controller
         } else {
             $this->audit = null;
         }
-        
+
         $this->view->share('schoolName', $this->settings->get('school.name', 'NexaT School'));
         $this->view->share('user', $this->auth->getUser());
         $this->view->share('theme', $this->settings->getTheme());
@@ -35,7 +34,6 @@ abstract class Controller
 
     protected function authorize(string $permission): void
     {
-        // 1. If not logged in at all, redirect to login page
         if (!$this->auth->check()) {
             header('Location: ' . BASE_URL . '/login');
             exit;
@@ -43,16 +41,15 @@ abstract class Controller
 
         $user = $this->auth->getUser();
 
-        // 2. If logged in but lacks permission
         if (!$user || (method_exists($user, 'can') && !$user->can($permission))) {
             http_response_code(403);
-            
+
             while (ob_get_level() > 0) {
                 ob_end_clean();
             }
 
-            $errorView = defined('VIEWS_PATH') 
-                ? VIEWS_PATH . '/errors/403.php' 
+            $errorView = defined('VIEWS_PATH')
+                ? VIEWS_PATH . '/errors/403.php'
                 : ROOT_PATH . '/app/Views/errors/403.php';
 
             if (file_exists($errorView)) {
@@ -67,26 +64,73 @@ abstract class Controller
             exit;
         }
     }
-    
-    protected function jsonResponse(array $data, int $statusCode = 200): void
-    {
-        http_response_code($statusCode);
-        header('Content-Type: application/json');
-        echo json_encode($data);
-        exit;
-    }
-    
-    protected function redirect(string $path): void
-    {
-        header('Location: ' . BASE_URL . '/' . ltrim($path, '/'));
-        exit;
-    }
 
     protected function requireAuth(): void
     {
         if (!$this->auth || !$this->auth->check()) {
             header('Location: ' . BASE_URL . '/login');
             exit;
+        }
+    }
+
+    protected function requirePermission(string $permission): void
+    {
+        $this->authorize($permission);
+    }
+
+    protected function schoolId(): int
+    {
+        $user = $this->auth->getUser();
+        return (int)($user->school_id ?? 1);
+    }
+
+    protected function redirect(string $path): void
+    {
+        header('Location: ' . BASE_URL . '/' . ltrim($path, '/'));
+        exit;
+    }
+
+    protected function json(array $data, int $statusCode = 200): void
+    {
+        http_response_code($statusCode);
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
+    }
+
+    protected function jsonResponse(array $data, int $statusCode = 200): void
+    {
+        $this->json($data, $statusCode);
+    }
+
+    protected function flashError(string $message): void
+    {
+        if (method_exists($this->view, 'flash')) {
+            $this->view->flash('error', $message);
+        } else {
+            $_SESSION['flash_error'] = $message;
+        }
+    }
+
+    protected function flashSuccess(string $message): void
+    {
+        if (method_exists($this->view, 'flash')) {
+            $this->view->flash('success', $message);
+        } else {
+            $_SESSION['flash_success'] = $message;
+        }
+    }
+
+    protected function audit(string $action, string $module, string $description): void
+    {
+        if (!$this->audit) {
+            return;
+        }
+
+        $userId = $this->auth->id() ?? 0;
+
+        if (method_exists($this->audit, 'log')) {
+            $this->audit->log($userId, $action, $module, $description);
         }
     }
 }

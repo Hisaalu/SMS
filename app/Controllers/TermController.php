@@ -11,13 +11,10 @@ class TermController extends Controller
 {
     public function index(): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('academic.terms.view');
 
-        $academicYearId = $_GET['year'] ?? null;
-        
+        $academicYearId = (int)($_GET['year'] ?? 0);
+
         if ($academicYearId) {
             $terms = Term::where('academic_year_id', $academicYearId);
             $selectedYear = AcademicYear::find($academicYearId);
@@ -28,52 +25,52 @@ class TermController extends Controller
 
         $years = AcademicYear::all([], ['start_date' => 'DESC']);
 
-        $data = [
-            'terms' => $terms,
-            'years' => $years,
-            'selectedYear' => $selectedYear
-        ];
-
-        echo $this->view->renderWithLayout('academic/terms/index', 'default', $data);
+        echo $this->view->renderWithLayout('academic/terms/index', 'default', [
+            'terms'        => $terms,
+            'years'        => $years,
+            'selectedYear' => $selectedYear,
+        ]);
     }
 
     public function create(): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('academic.terms.create');
 
         $years = AcademicYear::all([], ['start_date' => 'DESC']);
         $selectedYearId = $_GET['year'] ?? null;
 
-        $data = [
-            'years' => $years,
-            'selectedYearId' => $selectedYearId
-        ];
-
-        echo $this->view->renderWithLayout('academic/terms/create', 'default', $data);
+        echo $this->view->renderWithLayout('academic/terms/create', 'default', [
+            'years'          => $years,
+            'selectedYearId' => $selectedYearId,
+        ]);
     }
 
     public function store(): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('academic.terms.create');
 
-        $academicYearId = $_POST['academic_year_id'] ?? '';
-        $name           = $_POST['name'] ?? '';
-        $termNumber     = $_POST['term_number'] ?? 1;
+        $academicYearId = (int)($_POST['academic_year_id'] ?? 0);
+        $name           = trim($_POST['name'] ?? '');
+        $termNumber     = (int)($_POST['term_number'] ?? 1);
         $startDate      = $_POST['start_date'] ?? '';
         $endDate        = $_POST['end_date'] ?? '';
         $isCurrent      = isset($_POST['is_current']) ? 1 : 0;
-        $schoolId       = $this->auth->getUser()->school_id ?? null;
+        $schoolId       = $this->schoolId();
 
-        if (empty($academicYearId) || empty($name) || empty($startDate) || empty($endDate)) {
-            $this->view->flash('error', 'All required fields must be filled out.');
-            header('Location: ' . BASE_URL . '/academic/terms/create');
-            exit;
+        if ($academicYearId === 0 || $name === '' || $startDate === '' || $endDate === '') {
+            $this->flashError('All required fields must be filled out.');
+            $this->redirect('/academic/terms/create');
+        }
+
+        if ($startDate > $endDate) {
+            $this->flashError('Start date must be before end date.');
+            $this->redirect('/academic/terms/create');
+        }
+
+        $error = $this->validateTermUniqueness($academicYearId, $termNumber, null);
+        if ($error) {
+            $this->flashError($error);
+            $this->redirect('/academic/terms/create');
         }
 
         $term = new Term([
@@ -83,73 +80,78 @@ class TermController extends Controller
             'term_number'      => $termNumber,
             'start_date'       => $startDate,
             'end_date'         => $endDate,
-            'is_current'       => $isCurrent
+            'is_current'       => $isCurrent,
         ]);
 
-        if ($term->save()) {
-            $this->view->flash('success', 'Term created successfully.');
-            header('Location: ' . BASE_URL . '/academic/terms?year=' . $academicYearId);
-            exit;
-        }
+        try {
+            if ($term->save()) {
+                $this->audit('Term Created', 'academic', "Created term: {$name} (Year #{$academicYearId})");
+                $this->flashSuccess('Term created successfully.');
+                $this->redirect('/academic/terms?year=' . $academicYearId);
+            }
 
-        $this->view->flash('error', 'Failed to create term.');
-        header('Location: ' . BASE_URL . '/academic/terms/create');
-        exit;
+            $this->flashError('Failed to create term.');
+            $this->redirect('/academic/terms/create');
+
+        } catch (\Throwable $e) {
+            $this->flashError($this->friendlyTermError($e));
+            $this->redirect('/academic/terms/create');
+        }
     }
 
     public function edit($params): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('academic.terms.edit');
 
-        $termId = $params['id'] ?? 0;
+        $termId = (int)($params['id'] ?? 0);
         $term = Term::find($termId);
 
         if (!$term) {
-            $this->view->flash('error', 'Term not found.');
-            header('Location: ' . BASE_URL . '/academic/terms');
-            exit;
+            $this->flashError('Term not found.');
+            $this->redirect('/academic/terms');
         }
 
         $years = AcademicYear::all([], ['start_date' => 'DESC']);
 
-        $data = [
-            'term' => $term,
-            'years' => $years
-        ];
-
-        echo $this->view->renderWithLayout('academic/terms/edit', 'default', $data);
+        echo $this->view->renderWithLayout('academic/terms/edit', 'default', [
+            'term'  => $term,
+            'years' => $years,
+        ]);
     }
 
     public function update($params): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('academic.terms.edit');
 
-        $termId = $params['id'] ?? 0;
+        $termId = (int)($params['id'] ?? 0);
         $term = Term::find($termId);
 
         if (!$term) {
-            $this->view->flash('error', 'Term not found.');
-            header('Location: ' . BASE_URL . '/academic/terms');
-            exit;
+            $this->flashError('Term not found.');
+            $this->redirect('/academic/terms');
         }
 
-        $academicYearId = $_POST['academic_year_id'] ?? '';
-        $name           = $_POST['name'] ?? '';
-        $termNumber     = $_POST['term_number'] ?? 1;
+        $academicYearId = (int)($_POST['academic_year_id'] ?? 0);
+        $name           = trim($_POST['name'] ?? '');
+        $termNumber     = (int)($_POST['term_number'] ?? 1);
         $startDate      = $_POST['start_date'] ?? '';
         $endDate        = $_POST['end_date'] ?? '';
         $isCurrent      = isset($_POST['is_current']) ? 1 : 0;
 
-        if (empty($academicYearId) || empty($name) || empty($startDate) || empty($endDate)) {
-            $this->view->flash('error', 'All required fields must be filled out.');
-            header('Location: ' . BASE_URL . '/academic/terms/' . $termId . '/edit');
-            exit;
+        if ($academicYearId === 0 || $name === '' || $startDate === '' || $endDate === '') {
+            $this->flashError('All required fields must be filled out.');
+            $this->redirect('/academic/terms/' . $termId . '/edit');
+        }
+
+        if ($startDate > $endDate) {
+            $this->flashError('Start date must be before end date.');
+            $this->redirect('/academic/terms/' . $termId . '/edit');
+        }
+
+        $error = $this->validateTermUniqueness($academicYearId, $termNumber, $termId);
+        if ($error) {
+            $this->flashError($error);
+            $this->redirect('/academic/terms/' . $termId . '/edit');
         }
 
         $term->fill([
@@ -158,17 +160,92 @@ class TermController extends Controller
             'term_number'      => $termNumber,
             'start_date'       => $startDate,
             'end_date'         => $endDate,
-            'is_current'       => $isCurrent
+            'is_current'       => $isCurrent,
         ]);
 
-        if ($term->save()) {
-            $this->view->flash('success', 'Term updated successfully.');
-            header('Location: ' . BASE_URL . '/academic/terms?year=' . $academicYearId);
-            exit;
+        try {
+            if ($term->save()) {
+                $this->audit('Term Updated', 'academic', "Updated term: {$name} (ID: {$termId})");
+                $this->flashSuccess('Term updated successfully.');
+                $this->redirect('/academic/terms?year=' . $academicYearId);
+            }
+
+            $this->flashError('Failed to update term.');
+            $this->redirect('/academic/terms/' . $termId . '/edit');
+
+        } catch (\Throwable $e) {
+            $this->flashError($this->friendlyTermError($e));
+            $this->redirect('/academic/terms/' . $termId . '/edit');
+        }
+    }
+
+    public function delete($params): void
+    {
+        $this->requirePermission('academic.terms.delete');
+
+        $termId = (int)($params['id'] ?? 0);
+        $term = Term::find($termId);
+
+        if (!$term) {
+            $this->json(['error' => 'Term not found'], 404);
         }
 
-        $this->view->flash('error', 'Failed to update term.');
-        header('Location: ' . BASE_URL . '/academic/terms/' . $termId . '/edit');
-        exit;
+        try {
+            if ($term->delete(['id' => $termId])) {
+                $this->audit('Term Deleted', 'academic', "Deleted term ID: {$termId}");
+                $this->json(['success' => true]);
+            }
+
+            $this->json(['error' => 'Failed to delete term'], 500);
+
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Failed to delete term'], 500);
+        }
+    }
+
+    private function validateTermUniqueness(int $academicYearId, int $termNumber, ?int $excludeTermId): ?string
+    {
+        $sql = "SELECT id, name FROM terms
+                WHERE academic_year_id = :year
+                  AND term_number = :number";
+
+        $params = [
+            'year'   => $academicYearId,
+            'number' => $termNumber,
+        ];
+
+        if ($excludeTermId !== null) {
+            $sql .= " AND id != :id";
+            $params['id'] = $excludeTermId;
+        }
+
+        $sql .= " LIMIT 1";
+
+        $existing = $this->db->fetch($sql, $params);
+
+        if ($existing) {
+            return "Term number {$termNumber} already exists for this academic year (\"{$existing['name']}\").";
+        }
+
+        return null;
+    }
+
+    private function friendlyTermError(\Throwable $e): string
+    {
+        $message = $e->getMessage();
+
+        if (str_contains($message, '1062') && str_contains($message, 'uk_terms_year_number')) {
+            return 'That term number is already used for this academic year. Please pick a different term number.';
+        }
+
+        if (str_contains($message, '1452') || str_contains($message, 'foreign key')) {
+            return 'The selected academic year does not exist. Please refresh and try again.';
+        }
+
+        if (str_contains($message, '1451') || str_contains($message, 'Cannot delete')) {
+            return 'This term cannot be deleted because it is referenced by other records.';
+        }
+
+        return 'Something went wrong. Please try again or contact support.';
     }
 }

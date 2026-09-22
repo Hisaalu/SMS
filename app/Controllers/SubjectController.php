@@ -11,13 +11,11 @@ class SubjectController extends Controller
 {
     public function index(): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requireAuth();
 
-        $schoolId = $this->auth->getUser()->school_id;
-        $subjects = Subject::where('school_id', $schoolId);
+        $schoolId = $this->schoolId();
+
+        $subjects    = Subject::where('school_id', $schoolId);
         $departments = Department::where('school_id', $schoolId);
 
         $deptList = [];
@@ -27,130 +25,115 @@ class SubjectController extends Controller
 
         echo $this->view->renderWithLayout('academic/subjects/index', 'default', [
             'subjects' => $subjects,
-            'deptList' => $deptList
+            'deptList' => $deptList,
         ]);
     }
 
     public function create(): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
-
-        $schoolId = $this->auth->getUser()->school_id;
-        $departments = Department::where('school_id', $schoolId);
+        $this->requireAuth();
 
         echo $this->view->renderWithLayout('academic/subjects/create', 'default', [
-            'departments' => $departments
+            'departments' => Department::where('school_id', $this->schoolId()),
         ]);
     }
 
     public function store(): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
+        $this->requireAuth();
+
+        $data = $this->collectInput();
+
+        if ($data === null) {
+            $this->flashError('Subject Name and Code are required.');
+            $this->redirect('/academic/subjects/create');
         }
 
-        $schoolId     = $this->auth->getUser()->school_id;
-        $departmentId = $_POST['department_id'] ?? null;
-        $name         = $_POST['name'] ?? '';
-        $code         = $_POST['code'] ?? '';
-        $type         = $_POST['type'] ?? 'core';
+        $data['school_id'] = $this->schoolId();
 
-        if (empty($name) || empty($code)) {
-            $this->view->flash('error', 'Subject Name and Code are required.');
-            header('Location: ' . BASE_URL . '/academic/subjects/create');
-            exit;
-        }
-
-        $subject = new Subject([
-            'school_id'     => $schoolId,
-            'department_id' => !empty($departmentId) ? $departmentId : null,
-            'name'          => $name,
-            'code'          => $code,
-            'type'          => $type
-        ]);
+        $subject = new Subject($data);
 
         if ($subject->save()) {
-            $this->view->flash('success', 'Subject created successfully.');
-            header('Location: ' . BASE_URL . '/academic/subjects');
-            exit;
+            $this->flashSuccess('Subject created successfully.');
+            $this->redirect('/academic/subjects');
         }
 
-        $this->view->flash('error', 'Failed to create subject.');
-        header('Location: ' . BASE_URL . '/academic/subjects/create');
-        exit;
+        $this->flashError('Failed to create subject.');
+        $this->redirect('/academic/subjects/create');
     }
 
     public function edit($params): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requireAuth();
 
-        $id = $params['id'] ?? 0;
-        $subject = Subject::find($id);
-
+        $subject = $this->findSubjectOrRedirect((int)($params['id'] ?? 0));
         if (!$subject) {
-            $this->view->flash('error', 'Subject not found.');
-            header('Location: ' . BASE_URL . '/academic/subjects');
-            exit;
+            return;
         }
-
-        $schoolId = $this->auth->getUser()->school_id;
-        $departments = Department::where('school_id', $schoolId);
 
         echo $this->view->renderWithLayout('academic/subjects/edit', 'default', [
             'subject'     => $subject,
-            'departments' => $departments
+            'departments' => Department::where('school_id', $this->schoolId()),
         ]);
     }
 
     public function update($params): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
+        $this->requireAuth();
+
+        $id = (int)($params['id'] ?? 0);
+        $subject = $this->findSubjectOrRedirect($id);
+        if (!$subject) {
+            return;
         }
 
-        $id = $params['id'] ?? 0;
+        $data = $this->collectInput();
+
+        if ($data === null) {
+            $this->flashError('Subject Name and Code are required.');
+            $this->redirect('/academic/subjects/' . $id . '/edit');
+        }
+
+        $subject->fill($data);
+
+        if ($subject->save()) {
+            $this->flashSuccess('Subject updated successfully.');
+            $this->redirect('/academic/subjects');
+        }
+
+        $this->flashError('Failed to update subject.');
+        $this->redirect('/academic/subjects/' . $id . '/edit');
+    }
+
+    private function findSubjectOrRedirect(int $id): ?Subject
+    {
         $subject = Subject::find($id);
 
         if (!$subject) {
-            $this->view->flash('error', 'Subject not found.');
-            header('Location: ' . BASE_URL . '/academic/subjects');
-            exit;
+            $this->flashError('Subject not found.');
+            $this->redirect('/academic/subjects');
+            return null;
         }
 
-        $departmentId = $_POST['department_id'] ?? null;
-        $name         = $_POST['name'] ?? '';
-        $code         = $_POST['code'] ?? '';
-        $type         = $_POST['type'] ?? 'core';
+        return $subject;
+    }
 
-        if (empty($name) || empty($code)) {
-            $this->view->flash('error', 'Subject Name and Code are required.');
-            header('Location: ' . BASE_URL . '/academic/subjects/' . $id . '/edit');
-            exit;
+    private function collectInput(): ?array
+    {
+        $name = trim($_POST['name'] ?? '');
+        $code = trim($_POST['code'] ?? '');
+
+        if ($name === '' || $code === '') {
+            return null;
         }
 
-        $subject->fill([
-            'department_id' => !empty($departmentId) ? $departmentId : null,
+        $departmentId = (int)($_POST['department_id'] ?? 0);
+
+        return [
+            'department_id' => $departmentId ?: null,
             'name'          => $name,
             'code'          => $code,
-            'type'          => $type
-        ]);
-
-        if ($subject->save()) {
-            $this->view->flash('success', 'Subject updated successfully.');
-            header('Location: ' . BASE_URL . '/academic/subjects');
-            exit;
-        }
-
-        $this->view->flash('error', 'Failed to update subject.');
-        header('Location: ' . BASE_URL . '/academic/subjects/' . $id . '/edit');
-        exit;
+            'type'          => $_POST['type'] ?? 'core',
+        ];
     }
 }

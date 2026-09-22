@@ -12,78 +12,100 @@ class Role extends Model
     protected $fillable = ['name', 'slug', 'description', 'status'];
     protected $guarded = ['id'];
     protected $timestamps = true;
-    
-    public function users()
+
+    private ?array $cachedPermissions = null;
+
+    public function users(): array
     {
-        $db = $this->db;
-        $sql = "SELECT u.* FROM users u 
-                INNER JOIN user_roles ur ON u.id = ur.user_id 
-                WHERE ur.role_id = ?";
-        return $db->fetchAll($sql, [$this->id]);
+        return $this->db->fetchAll(
+            "SELECT u.* FROM users u
+             INNER JOIN user_roles ur ON u.id = ur.user_id
+             WHERE ur.role_id = ?",
+            [$this->id]
+        );
     }
-    
-    public function permissions()
+
+    public function permissions(): array
     {
-        $db = $this->db;
-        $sql = "SELECT p.* FROM permissions p 
-                INNER JOIN role_permissions rp ON p.id = rp.permission_id 
-                WHERE rp.role_id = ?";
-        return $db->fetchAll($sql, [$this->id]);
+        if ($this->cachedPermissions !== null) {
+            return $this->cachedPermissions;
+        }
+
+        return $this->cachedPermissions = $this->db->fetchAll(
+            "SELECT p.* FROM permissions p
+             INNER JOIN role_permissions rp ON p.id = rp.permission_id
+             WHERE rp.role_id = ?",
+            [$this->id]
+        );
     }
-    
-    public function hasPermission($permissionSlug)
+
+    public function hasPermission(string $permissionSlug): bool
     {
-        $db = $this->db;
-        $sql = "SELECT COUNT(*) as count FROM role_permissions rp 
-                INNER JOIN permissions p ON rp.permission_id = p.id 
-                WHERE rp.role_id = ? AND p.slug = ?";
-        $result = $db->fetch($sql, [$this->id, $permissionSlug]);
-        return $result['count'] > 0;
+        $row = $this->db->fetch(
+            "SELECT 1 AS found FROM role_permissions rp
+             INNER JOIN permissions p ON rp.permission_id = p.id
+             WHERE rp.role_id = ? AND p.slug = ?
+             LIMIT 1",
+            [$this->id, $permissionSlug]
+        );
+
+        return $row !== null;
     }
-    
-    public function assignPermission($permissionId)
+
+    public function assignPermission(int $permissionId): bool
     {
-        $db = $this->db;
-        $existing = $db->fetch(
-            "SELECT id FROM role_permissions WHERE role_id = ? AND permission_id = ?",
+        $existing = $this->db->fetch(
+            "SELECT 1 AS found FROM role_permissions
+             WHERE role_id = ? AND permission_id = ? LIMIT 1",
             [$this->id, $permissionId]
         );
-        
-        if (!$existing) {
-            return $db->insert('role_permissions', [
-                'role_id' => $this->id,
-                'permission_id' => $permissionId,
-                'created_at' => date('Y-m-d H:i:s')
-            ]);
+
+        if ($existing) {
+            return false;
         }
-        return false;
-    }
-    
-    public function removePermission($permissionId)
-    {
-        $db = $this->db;
-        return $db->delete('role_permissions', [
-            'role_id' => $this->id,
-            'permission_id' => $permissionId
+
+        $this->cachedPermissions = null;
+
+        return (bool)$this->db->insert('role_permissions', [
+            'role_id'       => $this->id,
+            'permission_id' => $permissionId,
+            'created_at'    => date('Y-m-d H:i:s'),
         ]);
     }
-    
-    public function syncPermissions(array $permissionIds)
+
+    public function removePermission(int $permissionId): bool
     {
-        $db = $this->db;
-        $db->delete('role_permissions', ['role_id' => $this->id]);
-        
+        $this->cachedPermissions = null;
+
+        return $this->db->delete('role_permissions', [
+            'role_id'       => $this->id,
+            'permission_id' => $permissionId,
+        ]);
+    }
+
+    public function syncPermissions(array $permissionIds): bool
+    {
+        $this->db->delete('role_permissions', ['role_id' => $this->id]);
+        $this->cachedPermissions = null;
+
+        if (empty($permissionIds)) {
+            return true;
+        }
+
+        $now = date('Y-m-d H:i:s');
+
         foreach ($permissionIds as $permissionId) {
-            $db->insert('role_permissions', [
-                'role_id' => $this->id,
-                'permission_id' => $permissionId,
-                'created_at' => date('Y-m-d H:i:s')
+            $this->db->insert('role_permissions', [
+                'role_id'       => $this->id,
+                'permission_id' => (int)$permissionId,
+                'created_at'    => $now,
             ]);
         }
+
         return true;
     }
-    
-    public function isSuperAdmin()
+
+    public function isSuperAdmin(): bool
     {
         return $this->slug === 'super_admin';
     }

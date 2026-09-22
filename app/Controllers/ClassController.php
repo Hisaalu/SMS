@@ -10,102 +10,106 @@ class ClassController extends Controller
 {
     public function index(): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requireAuth();
 
-        $schoolId = $this->auth->getUser()->school_id;
-        $classes = SchoolClass::where('school_id', $schoolId);
+        $schoolId = $this->schoolId();
+        $classes  = SchoolClass::where('school_id', $schoolId);
 
-        echo $this->view->renderWithLayout('academic/classes/index', 'default', ['classes' => $classes]);
+        echo $this->view->renderWithLayout('academic/classes/index', 'default', [
+            'classes' => $classes,
+        ]);
     }
 
     public function create(): void
     {
+        $this->requireAuth();
+
         echo $this->view->renderWithLayout('academic/classes/create', 'default');
     }
 
     public function store(): void
     {
-        $schoolId = $this->auth->getUser()->school_id;
-        $name = $_POST['name'] ?? '';
-        $code = $_POST['code'] ?? '';
+        $this->requireAuth();
+
+        $name = trim($_POST['name'] ?? '');
+        $code = trim($_POST['code'] ?? '');
+
+        if ($name === '') {
+            $this->flashError('Class name is required.');
+            $this->redirect('/academic/classes/create');
+        }
 
         $class = new SchoolClass([
-            'school_id' => $schoolId,
+            'school_id' => $this->schoolId(),
             'name'      => $name,
-            'code'      => $code
+            'code'      => $code,
         ]);
 
         if ($class->save()) {
-            $this->view->flash('success', 'Class created successfully');
-            header('Location: ' . BASE_URL . '/academic/classes');
-            exit;
+            $this->flashSuccess('Class created successfully.');
+            $this->redirect('/academic/classes');
         }
 
-        $this->view->flash('error', 'Failed to create class');
-        header('Location: ' . BASE_URL . '/academic/classes/create');
-        exit;
+        $this->flashError('Failed to create class.');
+        $this->redirect('/academic/classes/create');
     }
 
     public function edit($params): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requireAuth();
 
-        $classId = $params['id'] ?? 0;
-        $class = SchoolClass::find($classId);
-
+        $class = $this->findClassOrRedirect((int)($params['id'] ?? 0));
         if (!$class) {
-            $this->view->flash('error', 'Class not found.');
-            header('Location: ' . BASE_URL . '/academic/classes');
-            exit;
+            return;
         }
 
-        echo $this->view->renderWithLayout('academic/classes/edit', 'default', ['class' => $class]);
+        echo $this->view->renderWithLayout('academic/classes/edit', 'default', [
+            'class' => $class,
+        ]);
     }
 
     public function update($params): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requireAuth();
 
-        $classId = $params['id'] ?? 0;
-        $class = SchoolClass::find($classId);
-
+        $classId = (int)($params['id'] ?? 0);
+        $class = $this->findClassOrRedirect($classId);
         if (!$class) {
-            $this->view->flash('error', 'Class not found.');
-            header('Location: ' . BASE_URL . '/academic/classes');
-            exit;
+            return;
         }
 
-        $name = $_POST['name'] ?? '';
-        $code = $_POST['code'] ?? '';
+        $name = trim($_POST['name'] ?? '');
+        $code = trim($_POST['code'] ?? '');
 
-        if (empty($name)) {
-            $this->view->flash('error', 'Class name is required.');
-            header('Location: ' . BASE_URL . '/academic/classes/' . $classId . '/edit');
-            exit;
+        if ($name === '') {
+            $this->flashError('Class name is required.');
+            $this->redirect('/academic/classes/' . $classId . '/edit');
         }
 
         $class->fill([
             'name' => $name,
-            'code' => $code
+            'code' => $code,
         ]);
 
         if ($class->save()) {
-            $this->view->flash('success', 'Class updated successfully.');
-            header('Location: ' . BASE_URL . '/academic/classes');
-            exit;
+            $this->flashSuccess('Class updated successfully.');
+            $this->redirect('/academic/classes');
         }
 
-        $this->view->flash('error', 'Failed to update class.');
-        header('Location: ' . BASE_URL . '/academic/classes/' . $classId . '/edit');
-        exit;
+        $this->flashError('Failed to update class.');
+        $this->redirect('/academic/classes/' . $classId . '/edit');
+    }
+
+    private function findClassOrRedirect(int $id): ?SchoolClass
+    {
+        $class = SchoolClass::find($id);
+
+        if (!$class) {
+            $this->flashError('Class not found.');
+            $this->redirect('/academic/classes');
+            return null;
+        }
+
+        return $class;
     }
 }

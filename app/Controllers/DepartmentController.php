@@ -10,122 +10,105 @@ class DepartmentController extends Controller
 {
     public function index(): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requireAuth();
 
-        $schoolId = $this->auth->getUser()->school_id;
-        $departments = Department::where('school_id', $schoolId);
+        $departments = Department::where('school_id', $this->schoolId());
 
         echo $this->view->renderWithLayout('academic/departments/index', 'default', [
-            'departments' => $departments
+            'departments' => $departments,
         ]);
     }
 
     public function create(): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requireAuth();
 
         echo $this->view->renderWithLayout('academic/departments/create', 'default');
     }
 
     public function store(): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requireAuth();
 
-        $schoolId = $this->auth->getUser()->school_id;
-        $name     = $_POST['name'] ?? '';
-        $code     = $_POST['code'] ?? '';
+        $name = trim($_POST['name'] ?? '');
+        $code = trim($_POST['code'] ?? '');
 
-        if (empty($name)) {
-            $this->view->flash('error', 'Department name is required.');
-            header('Location: ' . BASE_URL . '/academic/departments/create');
-            exit;
+        if ($name === '') {
+            $this->flashError('Department name is required.');
+            $this->redirect('/academic/departments/create');
         }
 
         $department = new Department([
-            'school_id' => $schoolId,
+            'school_id' => $this->schoolId(),
             'name'      => $name,
-            'code'      => $code
+            'code'      => $code,
         ]);
 
         if ($department->save()) {
-            $this->view->flash('success', 'Department created successfully.');
-            header('Location: ' . BASE_URL . '/academic/departments');
-            exit;
+            $this->flashSuccess('Department created successfully.');
+            $this->redirect('/academic/departments');
         }
 
-        $this->view->flash('error', 'Failed to create department.');
-        header('Location: ' . BASE_URL . '/academic/departments/create');
-        exit;
+        $this->flashError('Failed to create department.');
+        $this->redirect('/academic/departments/create');
     }
 
     public function edit($params): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requireAuth();
 
-        $id = $params['id'] ?? 0;
-        $department = Department::find($id);
-
+        $department = $this->findOrRedirect((int)($params['id'] ?? 0));
         if (!$department) {
-            $this->view->flash('error', 'Department not found.');
-            header('Location: ' . BASE_URL . '/academic/departments');
-            exit;
+            return;
         }
 
         echo $this->view->renderWithLayout('academic/departments/edit', 'default', [
-            'department' => $department
+            'department' => $department,
         ]);
     }
 
     public function update($params): void
     {
-        if (!$this->auth->check()) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requireAuth();
 
-        $id = $params['id'] ?? 0;
-        $department = Department::find($id);
-
+        $id = (int)($params['id'] ?? 0);
+        $department = $this->findOrRedirect($id);
         if (!$department) {
-            $this->view->flash('error', 'Department not found.');
-            header('Location: ' . BASE_URL . '/academic/departments');
-            exit;
+            return;
         }
 
-        $name = $_POST['name'] ?? '';
-        $code = $_POST['code'] ?? '';
+        $name = trim($_POST['name'] ?? '');
+        $code = trim($_POST['code'] ?? '');
 
-        if (empty($name)) {
-            $this->view->flash('error', 'Department name is required.');
-            header('Location: ' . BASE_URL . '/academic/departments/' . $id . '/edit');
-            exit;
+        if ($name === '') {
+            $this->flashError('Department name is required.');
+            $this->redirect('/academic/departments/' . $id . '/edit');
         }
 
         $department->fill([
             'name' => $name,
-            'code' => $code
+            'code' => $code,
         ]);
 
         if ($department->save()) {
-            $this->view->flash('success', 'Department updated successfully.');
-            header('Location: ' . BASE_URL . '/academic/departments');
-            exit;
+            $this->flashSuccess('Department updated successfully.');
+            $this->redirect('/academic/departments');
         }
 
-        $this->view->flash('error', 'Failed to update department.');
-        header('Location: ' . BASE_URL . '/academic/departments/' . $id . '/edit');
-        exit;
+        $this->flashError('Failed to update department.');
+        $this->redirect('/academic/departments/' . $id . '/edit');
+    }
+
+    private function findOrRedirect(int $id): ?Department
+    {
+        $department = Department::find($id);
+
+        if (!$department) {
+            $this->flashError('Department not found.');
+            $this->redirect('/academic/departments');
+            return null;
+        }
+
+        return $department;
     }
 }

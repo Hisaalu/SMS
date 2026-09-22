@@ -7,16 +7,13 @@ use NexaT\Core\Database;
 
 class DivisionService
 {
-    private $db;
+    private Database $db;
 
     public function __construct()
     {
         $this->db = Database::getInstance();
     }
 
-    /**
-     * Get all divisions for a school, ordered by display_order.
-     */
     public function getAll(int $schoolId, bool $activeOnly = false): array
     {
         $sql = "SELECT * FROM grading_divisions WHERE school_id = :s";
@@ -28,16 +25,13 @@ class DivisionService
         return $this->db->fetchAll($sql, ['s' => $schoolId]);
     }
 
-    /**
-     * Find the division for a given aggregate score.
-     */
     public function getDivisionForAggregate(float $aggregate, int $schoolId): ?array
     {
         return $this->db->fetch(
-            "SELECT * FROM grading_divisions 
-             WHERE school_id = :s 
-             AND :agg BETWEEN min_aggregate AND max_aggregate 
-             AND status = 'active'
+            "SELECT * FROM grading_divisions
+             WHERE school_id = :s
+               AND :agg BETWEEN min_aggregate AND max_aggregate
+               AND status = 'active'
              ORDER BY display_order ASC LIMIT 1",
             ['s' => $schoolId, 'agg' => $aggregate]
         ) ?: null;
@@ -84,19 +78,16 @@ class DivisionService
     public function delete(int $id, int $schoolId): bool
     {
         return $this->db->delete('grading_divisions', [
-            'id' => $id, 'school_id' => $schoolId
+            'id' => $id, 'school_id' => $schoolId,
         ]) !== false;
     }
 
-    /**
-     * Check for overlapping aggregate ranges.
-     */
     public function hasOverlap(int $min, int $max, int $schoolId, ?int $excludeId = null): bool
     {
-        $sql = "SELECT id FROM grading_divisions 
-                WHERE school_id = :s 
-                AND min_aggregate <= :max 
-                AND max_aggregate >= :min";
+        $sql = "SELECT id FROM grading_divisions
+                WHERE school_id = :s
+                  AND min_aggregate <= :max
+                  AND max_aggregate >= :min";
         $params = ['s' => $schoolId, 'min' => $min, 'max' => $max];
 
         if ($excludeId) {

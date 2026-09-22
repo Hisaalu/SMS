@@ -13,48 +13,47 @@ class AcademicYear extends Model
     protected $guarded = ['id'];
     protected $timestamps = true;
 
-    public function terms()
+    public function terms(): array
     {
-        $db = $this->db;
-        return $db->fetchAll(
+        return $this->db->fetchAll(
             "SELECT * FROM terms WHERE academic_year_id = ? ORDER BY term_number ASC",
             [$this->id]
         );
     }
 
-    public function getCurrentTerm()
+    public function getCurrentTerm(): ?array
     {
-        $db = $this->db;
-        return $db->fetch(
-            "SELECT * FROM terms WHERE academic_year_id = ? AND is_current = 1",
+        return $this->db->fetch(
+            "SELECT * FROM terms WHERE academic_year_id = ? AND is_current = 1 LIMIT 1",
             [$this->id]
-        );
+        ) ?: null;
     }
 
-    public static function getCurrent($schoolId = null)
+    public static function getCurrent(?int $schoolId = null): ?array
     {
         $instance = new static();
-        $schoolId = $schoolId ?? ($instance->schoolId ?? null);
-        
+        $schoolId = $schoolId ?? $instance->schoolId ?? null;
+
+        if (!$schoolId) {
+            return null;
+        }
+
         return $instance->db->fetch(
             "SELECT * FROM academic_years WHERE school_id = ? AND is_current = 1 LIMIT 1",
             [$schoolId]
-        );
+        ) ?: null;
     }
 
-    public function setCurrent()
+    public function setCurrent(): bool
     {
-        $db = $this->db;
-        
-        // Reset current flag only for this specific school
         if (!empty($this->school_id)) {
-            $db->update('academic_years', ['is_current' => 0], ['school_id' => $this->school_id]);
+            $this->db->update('academic_years', ['is_current' => 0], ['school_id' => $this->school_id]);
         } else {
-            $db->query("UPDATE academic_years SET is_current = 0");
+            $this->db->execute("UPDATE academic_years SET is_current = 0");
         }
 
-        // Set this record as current
         $this->is_current = 1;
+
         return $this->save();
     }
 }

@@ -13,7 +13,7 @@ class SchoolClass extends Model
     protected $guarded = ['id'];
     protected $timestamps = true;
 
-    public function streams()
+    public function streams(): array
     {
         return Stream::where('class_id', $this->id);
     }

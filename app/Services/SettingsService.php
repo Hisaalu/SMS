@@ -4,133 +4,151 @@
 namespace NexaT\Services;
 
 use NexaT\Core\Database;
+use Throwable;
 
 class SettingsService
 {
-    private $db;
-    private $cache = [];
-    private $settingsLoaded = false;
-    
+    private Database $db;
+    private array $cache = [];
+    private array $categoryIndex = [];
+    private bool $loaded = false;
+
     public function __construct()
     {
         $this->db = Database::getInstance();
-        $this->loadSettings();
+        $this->load();
     }
-    
-    private function loadSettings(): void
-    {
-        if ($this->settingsLoaded) {
-            return;
-        }
-        
-        try {
-            $results = $this->db->fetchAll("SELECT setting_key, setting_value, setting_type FROM settings");
-            
-            foreach ($results as $row) {
-                $this->cache[$row['setting_key']] = $this->castValue(
-                    $row['setting_value'],
-                    $row['setting_type']
-                );
-            }
-        } catch (\Exception $e) {
-            $this->cache = [];
-        }
-        
-        $this->settingsLoaded = true;
-    }
-    
-    private function castValue($value, string $type)
-    {
-        switch ($type) {
-            case 'boolean':
-            case 'bool':
-                return filter_var($value, FILTER_VALIDATE_BOOLEAN);
-            case 'integer':
-            case 'int':
-                return (int)$value;
-            case 'decimal':
-            case 'float':
-                return (float)$value;
-            case 'json':
-                return json_decode($value, true);
-            case 'array':
-                return explode(',', $value);
-            default:
-                return (string)$value;
-        }
-    }
-    
-    private function prepareValueForStorage($value): string
-    {
-        if (is_array($value) || is_object($value)) {
-            return json_encode($value);
-        }
-        if (is_bool($value)) {
-            return $value ? 'true' : 'false';
-        }
-        return (string)$value;
-    }
-    
+
     public function get(string $key, $default = null)
     {
         return $this->cache[$key] ?? $default;
     }
-    
-    public function set(string $key, $value, string $type = 'string', string $category = 'general', string $description = ''): bool
-    {
-        $value = $this->prepareValueForStorage($value);
-        
+
+    public function set(
+        string $key,
+        $value,
+        string $type = 'string',
+        string $category = 'general',
+        string $description = ''
+    ): bool {
+        $stored = $this->prepareValueForStorage($value);
+        $now = date('Y-m-d H:i:s');
+
         $existing = $this->db->fetch(
-            "SELECT id FROM settings WHERE setting_key = ?",
+            "SELECT id, category FROM settings WHERE setting_key = ? LIMIT 1",
             [$key]
         );
-        
-        if ($existing) {
-            $result = $this->db->update('settings', [
-                'setting_value' => $value,
-                'setting_type' => $type,
-                'category' => $category,
-                'description' => $description,
-                'updated_at' => date('Y-m-d H:i:s')
-            ], ['setting_key' => $key]);
-        } else {
-            $result = $this->db->insert('settings', [
-                'setting_key' => $key,
-                'setting_value' => $value,
-                'setting_type' => $type,
-                'category' => $category,
-                'description' => $description,
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
+
+        try {
+            if ($existing) {
+                $this->db->update('settings', [
+                    'setting_value' => $stored,
+                    'setting_type'  => $type,
+                    'category'      => $category,
+                    'description'   => $description,
+                    'updated_at'    => $now,
+                ], ['setting_key' => $key]);
+
+                if ($existing['category'] !== $category) {
+                    $this->reindexCategory($key, $existing['category'], $category);
+                }
+            } else {
+                $this->db->insert('settings', [
+                    'setting_key'   => $key,
+                    'setting_value' => $stored,
+                    'setting_type'  => $type,
+                    'category'      => $category,
+                    'description'   => $description,
+                    'created_at'    => $now,
+                    'updated_at'    => $now,
+                ]);
+
+                $this->categoryIndex[$category][] = $key;
+            }
+        } catch (Throwable $e) {
+            return false;
         }
-        
-        if ($result !== false) {
-            $this->cache[$key] = $this->castValue($value, $type);
-            return true;
-        }
-        
-        return false;
+
+        $this->cache[$key] = $this->castValue($stored, $type);
+
+        return true;
     }
-    
+
     public function getCategory(string $category): array
     {
         $result = [];
-        foreach ($this->cache as $key => $value) {
-            // Check category by looking up the setting
-            $categoryCheck = $this->db->fetch(
-                "SELECT category FROM settings WHERE setting_key = ?",
-                [$key]
-            );
-            if ($categoryCheck && $categoryCheck['category'] === $category) {
-                $result[$key] = $value;
-            }
+
+        foreach ($this->categoryIndex[$category] ?? [] as $key) {
+            $result[$key] = $this->cache[$key];
         }
+
         return $result;
     }
-    
+
     public function getAll(): array
     {
         return $this->cache;
+    }
+
+    private function load(): void
+    {
+        if ($this->loaded) {
+            return;
+        }
+
+        $this->loaded = true;
+
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT setting_key, setting_value, setting_type, category FROM settings"
+            );
+
+            foreach ($rows as $row) {
+                $this->cache[$row['setting_key']] = $this->castValue(
+                    $row['setting_value'],
+                    $row['setting_type']
+                );
+
+                $this->categoryIndex[$row['category'] ?? 'general'][] = $row['setting_key'];
+            }
+        } catch (Throwable $e) {
+            $this->cache = [];
+            $this->categoryIndex = [];
+        }
+    }
+
+    private function reindexCategory(string $key, string $oldCategory, string $newCategory): void
+    {
+        $this->categoryIndex[$oldCategory] = array_values(array_filter(
+            $this->categoryIndex[$oldCategory] ?? [],
+            fn($existing) => $existing !== $key
+        ));
+
+        $this->categoryIndex[$newCategory][] = $key;
+    }
+
+    private function castValue($value, string $type)
+    {
+        return match ($type) {
+            'boolean', 'bool'  => filter_var($value, FILTER_VALIDATE_BOOLEAN),
+            'integer', 'int'   => (int)$value,
+            'decimal', 'float' => (float)$value,
+            'json'             => json_decode((string)$value, true),
+            'array'            => is_array($value) ? $value : explode(',', (string)$value),
+            default            => (string)$value,
+        };
+    }
+
+    private function prepareValueForStorage($value): string
+    {
+        if (is_array($value) || is_object($value)) {
+            return json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        return (string)$value;
     }
 }

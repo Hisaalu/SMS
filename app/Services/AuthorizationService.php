@@ -4,75 +4,64 @@
 namespace NexaT\Services;
 
 use NexaT\Models\User;
-use NexaT\Models\Role;
-use NexaT\Models\Permission;
 
 class AuthorizationService
 {
-    private $user;
-    
-    public function __construct(User $user = null)
+    private ?User $user;
+
+    public function __construct(?User $user = null)
     {
         $this->user = $user;
     }
-    
-    public function setUser(User $user)
+
+    public function setUser(User $user): self
     {
         $this->user = $user;
+
         return $this;
     }
-    
-    public function can($permissionSlug)
+
+    public function getUser(): ?User
     {
-        if (!$this->user) {
-            return false;
-        }
-        return $this->user->hasPermission($permissionSlug);
+        return $this->user;
     }
-    
-    public function hasRole($roleSlug)
+
+    public function can(string $permissionSlug): bool
     {
-        if (!$this->user) {
-            return false;
-        }
-        return $this->user->hasRole($roleSlug);
+        return $this->user?->hasPermission($permissionSlug) ?? false;
     }
-    
-    public function getUserPermissions()
+
+    public function hasRole(string $roleSlug): bool
     {
-        if (!$this->user) {
-            return [];
-        }
-        return $this->user->permissions();
+        return $this->user?->hasRole($roleSlug) ?? false;
     }
-    
-    public function getUserRoles()
+
+    public function getUserPermissions(): array
     {
-        if (!$this->user) {
-            return [];
-        }
-        return $this->user->roles();
+        return $this->user?->permissions() ?? [];
     }
-    
-    public function isSuperAdmin()
+
+    public function getUserRoles(): array
     {
-        if (!$this->user) {
-            return false;
-        }
-        return $this->user->isSuperAdmin();
+        return $this->user?->roles() ?? [];
     }
-    
-    public function canManageUsers()
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->user?->isSuperAdmin() ?? false;
+    }
+
+    public function canManageUsers(): bool
     {
         return $this->can('users.manage') || $this->isSuperAdmin();
     }
-    
-    public function canManageRoles()
+
+    public function canManageRoles(): bool
     {
         return $this->can('roles.manage') || $this->isSuperAdmin();
     }
-    
-    public function canManageSettings()
+
+    public function canManageSettings(): bool
     {
         return $this->can('settings.manage') || $this->isSuperAdmin();
     }

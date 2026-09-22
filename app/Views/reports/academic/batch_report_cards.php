@@ -10,9 +10,10 @@
         </a>
     </div>
 
-    <?php if (isset($_SESSION['flash_error'])): ?>
+    <?php if (!empty($_SESSION['flash_error'])): ?>
         <div class="alert alert-danger alert-dismissible fade show">
-            <?= htmlspecialchars($_SESSION['flash_error']); unset($_SESSION['flash_error']); ?>
+            <?= htmlspecialchars($_SESSION['flash_error']) ?>
+            <?php unset($_SESSION['flash_error']); ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     <?php endif; ?>
@@ -22,11 +23,10 @@
         <?php
             $formAction     = BASE_URL . '/reports/academic/batch-report-cards/view';
             $includeStudent = false;
-            $extrasHtml     = '';
+            $defaults       = $defaults ?? [];
             include __DIR__ . '/_report_config.php';
         ?>
 
-        <!-- Batch-specific: Class, Stream, Period -->
         <div class="card mt-3 border-0 shadow-sm">
             <div class="card-header bg-white border-0 pt-3 pb-0">
                 <h6 class="mb-0 fw-bold text-primary">
@@ -40,7 +40,7 @@
                         <select name="academic_year_id" class="form-select form-select-sm" required>
                             <option value="">Select Year</option>
                             <?php foreach ($filters['academic_years'] as $year): ?>
-                                <option value="<?= $year['id'] ?>"><?= htmlspecialchars($year['name']) ?></option>
+                                <option value="<?= (int)$year['id'] ?>"><?= htmlspecialchars($year['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -49,7 +49,7 @@
                         <select name="term_id" class="form-select form-select-sm" required>
                             <option value="">Select Term</option>
                             <?php foreach ($filters['terms'] as $term): ?>
-                                <option value="<?= $term['id'] ?>"><?= htmlspecialchars($term['name']) ?></option>
+                                <option value="<?= (int)$term['id'] ?>"><?= htmlspecialchars($term['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -58,7 +58,7 @@
                         <select name="class_id" class="form-select form-select-sm" required>
                             <option value="">Select Class</option>
                             <?php foreach ($filters['classes'] as $class): ?>
-                                <option value="<?= $class['id'] ?>"><?= htmlspecialchars($class['name']) ?></option>
+                                <option value="<?= (int)$class['id'] ?>"><?= htmlspecialchars($class['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -67,7 +67,7 @@
                         <select name="stream_id" class="form-select form-select-sm">
                             <option value="">All Streams</option>
                             <?php foreach ($filters['streams'] as $stream): ?>
-                                <option value="<?= $stream['id'] ?>"><?= htmlspecialchars($stream['name']) ?></option>
+                                <option value="<?= (int)$stream['id'] ?>"><?= htmlspecialchars($stream['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>

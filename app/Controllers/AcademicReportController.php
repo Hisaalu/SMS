@@ -5,62 +5,46 @@ namespace NexaT\Controllers;
 
 use NexaT\Core\Controller;
 use NexaT\Services\AcademicReportService;
-use NexaT\Services\AuditService;
 
 class AcademicReportController extends Controller
 {
-    private $reportService;
+    private AcademicReportService $reportService;
 
     public function __construct()
     {
         parent::__construct();
         $this->reportService = new AcademicReportService();
-        $this->audit = new AuditService();
     }
 
     public function index(): void
     {
-        if (!$this->auth->check() || !$this->auth->getUser()->hasPermission('reports.academic.view')) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('reports.academic.view');
 
-        $schoolId = $this->auth->getUser()->school_id ?? 1;
+        $schoolId = $this->schoolId();
 
-        $filters = [
+        $filters = array_filter([
             'academic_year_id' => $_GET['academic_year_id'] ?? null,
-            'term_id' => $_GET['term_id'] ?? null,
-            'class_id' => $_GET['class_id'] ?? null,
-            'subject_id' => $_GET['subject_id'] ?? null,
-        ];
+            'term_id'          => $_GET['term_id']          ?? null,
+            'class_id'         => $_GET['class_id']         ?? null,
+            'subject_id'       => $_GET['subject_id']       ?? null,
+        ]);
 
-        $filters = array_filter($filters);
-
-        $reportFilters = $this->reportService->getReportFilters($schoolId);
-        $stats = $this->reportService->getDashboardStats($schoolId, $filters);
-
-        echo $this->view->render('reports/academic/report_card_view', [
-            'data'             => $data,
-            'academicYearId'   => $academicYearId,
-            'termId'           => $termId,
-            'academicYearName' => $academicYear['name'] ?? '',
-            'termName'         => $term['name'] ?? '',
-            'options'          => $options,
+        echo $this->view->renderWithLayout('reports/academic/index', 'default', [
+            'title'           => 'Academic Reports',
+            'filters'         => $this->reportService->getReportFilters($schoolId),
+            'stats'           => $this->reportService->getDashboardStats($schoolId, $filters),
+            'selectedFilters' => $filters,
         ]);
     }
 
     public function reportCards(): void
     {
-        if (!$this->auth->check() || !$this->auth->getUser()->hasPermission('reports.report_cards.view')) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('reports.report_cards.view');
 
-        $schoolId = $this->auth->getUser()->school_id ?? 1;
-        $reportFilters = $this->reportService->getReportFilters($schoolId);
+        $schoolId = $this->schoolId();
 
         $students = $this->db->fetchAll(
-            "SELECT DISTINCT s.id, s.admission_number, s.first_name, s.last_name, cl.name as class_name
+            "SELECT DISTINCT s.id, s.admission_number, s.first_name, s.last_name, cl.name AS class_name
              FROM students s
              LEFT JOIN student_enrollments se ON s.id = se.student_id AND se.status = 'active'
              LEFT JOIN classes cl ON se.class_id = cl.id
@@ -70,107 +54,52 @@ class AcademicReportController extends Controller
         );
 
         echo $this->view->renderWithLayout('reports/academic/report_cards', 'default', [
-            'title' => 'Student Report Cards',
-            'filters' => $reportFilters,
+            'title'    => 'Student Report Cards',
+            'filters'  => $this->reportService->getReportFilters($schoolId),
             'students' => $students,
         ]);
     }
 
     public function generateReportCard(): void
     {
-        if (!$this->auth->check() || !$this->auth->getUser()->hasPermission('reports.report_cards.view')) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('reports.report_cards.view');
 
-        $schoolId = $this->auth->getUser()->school_id ?? 1;
+        $schoolId       = $this->schoolId();
         $studentId      = (int)($_GET['student_id'] ?? 0);
         $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
         $termId         = (int)($_GET['term_id'] ?? 0);
 
         if (!$studentId || !$academicYearId || !$termId) {
-            $_SESSION['flash_error'] = 'Please select student, academic year and term.';
-            header('Location: ' . BASE_URL . '/reports/academic/report-cards');
-            exit;
+            $this->flashError('Please select student, academic year and term.');
+            $this->redirect('/reports/academic/report-cards');
         }
 
-        // Verify student belongs to this school
         $student = $this->db->fetch(
             "SELECT id FROM students WHERE id = :id AND school_id = :s",
             ['id' => $studentId, 's' => $schoolId]
         );
+
         if (!$student) {
-            $_SESSION['flash_error'] = 'Student not found.';
-            header('Location: ' . BASE_URL . '/reports/academic/report-cards');
-            exit;
+            $this->flashError('Student not found.');
+            $this->redirect('/reports/academic/report-cards');
         }
 
-        // Selected exams
-        $examSelection = $_GET['examinations'] ?? [];
-        if (in_array('all', $examSelection)) {
-            $allExams = $this->db->fetchAll(
-                "SELECT id FROM examinations 
-                WHERE school_id = :s AND academic_year_id = :y AND academic_period_id = :t",
-                ['s' => $schoolId, 'y' => $academicYearId, 't' => $termId]
-            );
-            $examinationIds = array_column($allExams, 'id');
-        } else {
-            $examinationIds = array_map('intval', $examSelection);
-        }
-
-        $options = [
-            'report_name'        => $_GET['report_name']        ?? 'End of Term Report',
-            'report_color'       => $_GET['report_color']       ?? 'bw',
-            'report_format'      => $_GET['report_format']      ?? 'progression',
-
-            // Defaults must match _report_config.php
-            'show_positions'     => ($_GET['show_positions']    ?? 'no')  === 'yes',
-            'show_photo'         => ($_GET['show_photo']        ?? 'yes') === 'yes',
-            'show_division'      => ($_GET['show_division']     ?? 'no')  === 'yes',
-            'show_grades'        => ($_GET['show_grades']       ?? 'yes') === 'yes',
-            'grades_per_exam'    => ($_GET['grades_per_exam']   ?? 'yes') === 'yes',
-            'show_initials'      => ($_GET['show_initials']     ?? 'yes') === 'yes',
-
-            'grade_format'       => $_GET['grade_format']       ?? 'default',
-            'opt_comments'       => ($_GET['opt_comments']      ?? 'yes') === 'yes',
-            'show_skills'        => ($_GET['show_skills']       ?? 'no')  === 'yes',
-            'hm_comment'         => $_GET['hm_comment']         ?? 'auto',
-            'ct_comment'         => $_GET['ct_comment']         ?? 'auto',
-            'show_names'         => ($_GET['show_names']        ?? 'no')  === 'yes',
-            'auto_signatures'    => ($_GET['auto_signatures']   ?? 'no')  === 'yes',
-            'show_fees'          => ($_GET['show_fees']         ?? 'no')  === 'yes',
-            'show_next_term'     => ($_GET['show_next_term']    ?? 'no')  === 'yes',
-            'show_remarks'       => ($_GET['show_remarks']      ?? 'no')  === 'yes',
-            'show_performance'   => ($_GET['show_performance']  ?? 'no')  === 'yes',
-            'mark_sheet'         => $_GET['mark_sheet']         ?? null,
-
-            'final_grade_method' => $_GET['final_grade_method'] ?? 'average',
-            'position_ranking'   => $_GET['position_ranking']   ?? 'aggregate',
-        ];
+        $examinationIds = $this->resolveExaminationIds($_GET['examinations'] ?? [], $schoolId, $academicYearId, $termId);
+        $options        = $this->collectReportOptions($_GET);
 
         $data = $this->reportService->getMultiExamReportCard(
             $studentId, $academicYearId, $termId, $schoolId, $examinationIds, $options
         );
 
-        if (empty($data)) {
-            $_SESSION['flash_error'] = 'No data found for the selected criteria.';
-            header('Location: ' . BASE_URL . '/reports/academic/report-cards');
-            exit;
+        if (empty($data) || empty($data['subjects'])) {
+            $this->flashError('No data found for the selected criteria.');
+            $this->redirect('/reports/academic/report-cards');
         }
 
-        // Names for the view
         $academicYear = $this->db->fetch("SELECT name FROM academic_years WHERE id = :id", ['id' => $academicYearId]);
         $term         = $this->db->fetch("SELECT name FROM terms WHERE id = :id", ['id' => $termId]);
 
-        // Audit
-        if ($this->audit) {
-            $this->audit->log(
-                $this->auth->id(),
-                'Report Card Generated',
-                'reports',
-                "Generated multi-exam report card for student ID: {$studentId}"
-            );
-        }
+        $this->audit('Report Card Generated', 'reports', "Generated multi-exam report card for student ID: {$studentId}");
 
         echo $this->view->render('reports/academic/report_card_view', [
             'data'             => $data,
@@ -184,205 +113,182 @@ class AcademicReportController extends Controller
 
     public function subjectAnalysis(): void
     {
-        if (!$this->auth->check() || !$this->auth->getUser()->hasPermission('reports.subject_analysis.view')) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('reports.subject_analysis.view');
 
-        $schoolId = $this->auth->getUser()->school_id ?? 1;
+        $schoolId = $this->schoolId();
 
-        $filters = [
+        $filters = array_filter([
             'academic_year_id' => $_GET['academic_year_id'] ?? null,
-            'term_id' => $_GET['term_id'] ?? null,
-            'class_id' => $_GET['class_id'] ?? null,
-            'subject_id' => $_GET['subject_id'] ?? null,
-        ];
-        $filters = array_filter($filters);
+            'term_id'          => $_GET['term_id']          ?? null,
+            'class_id'         => $_GET['class_id']         ?? null,
+            'subject_id'       => $_GET['subject_id']       ?? null,
+        ]);
 
-        $reportFilters = $this->reportService->getReportFilters($schoolId);
         $stats = !empty($filters['subject_id'])
             ? $this->reportService->getSubjectPerformance($schoolId, $filters)
             : [];
 
         echo $this->view->renderWithLayout('reports/academic/subject_analysis', 'default', [
-            'title' => 'Subject Performance Analysis',
-            'filters' => $reportFilters,
-            'stats' => $stats,
+            'title'           => 'Subject Performance Analysis',
+            'filters'         => $this->reportService->getReportFilters($schoolId),
+            'stats'           => $stats,
             'selectedFilters' => $filters,
         ]);
     }
 
     public function classAnalysis(): void
     {
-        if (!$this->auth->check() || !$this->auth->getUser()->hasPermission('reports.class_analysis.view')) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('reports.class_analysis.view');
 
-        $schoolId = $this->auth->getUser()->school_id ?? 1;
+        $schoolId = $this->schoolId();
 
-        $filters = [
+        $filters = array_filter([
             'academic_year_id' => $_GET['academic_year_id'] ?? null,
-            'term_id' => $_GET['term_id'] ?? null,
-            'class_id' => $_GET['class_id'] ?? null,
-            'stream_id' => $_GET['stream_id'] ?? null,
-        ];
-        $filters = array_filter($filters);
+            'term_id'          => $_GET['term_id']          ?? null,
+            'class_id'         => $_GET['class_id']         ?? null,
+            'stream_id'        => $_GET['stream_id']        ?? null,
+        ]);
 
-        $reportFilters = $this->reportService->getReportFilters($schoolId);
         $matrix = !empty($filters['academic_year_id'])
             ? $this->reportService->getClassResultsMatrix($schoolId, $filters)
             : ['students' => [], 'subjects' => [], 'marks' => []];
 
         echo $this->view->renderWithLayout('reports/academic/class_analysis', 'default', [
-            'title' => 'Class Performance Analysis',
-            'filters' => $reportFilters,
-            'matrix' => $matrix,
+            'title'           => 'Class Performance Analysis',
+            'filters'         => $this->reportService->getReportFilters($schoolId),
+            'matrix'          => $matrix,
             'selectedFilters' => $filters,
         ]);
     }
 
     public function batchReportCards(): void
     {
-        if (!$this->auth->check() || !$this->auth->getUser()->hasPermission('reports.report_cards.view')) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('reports.report_cards.view');
 
-        $schoolId = $this->auth->getUser()->school_id ?? 1;
-        $filters = $this->reportService->getReportFilters($schoolId);
+        $schoolId = $this->schoolId();
 
         echo $this->view->renderWithLayout('reports/academic/batch_report_cards', 'default', [
-            'title' => 'Batch Report Cards',
-            'filters' => $filters,
+            'title'   => 'Batch Report Cards',
+            'filters' => $this->reportService->getReportFilters($schoolId),
         ]);
     }
 
     public function generateBatchReportCards(): void
     {
-        if (!$this->auth->check() || !$this->auth->getUser()->hasPermission('reports.report_cards.view')) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('reports.report_cards.view');
 
-        $schoolId       = $this->auth->getUser()->school_id ?? 1;
+        $schoolId       = $this->schoolId();
         $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
         $termId         = (int)($_GET['term_id'] ?? 0);
         $classId        = (int)($_GET['class_id'] ?? 0);
         $streamId       = !empty($_GET['stream_id']) ? (int)$_GET['stream_id'] : null;
 
         if (!$academicYearId || !$termId || !$classId) {
-            $_SESSION['flash_error'] = 'Missing required parameters.';
-            header('Location: ' . BASE_URL . '/reports/academic/batch-report-cards');
-            exit;
+            $this->flashError('Missing required parameters.');
+            $this->redirect('/reports/academic/batch-report-cards');
         }
 
-        // ----------------------------------------------
-        // Selected exams
-        // ----------------------------------------------
-        $examSelection = $_GET['examinations'] ?? [];
-        if (empty($examSelection)) $examSelection = ['all'];
-
-        if (in_array('all', $examSelection)) {
-            $allExams = $this->db->fetchAll(
-                "SELECT id FROM examinations 
-                WHERE school_id = :s AND academic_year_id = :y AND academic_period_id = :t",
-                ['s' => $schoolId, 'y' => $academicYearId, 't' => $termId]
-            );
-            $examinationIds = array_column($allExams, 'id');
-        } else {
-            $examinationIds = array_map('intval', $examSelection);
-        }
+        $examinationIds = $this->resolveExaminationIds($_GET['examinations'] ?? ['all'], $schoolId, $academicYearId, $termId);
 
         if (empty($examinationIds)) {
-            $_SESSION['flash_error'] = 'No examinations found for the selected year and term.';
-            header('Location: ' . BASE_URL . '/reports/academic/batch-report-cards');
-            exit;
+            $this->flashError('No examinations found for the selected year and term.');
+            $this->redirect('/reports/academic/batch-report-cards');
         }
 
-        // ----------------------------------------------
-        // Report options
-        // ----------------------------------------------
-        $options = [
-            'report_name'      => $_GET['report_name']      ?? 'End of Term Report',
-            'report_color'     => $_GET['report_color']     ?? 'bw',
-            'report_format'    => $_GET['report_format']    ?? 'progression',
-            'show_positions'   => ($_GET['show_positions']  ?? 'no') === 'yes',
-            'show_photo'       => ($_GET['show_photo']      ?? 'no') === 'yes',
-            'show_division'    => ($_GET['show_division']   ?? 'no') === 'yes',
-            'show_grades'      => ($_GET['show_grades']     ?? 'no') === 'yes',
-            'grades_per_exam'  => ($_GET['grades_per_exam'] ?? 'no') === 'yes',
-            'grade_format'     => $_GET['grade_format']     ?? 'default',
-            'opt_comments'     => ($_GET['opt_comments']    ?? 'no') === 'yes',
-            'show_skills'      => ($_GET['show_skills']     ?? 'no') === 'yes',
-            'hm_comment'       => $_GET['hm_comment']       ?? 'no',
-            'ct_comment'       => $_GET['ct_comment']       ?? 'no',
-            'show_names'       => ($_GET['show_names']      ?? 'no') === 'yes',
-            'auto_signatures'  => ($_GET['auto_signatures'] ?? 'no') === 'yes',
-            'show_fees'        => ($_GET['show_fees']       ?? 'no') === 'yes',
-            'show_next_term'   => ($_GET['show_next_term']  ?? 'no') === 'yes',
-            'show_remarks'     => ($_GET['show_remarks']    ?? 'no') === 'yes',
-            'show_performance' => ($_GET['show_performance']?? 'no') === 'yes',
-            'final_grade_method' => $_GET['final_grade_method'] ?? 'average',
-            'position_ranking'   => $_GET['position_ranking']   ?? 'aggregate',
-            'show_initials'      => ($_GET['show_initials'] ?? 'yes') === 'yes',
-        ];
+        $options  = $this->collectReportOptions($_GET);
+        $students = $this->loadClassStudents($schoolId, $academicYearId, $classId, $streamId);
 
-        // ----------------------------------------------
-        // Get students in the class
-        // ----------------------------------------------
-        $sql = "SELECT s.id
-                FROM students s
-                INNER JOIN student_enrollments se ON s.id = se.student_id
-                WHERE se.status = 'active'
-                AND se.academic_year_id = :year_id
-                AND se.class_id = :class_id
-                AND s.school_id = :school_id";
-        $params = [
-            'year_id'    => $academicYearId,
-            'class_id'   => $classId,
-            'school_id'  => $schoolId,
-        ];
-        if ($streamId) {
-            $sql .= " AND se.stream_id = :stream_id";
-            $params['stream_id'] = $streamId;
-        }
-        $sql .= " ORDER BY s.last_name ASC, s.first_name ASC";
-
-        $students = $this->db->fetchAll($sql, $params);
-
-        // ----------------------------------------------
-        // Names
-        // ----------------------------------------------
         $academicYear = $this->db->fetch("SELECT name FROM academic_years WHERE id = :id", ['id' => $academicYearId]);
         $term         = $this->db->fetch("SELECT name FROM terms WHERE id = :id", ['id' => $termId]);
 
-        // ----------------------------------------------
-        // Build a report card dataset per student
-        // ----------------------------------------------
         $allData = [];
         foreach ($students as $s) {
             $data = $this->reportService->getMultiExamReportCard(
-                (int)$s['id'],
-                $academicYearId,
-                $termId,
-                $schoolId,
-                $examinationIds,
-                $options
+                (int)$s['id'], $academicYearId, $termId, $schoolId, $examinationIds, $options
             );
             if (!empty($data) && !empty($data['subjects'])) {
                 $allData[] = $data;
             }
         }
 
-        // ----------------------------------------------
-        // Render
-        // ----------------------------------------------
         echo $this->view->render('reports/academic/batch_report_cards_view', [
             'allData'          => $allData,
             'academicYearName' => $academicYear['name'] ?? '',
             'termName'         => $term['name'] ?? '',
             'options'          => $options,
         ]);
+    }
+
+    private function resolveExaminationIds(array $selection, int $schoolId, int $yearId, int $termId): array
+    {
+        if (empty($selection)) {
+            $selection = ['all'];
+        }
+
+        if (in_array('all', $selection, true)) {
+            $rows = $this->db->fetchAll(
+                "SELECT id FROM examinations
+                 WHERE school_id = :s AND academic_year_id = :y AND academic_period_id = :t",
+                ['s' => $schoolId, 'y' => $yearId, 't' => $termId]
+            );
+            return array_column($rows, 'id');
+        }
+
+        return array_map('intval', $selection);
+    }
+
+    private function loadClassStudents(int $schoolId, int $yearId, int $classId, ?int $streamId): array
+    {
+        $sql = "SELECT s.id
+                FROM students s
+                INNER JOIN student_enrollments se ON s.id = se.student_id
+                WHERE se.status = 'active'
+                  AND se.academic_year_id = :year_id
+                  AND se.class_id = :class_id
+                  AND s.school_id = :school_id";
+
+        $params = [
+            'year_id'   => $yearId,
+            'class_id'  => $classId,
+            'school_id' => $schoolId,
+        ];
+
+        if ($streamId) {
+            $sql .= " AND se.stream_id = :stream_id";
+            $params['stream_id'] = $streamId;
+        }
+
+        $sql .= " ORDER BY s.last_name ASC, s.first_name ASC";
+
+        return $this->db->fetchAll($sql, $params);
+    }
+
+    private function collectReportOptions(array $input): array
+    {
+        return [
+            'report_name'        => $input['report_name']        ?? 'End of Term Report',
+            'report_color'       => $input['report_color']       ?? 'bw',
+            'report_format'      => $input['report_format']      ?? 'progression',
+            'show_positions'     => ($input['show_positions']    ?? 'no')  === 'yes',
+            'show_photo'         => ($input['show_photo']        ?? 'yes') === 'yes',
+            'show_division'      => ($input['show_division']     ?? 'no')  === 'yes',
+            'show_grades'        => ($input['show_grades']       ?? 'yes') === 'yes',
+            'grades_per_exam'    => ($input['grades_per_exam']   ?? 'yes') === 'yes',
+            'show_initials'      => ($input['show_initials']     ?? 'yes') === 'yes',
+            'grade_format'       => $input['grade_format']       ?? 'default',
+            'opt_comments'       => ($input['opt_comments']      ?? 'yes') === 'yes',
+            'show_skills'        => ($input['show_skills']       ?? 'no')  === 'yes',
+            'hm_comment'         => $input['hm_comment']         ?? 'auto',
+            'ct_comment'         => $input['ct_comment']         ?? 'auto',
+            'show_names'         => ($input['show_names']        ?? 'no')  === 'yes',
+            'auto_signatures'    => ($input['auto_signatures']   ?? 'no')  === 'yes',
+            'show_fees'          => ($input['show_fees']         ?? 'no')  === 'yes',
+            'show_next_term'     => ($input['show_next_term']    ?? 'no')  === 'yes',
+            'show_remarks'       => ($input['show_remarks']      ?? 'no')  === 'yes',
+            'show_performance'   => ($input['show_performance']  ?? 'no')  === 'yes',
+            'mark_sheet'         => $input['mark_sheet']         ?? null,
+            'final_grade_method' => $input['final_grade_method'] ?? 'average',
+            'position_ranking'   => $input['position_ranking']   ?? 'aggregate',
+        ];
     }
 }

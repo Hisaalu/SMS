@@ -5,55 +5,35 @@ namespace NexaT\Helpers;
 
 class UrlHelper
 {
-    /**
-     * Generate a full URL with base path
-     */
-    public static function url($path = '')
+    public static function url(string $path = ''): string
     {
         $base = rtrim(BASE_URL, '/');
         $path = ltrim($path, '/');
-        
-        if (empty($path)) {
-            return $base . '/';
-        }
-        
-        return $base . '/' . $path;
+
+        return $path === '' ? $base . '/' : $base . '/' . $path;
     }
-    
-    /**
-     * Generate a URL for assets
-     */
-    public static function asset($path)
+
+    public static function asset(string $path): string
     {
-        $base = rtrim(BASE_URL, '/');
-        $path = ltrim($path, '/');
-        return $base . '/public/assets/' . $path;
+        return rtrim(BASE_URL, '/') . '/public/assets/' . ltrim($path, '/');
     }
-    
-    /**
-     * Redirect to a URL
-     */
-    public static function redirect($path)
+
+    public static function redirect(string $path): void
     {
         header('Location: ' . self::url($path));
         exit;
     }
-    
-    /**
-     * Get the current URL
-     */
-    public static function current()
+
+    public static function current(): string
     {
-        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'];
-        $uri = $_SERVER['REQUEST_URI'];
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $uri  = $_SERVER['REQUEST_URI'] ?? '/';
+
         return $protocol . '://' . $host . $uri;
     }
-    
-    /**
-     * Get the base path
-     */
-    public static function base()
+
+    public static function base(): string
     {
         return rtrim(BASE_URL, '/') . '/';
     }

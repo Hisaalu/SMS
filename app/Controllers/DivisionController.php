@@ -8,7 +8,7 @@ use NexaT\Services\DivisionService;
 
 class DivisionController extends Controller
 {
-    private $divisionService;
+    private DivisionService $divisionService;
 
     public function __construct()
     {
@@ -18,12 +18,9 @@ class DivisionController extends Controller
 
     public function index(): void
     {
-        if (!$this->auth->check() || !$this->auth->getUser()->hasPermission('grading.view')) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('grading.view');
 
-        $schoolId = $this->auth->getUser()->school_id ?? 1;
+        $schoolId = $this->schoolId();
         $divisions = $this->divisionService->getAll($schoolId);
 
         echo $this->view->renderWithLayout('examinations/grading/divisions/index', 'default', [
@@ -34,126 +31,87 @@ class DivisionController extends Controller
 
     public function store(): void
     {
-        if (!$this->auth->check() || !$this->auth->getUser()->hasPermission('grading.manage')) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
+        $this->requirePermission('grading.manage');
+
+        $schoolId = $this->schoolId();
+        $data = $this->collectInput();
+
+        if ($data === null) {
+            $this->flashError('Name and Code are required.');
+            $this->redirect('/grading/divisions');
         }
 
-        $schoolId = $this->auth->getUser()->school_id ?? 1;
-
-        $name         = trim($_POST['name'] ?? '');
-        $code         = trim($_POST['code'] ?? '');
-        $minAggregate = (int)($_POST['min_aggregate'] ?? 0);
-        $maxAggregate = (int)($_POST['max_aggregate'] ?? 0);
-        $description  = trim($_POST['description'] ?? '');
-        $displayOrder = (int)($_POST['display_order'] ?? 0);
-        $status       = $_POST['status'] ?? 'active';
-
-        if (empty($name) || empty($code)) {
-            $_SESSION['flash_error'] = 'Name and Code are required.';
-            header('Location: ' . BASE_URL . '/grading/divisions');
-            exit;
+        if ($data['min_aggregate'] > $data['max_aggregate']) {
+            $this->flashError('Minimum aggregate cannot be greater than maximum.');
+            $this->redirect('/grading/divisions');
         }
 
-        if ($minAggregate > $maxAggregate) {
-            $_SESSION['flash_error'] = 'Minimum aggregate cannot be greater than maximum.';
-            header('Location: ' . BASE_URL . '/grading/divisions');
-            exit;
+        if ($this->divisionService->hasOverlap($data['min_aggregate'], $data['max_aggregate'], $schoolId)) {
+            $this->flashError("Aggregate range {$data['min_aggregate']}-{$data['max_aggregate']} overlaps with an existing division.");
+            $this->redirect('/grading/divisions');
         }
 
-        if ($this->divisionService->hasOverlap($minAggregate, $maxAggregate, $schoolId)) {
-            $_SESSION['flash_error'] = "Aggregate range {$minAggregate}-{$maxAggregate} overlaps with an existing division.";
-            header('Location: ' . BASE_URL . '/grading/divisions');
-            exit;
-        }
-
-        $this->divisionService->create([
-            'name'          => $name,
-            'code'          => $code,
-            'min_aggregate' => $minAggregate,
-            'max_aggregate' => $maxAggregate,
-            'description'   => $description,
-            'display_order' => $displayOrder,
-            'status'        => $status,
-        ], $schoolId);
-
-        $_SESSION['flash_success'] = 'Division created successfully.';
-        header('Location: ' . BASE_URL . '/grading/divisions');
-        exit;
+        $this->divisionService->create($data, $schoolId);
+        $this->flashSuccess('Division created successfully.');
+        $this->redirect('/grading/divisions');
     }
 
     public function update($params): void
     {
-        if (!$this->auth->check() || !$this->auth->getUser()->hasPermission('grading.manage')) {
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('grading.manage');
 
-        $schoolId = $this->auth->getUser()->school_id ?? 1;
+        $schoolId = $this->schoolId();
         $id = (int)($params['id'] ?? 0);
 
         $division = $this->divisionService->find($id, $schoolId);
         if (!$division) {
-            $_SESSION['flash_error'] = 'Division not found.';
-            header('Location: ' . BASE_URL . '/grading/divisions');
-            exit;
+            $this->flashError('Division not found.');
+            $this->redirect('/grading/divisions');
         }
 
-        $name         = trim($_POST['name'] ?? '');
-        $code         = trim($_POST['code'] ?? '');
-        $minAggregate = (int)($_POST['min_aggregate'] ?? 0);
-        $maxAggregate = (int)($_POST['max_aggregate'] ?? 0);
-        $description  = trim($_POST['description'] ?? '');
-        $displayOrder = (int)($_POST['display_order'] ?? 0);
-        $status       = $_POST['status'] ?? 'active';
+        $data = $this->collectInput();
 
-        if ($minAggregate > $maxAggregate) {
-            $_SESSION['flash_error'] = 'Minimum aggregate cannot be greater than maximum.';
-            header('Location: ' . BASE_URL . '/grading/divisions');
-            exit;
+        if ($data['min_aggregate'] > $data['max_aggregate']) {
+            $this->flashError('Minimum aggregate cannot be greater than maximum.');
+            $this->redirect('/grading/divisions');
         }
 
-        if ($this->divisionService->hasOverlap($minAggregate, $maxAggregate, $schoolId, $id)) {
-            $_SESSION['flash_error'] = "Aggregate range {$minAggregate}-{$maxAggregate} overlaps with an existing division.";
-            header('Location: ' . BASE_URL . '/grading/divisions');
-            exit;
+        if ($this->divisionService->hasOverlap($data['min_aggregate'], $data['max_aggregate'], $schoolId, $id)) {
+            $this->flashError("Aggregate range {$data['min_aggregate']}-{$data['max_aggregate']} overlaps with an existing division.");
+            $this->redirect('/grading/divisions');
         }
 
-        $this->divisionService->update($id, [
-            'name'          => $name,
-            'code'          => $code,
-            'min_aggregate' => $minAggregate,
-            'max_aggregate' => $maxAggregate,
-            'description'   => $description,
-            'display_order' => $displayOrder,
-            'status'        => $status,
-        ], $schoolId);
-
-        $_SESSION['flash_success'] = 'Division updated successfully.';
-        header('Location: ' . BASE_URL . '/grading/divisions');
-        exit;
+        $this->divisionService->update($id, $data, $schoolId);
+        $this->flashSuccess('Division updated successfully.');
+        $this->redirect('/grading/divisions');
     }
 
     public function delete($params): void
     {
-        if (!$this->auth->check() || !$this->auth->getUser()->hasPermission('grading.manage')) {
-            http_response_code(403);
-            echo json_encode(['error' => 'Unauthorized']);
-            exit;
-        }
+        $this->requirePermission('grading.manage');
 
-        $schoolId = $this->auth->getUser()->school_id ?? 1;
+        $schoolId = $this->schoolId();
         $id = (int)($params['id'] ?? 0);
 
         $division = $this->divisionService->find($id, $schoolId);
         if (!$division) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Division not found']);
-            exit;
+            $this->json(['error' => 'Division not found'], 404);
         }
 
         $this->divisionService->delete($id, $schoolId);
-        echo json_encode(['success' => true]);
-        exit;
+        $this->json(['success' => true]);
+    }
+
+    private function collectInput(): array
+    {
+        return [
+            'name'          => trim($_POST['name'] ?? ''),
+            'code'          => trim($_POST['code'] ?? ''),
+            'min_aggregate' => (int)($_POST['min_aggregate'] ?? 0),
+            'max_aggregate' => (int)($_POST['max_aggregate'] ?? 0),
+            'description'   => trim($_POST['description'] ?? ''),
+            'display_order' => (int)($_POST['display_order'] ?? 0),
+            'status'        => $_POST['status'] ?? 'active',
+        ];
     }
 }

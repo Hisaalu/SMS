@@ -1,4 +1,6 @@
 <?php
+// File: /app/Models/Department.php
+
 namespace NexaT\Models;
 
 use NexaT\Core\Model;

@@ -19,7 +19,7 @@
     <?php endif; ?>
 
     <?php 
-        $hasPhoto = !empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . $student['photo_path']);
+        $hasPhoto = !empty($student['photo_path']) && file_exists(ROOT_PATH . '/public/' . $student['photo_path']);
         $initials = strtoupper(substr($student['first_name'] ?? '', 0, 1) . substr($student['last_name'] ?? '', 0, 1));
     ?>
 
@@ -203,7 +203,7 @@
                         <?php if ($hasPhoto): ?>
                             <!-- Existing photo -->
                             <img id="photoPreview"
-                                 src="<?= BASE_URL . '/' . htmlspecialchars($student['photo_path']) ?>"
+                                 src="<?= BASE_URL . '/public/' . htmlspecialchars($student['photo_path']) ?>"
                                  class="rounded-circle border shadow-sm mb-3"
                                  style="width:140px; height:140px; object-fit:cover;"
                                  alt="Student Photo">

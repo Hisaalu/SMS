@@ -5,48 +5,42 @@ namespace NexaT\Core;
 
 class Config
 {
-    private static $config = [];
-    private static $loaded = false;
-    
+    private static array $config = [];
+    private static bool $loaded = false;
+
     public function __construct()
     {
-        if (!self::$loaded) {
-            $this->loadConfig();
-        }
+        self::ensureLoaded();
     }
-    
-    private function loadConfig(): void
-    {
-        $configFiles = [
-            'app' => CONFIG_PATH . '/config.php',
-            'database' => CONFIG_PATH . '/database.php'
-        ];
-        
-        foreach ($configFiles as $key => $file) {
-            if (file_exists($file)) {
-                self::$config[$key] = require $file;
-            }
-        }
-        
-        self::$loaded = true;
-    }
-    
+
     public static function get(string $key, $default = null)
     {
-        if (!self::$loaded) {
-            (new self())->loadConfig();
-        }
-        
-        $keys = explode('.', $key);
+        self::ensureLoaded();
+
         $current = self::$config;
-        
-        foreach ($keys as $segment) {
-            if (!isset($current[$segment])) {
+        foreach (explode('.', $key) as $segment) {
+            if (!is_array($current) || !array_key_exists($segment, $current)) {
                 return $default;
             }
             $current = $current[$segment];
         }
-        
+
         return $current;
+    }
+
+    private static function ensureLoaded(): void
+    {
+        if (self::$loaded) {
+            return;
+        }
+
+        self::$loaded = true;
+
+        foreach (['app' => 'config.php', 'database' => 'database.php'] as $key => $file) {
+            $path = CONFIG_PATH . '/' . $file;
+            if (is_file($path)) {
+                self::$config[$key] = require $path;
+            }
+        }
     }
 }

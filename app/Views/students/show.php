@@ -22,12 +22,12 @@
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-body text-center">
                     <?php 
-                        $hasPhoto = !empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . $student['photo_path']);
+                        $hasPhoto = !empty($student['photo_path']) && file_exists(ROOT_PATH . '/public/' . $student['photo_path']);
                         $initials = strtoupper(substr($student['first_name'] ?? '', 0, 1) . substr($student['last_name'] ?? '', 0, 1));
                     ?>
 
                     <?php if ($hasPhoto): ?>
-                        <img src="<?= BASE_URL . '/' . htmlspecialchars($student['photo_path']) ?>"
+                        <img src="<?= BASE_URL . '/public/' . htmlspecialchars($student['photo_path']) ?>"
                              class="rounded-circle border shadow-sm mb-3"
                              style="width:130px; height:130px; object-fit:cover;"
                              alt="Student Photo">

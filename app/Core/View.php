@@ -3,105 +3,70 @@
 
 namespace NexaT\Core;
 
+use RuntimeException;
+use Throwable;
+
 class View
 {
-    private static $instance;
-    private $data = [];
-    private $sharedData = [];
-    private $layoutPath = VIEWS_PATH . '/layouts';
-    private $viewPath = VIEWS_PATH;
-    
-    private function __construct() {}
-    
+    private static ?self $instance = null;
+    private array $data = [];
+    private array $sharedData = [];
+    private string $layoutPath;
+    private string $viewPath;
+
+    private function __construct()
+    {
+        $this->layoutPath = VIEWS_PATH . '/layouts';
+        $this->viewPath   = VIEWS_PATH;
+    }
+
     public static function getInstance(): self
     {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
-        return self::$instance;
+        return self::$instance ??= new self();
     }
-    
+
     public function render(string $view, array $data = []): string
     {
-        $viewPath = $this->viewPath . '/' . str_replace('.', '/', $view) . '.php';
-        
-        if (!file_exists($viewPath)) {
-            throw new \Exception("View not found: {$viewPath}");
+        $viewFile = $this->viewPath . '/' . str_replace('.', '/', $view) . '.php';
+
+        if (!is_file($viewFile)) {
+            throw new RuntimeException("View not found: {$viewFile}");
         }
-        
-        // Merge data
+
         $data = array_merge($this->sharedData, $this->data, $data);
         $data['view'] = $view;
-        
-        // Extract variables for the view
-        extract($data);
-        
-        // Start output buffering
-        ob_start();
-        
-        // Include the view file
-        require $viewPath;
-        
-        // Get the content
-        $content = ob_get_clean();
-        
-        // If content is empty, return an error message for debugging
-        if (empty($content) && !$this->isLayoutRendering()) {
-            return "<!-- View rendered but output is empty: {$viewPath} -->";
-        }
-        
-        return $content;
+
+        return $this->capture($viewFile, $data);
     }
-    
+
     public function renderWithLayout(string $view, string $layout = 'default', array $data = []): string
     {
-        // Render the view first
         $content = $this->render($view, $data);
-        
-        // If content is empty, show debug info
-        if (empty($content)) {
-            $content = "<!-- Content is empty for view: {$view} -->";
-        }
-        
         $data['content'] = $content;
-        
-        $layoutPath = $this->layoutPath . '/' . $layout . '.php';
-        
-        if (!file_exists($layoutPath)) {
-            throw new \Exception("Layout not found: {$layoutPath}");
+
+        $layoutFile = $this->layoutPath . '/' . $layout . '.php';
+
+        if (!is_file($layoutFile)) {
+            throw new RuntimeException("Layout not found: {$layoutFile}");
         }
-        
+
         $data = array_merge($this->sharedData, $this->data, $data);
-        extract($data);
-        
-        ob_start();
-        require $layoutPath;
-        return ob_get_clean();
+
+        return $this->capture($layoutFile, $data);
     }
-    
-    private function isLayoutRendering(): bool
-    {
-        // Check if we're in the middle of rendering a layout
-        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-        foreach ($backtrace as $trace) {
-            if (isset($trace['function']) && $trace['function'] === 'renderWithLayout') {
-                return true;
-            }
-        }
-        return false;
-    }
-    
+
     public function share(string $key, $value): self
     {
         $this->sharedData[$key] = $value;
         return $this;
     }
-    
+
     public function flash(string $key, $value): void
     {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
+
         $_SESSION['flash'][$key] = $value;
     }
 
@@ -111,16 +76,34 @@ class View
             session_start();
         }
 
-        if (isset($_SESSION['flash'][$key])) {
-            $message = $_SESSION['flash'][$key];
-            unset($_SESSION['flash'][$key]);
-            return $message;
+        if (!isset($_SESSION['flash'][$key])) {
+            return null;
         }
-        return null;
+
+        $message = $_SESSION['flash'][$key];
+        unset($_SESSION['flash'][$key]);
+
+        return $message;
     }
-    
+
     public function __set(string $key, $value): void
     {
         $this->data[$key] = $value;
+    }
+
+    private function capture(string $file, array $data): string
+    {
+        extract($data, EXTR_SKIP);
+
+        ob_start();
+
+        try {
+            require $file;
+        } catch (Throwable $e) {
+            ob_end_clean();
+            throw $e;
+        }
+
+        return ob_get_clean() ?: '';
     }
 }

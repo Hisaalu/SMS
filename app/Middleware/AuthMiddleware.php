@@ -10,7 +10,7 @@ class AuthMiddleware
     public function handle(array $params = []): void
     {
         $auth = new Auth();
-        
+
         if (!$auth->check()) {
             header('Location: ' . BASE_URL . '/login');
             exit;

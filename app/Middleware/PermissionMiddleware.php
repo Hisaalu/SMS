@@ -4,32 +4,31 @@
 namespace NexaT\Middleware;
 
 use NexaT\Core\Auth;
+use RuntimeException;
 
 class PermissionMiddleware
 {
     public function handle(array $params = []): void
     {
         $auth = new Auth();
-        
-        // Check if user is authenticated
+
         if (!$auth->check()) {
             header('Location: ' . BASE_URL . '/login');
             exit;
         }
-        
-        $user = $auth->getUser();
+
         $permission = $params['permission'] ?? null;
-        
+
         if (!$permission) {
-            throw new \Exception("Permission middleware requires a permission parameter");
+            throw new RuntimeException('PermissionMiddleware requires a "permission" parameter.');
         }
-        
-        // Super Admin bypass - all permissions granted
+
+        $user = $auth->getUser();
+
         if ($user->isSuperAdmin()) {
             return;
         }
-        
-        // Check if user has the required permission
+
         if (!$user->hasPermission($permission)) {
             http_response_code(403);
             require VIEWS_PATH . '/errors/403.php';

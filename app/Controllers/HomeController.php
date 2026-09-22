@@ -10,16 +10,11 @@ class HomeController extends Controller
     public function index(): void
     {
         if (!file_exists(STORAGE_PATH . '/installed')) {
-            header('Location: /NexaT/install');
+            header('Location: ' . BASE_URL . '/install');
             exit;
         }
-        
-        if ($this->auth->check()) {
-            header('Location: /NexaT/dashboard');
-            exit;
-        }
-        
-        header('Location: /NexaT/login');
+
+        header('Location: ' . BASE_URL . ($this->auth->check() ? '/dashboard' : '/login'));
         exit;
     }
 }

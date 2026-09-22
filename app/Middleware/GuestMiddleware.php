@@ -10,9 +10,9 @@ class GuestMiddleware
     public function handle(array $params = []): void
     {
         $auth = new Auth();
-        
+
         if ($auth->check()) {
-            header('Location: /dashboard');
+            header('Location: ' . BASE_URL . '/dashboard');
             exit;
         }
     }

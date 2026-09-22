@@ -21,29 +21,37 @@ class Auth
     {
         $sessionKey = defined('SESSION_USER_KEY') ? \SESSION_USER_KEY : 'user_id';
         $userId = $_SESSION[$sessionKey] ?? null;
-        
-        if ($userId && class_exists($this->userModel)) {
-            $user = $this->userModel::find($userId);
-            if ($user) {
-                $this->user = $user;
-            }
+
+        if (!$userId) {
+            return;
+        }
+
+        if (!class_exists($this->userModel)) {
+            return;
+        }
+
+        $user = $this->userModel::find((int)$userId)
+            ?? $this->userModel::findWithoutScope((int)$userId);
+
+        if ($user) {
+            $this->user = $user;
         }
     }
     
     public function attempt(string $email, string $password): bool
     {
-        $user = $this->userModel::firstWhere('email', $email);
-        
+        $user = $this->userModel::findByEmailGlobal($email);
+
         if (!$user) {
             return false;
         }
-        
-        if (password_verify($password, $user->password)) {
-            $this->login($user);
-            return true;
+
+        if (!password_verify($password, $user->password)) {
+            return false;
         }
-        
-        return false;
+
+        $this->login($user);
+        return true;
     }
     
     public function login($user): void

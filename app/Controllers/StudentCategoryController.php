@@ -4,220 +4,173 @@
 namespace NexaT\Controllers;
 
 use NexaT\Core\Controller;
-use NexaT\Core\Database;
-use Exception;
+use Throwable;
 
 class StudentCategoryController extends Controller
 {
     public function index(): void
     {
-        if (!$this->auth->check() || !$this->auth->user()->can('student_categories.view')) {
-            http_response_code(403);
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('student_categories.view');
 
-        $schoolId = (int) $this->auth->getUser()->school_id;
-        $db = Database::getInstance();
+        $schoolId = $this->schoolId();
 
-        $categories = $db->fetchAll(
-            "SELECT * FROM student_categories WHERE school_id = :school_id ORDER BY display_order ASC, id DESC",
+        $categories = $this->db->fetchAll(
+            "SELECT * FROM student_categories
+             WHERE school_id = :school_id
+             ORDER BY display_order ASC, id DESC",
             ['school_id' => $schoolId]
         );
 
         echo $this->view->renderWithLayout('students/categories/index', 'default', [
-            'categories' => $categories
+            'categories' => $categories,
         ]);
     }
 
     public function create(): void
     {
-        if (!$this->auth->check() || !$this->auth->user()->can('student_categories.create')) {
-            http_response_code(403);
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('student_categories.create');
 
         echo $this->view->renderWithLayout('students/categories/create', 'default');
     }
 
     public function store(): void
     {
-        if (!$this->auth->check() || !$this->auth->user()->can('student_categories.create')) {
-            http_response_code(403);
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('student_categories.create');
 
-        $schoolId = (int) $this->auth->getUser()->school_id;
+        $schoolId = $this->schoolId();
         $name = trim($_POST['name'] ?? '');
         $code = strtoupper(trim($_POST['code'] ?? ''));
         $description = trim($_POST['description'] ?? '');
 
-        if (empty($name) || empty($code)) {
-            $_SESSION['flash_error'] = 'Category Name and Code are required.';
-            header('Location: ' . BASE_URL . '/student-categories/create');
-            exit;
+        if ($name === '' || $code === '') {
+            $this->flashError('Category Name and Code are required.');
+            $this->redirect('/student-categories/create');
         }
 
-        $db = Database::getInstance();
-
         try {
-            $existing = $db->fetch(
-                "SELECT id FROM student_categories WHERE school_id = :school_id AND (code = :code OR name = :name)",
+            $existing = $this->db->fetch(
+                "SELECT id FROM student_categories
+                 WHERE school_id = :school_id AND (code = :code OR name = :name)",
                 ['school_id' => $schoolId, 'code' => $code, 'name' => $name]
             );
 
             if ($existing) {
-                $_SESSION['flash_error'] = 'A category with this Name or Code already exists.';
-                header('Location: ' . BASE_URL . '/student-categories/create');
-                exit;
+                $this->flashError('A category with this Name or Code already exists.');
+                $this->redirect('/student-categories/create');
             }
 
-            $db->execute(
-                "INSERT INTO student_categories (school_id, name, code, description, status) 
+            $this->db->execute(
+                "INSERT INTO student_categories (school_id, name, code, description, status)
                  VALUES (:school_id, :name, :code, :description, 'active')",
                 [
                     'school_id'   => $schoolId,
                     'name'        => $name,
                     'code'        => $code,
-                    'description' => !empty($description) ? $description : null
+                    'description' => $description !== '' ? $description : null,
                 ]
             );
 
-            $_SESSION['flash_success'] = 'Student category created successfully.';
-            header('Location: ' . BASE_URL . '/student-categories');
-            exit;
-        } catch (Exception $e) {
-            $_SESSION['flash_error'] = 'Error creating category: ' . $e->getMessage();
-            header('Location: ' . BASE_URL . '/student-categories/create');
-            exit;
+            $this->flashSuccess('Student category created successfully.');
+            $this->redirect('/student-categories');
+
+        } catch (Throwable $e) {
+            $this->flashError('Error creating category: ' . $e->getMessage());
+            $this->redirect('/student-categories/create');
         }
     }
 
     public function edit(array $params = []): void
     {
-        if (!$this->auth->check() || !$this->auth->user()->can('student_categories.edit')) {
-            http_response_code(403);
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('student_categories.edit');
 
-        $id = (int) ($params['id'] ?? $_GET['id'] ?? 0);
-        $schoolId = (int) $this->auth->getUser()->school_id;
-        $db = Database::getInstance();
+        $id = (int)($params['id'] ?? $_GET['id'] ?? 0);
+        $schoolId = $this->schoolId();
 
-        $category = $db->fetch(
+        $category = $this->db->fetch(
             "SELECT * FROM student_categories WHERE id = :id AND school_id = :school_id",
             ['id' => $id, 'school_id' => $schoolId]
         );
 
         if (!$category) {
-            $_SESSION['flash_error'] = 'Category not found.';
-            header('Location: ' . BASE_URL . '/student-categories');
-            exit;
+            $this->flashError('Category not found.');
+            $this->redirect('/student-categories');
         }
 
         echo $this->view->renderWithLayout('students/categories/edit', 'default', [
-            'category' => $category
+            'category' => $category,
         ]);
     }
 
     public function update(): void
     {
-        if (!$this->auth->check() || !$this->auth->user()->can('student_categories.edit')) {
-            http_response_code(403);
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('student_categories.edit');
 
-        $id = (int) ($_POST['id'] ?? 0);
-        $schoolId = (int) $this->auth->getUser()->school_id;
+        $id = (int)($_POST['id'] ?? 0);
+        $schoolId = $this->schoolId();
         $name = trim($_POST['name'] ?? '');
         $code = strtoupper(trim($_POST['code'] ?? ''));
         $description = trim($_POST['description'] ?? '');
         $status = $_POST['status'] ?? 'active';
 
-        if (empty($id) || empty($name) || empty($code)) {
-            $_SESSION['flash_error'] = 'Invalid request data.';
-            header('Location: ' . BASE_URL . '/student-categories');
-            exit;
+        if ($id === 0 || $name === '' || $code === '') {
+            $this->flashError('Invalid request data.');
+            $this->redirect('/student-categories');
         }
 
-        $db = Database::getInstance();
-
         try {
-            // Check for code/name collisions excluding current record
-            $existing = $db->fetch(
-                "SELECT id FROM student_categories 
+            $existing = $this->db->fetch(
+                "SELECT id FROM student_categories
                  WHERE school_id = :school_id AND (code = :code OR name = :name) AND id != :id",
                 ['school_id' => $schoolId, 'code' => $code, 'name' => $name, 'id' => $id]
             );
 
             if ($existing) {
-                $_SESSION['flash_error'] = 'Another category with this Name or Code already exists.';
-                header('Location: ' . BASE_URL . '/student-categories/edit?id=' . $id);
-                exit;
+                $this->flashError('Another category with this Name or Code already exists.');
+                $this->redirect('/student-categories/edit?id=' . $id);
             }
 
-            $db->update(
-                'student_categories',
-                [
-                    'name'        => $name,
-                    'code'        => $code,
-                    'description' => !empty($description) ? $description : null,
-                    'status'      => $status
-                ],
-                [
-                    'id'        => $id,
-                    'school_id' => $schoolId
-                ]
-            );
+            $this->db->update('student_categories', [
+                'name'        => $name,
+                'code'        => $code,
+                'description' => $description !== '' ? $description : null,
+                'status'      => $status,
+            ], ['id' => $id, 'school_id' => $schoolId]);
 
-            $_SESSION['flash_success'] = 'Student category updated successfully.';
-            header('Location: ' . BASE_URL . '/student-categories');
-            exit;
-        } catch (Exception $e) {
-            $_SESSION['flash_error'] = 'Error updating category: ' . $e->getMessage();
-            header('Location: ' . BASE_URL . '/student-categories/edit?id=' . $id);
-            exit;
+            $this->flashSuccess('Student category updated successfully.');
+            $this->redirect('/student-categories');
+
+        } catch (Throwable $e) {
+            $this->flashError('Error updating category: ' . $e->getMessage());
+            $this->redirect('/student-categories/edit?id=' . $id);
         }
     }
 
     public function delete(): void
     {
-        if (!$this->auth->check() || !$this->auth->user()->can('student_categories.delete')) {
-            http_response_code(403);
-            require VIEWS_PATH . '/errors/403.php';
-            exit;
-        }
+        $this->requirePermission('student_categories.delete');
 
-        $id = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
-        $schoolId = (int) $this->auth->getUser()->school_id;
-        $db = Database::getInstance();
+        $id = (int)($_POST['id'] ?? $_GET['id'] ?? 0);
+        $schoolId = $this->schoolId();
 
         try {
-            // Prevent deletion if students are associated with this category
-            $usageCheck = $db->fetch(
-                "SELECT COUNT(*) as count FROM students WHERE current_category_id = :id AND school_id = :school_id",
+            $usage = $this->db->fetch(
+                "SELECT COUNT(*) AS count FROM students
+                 WHERE current_category_id = :id AND school_id = :school_id",
                 ['id' => $id, 'school_id' => $schoolId]
             );
 
-            if (!empty($usageCheck['count']) && $usageCheck['count'] > 0) {
-                $_SESSION['flash_error'] = 'Cannot delete category: Assigned to ' . $usageCheck['count'] . ' student(s).';
-                header('Location: ' . BASE_URL . '/student-categories');
-                exit;
+            if (!empty($usage['count']) && (int)$usage['count'] > 0) {
+                $this->flashError("Cannot delete category: assigned to {$usage['count']} student(s).");
+                $this->redirect('/student-categories');
             }
 
-            $db->delete('student_categories', ['id' => $id, 'school_id' => $schoolId]);
+            $this->db->delete('student_categories', ['id' => $id, 'school_id' => $schoolId]);
+            $this->flashSuccess('Student category deleted successfully.');
 
-            $_SESSION['flash_success'] = 'Student category deleted successfully.';
-            header('Location: ' . BASE_URL . '/student-categories');
-            exit;
-        } catch (Exception $e) {
-            $_SESSION['flash_error'] = 'Error deleting category: ' . $e->getMessage();
-            header('Location: ' . BASE_URL . '/student-categories');
-            exit;
+        } catch (Throwable $e) {
+            $this->flashError('Error deleting category: ' . $e->getMessage());
         }
+
+        $this->redirect('/student-categories');
     }
 }

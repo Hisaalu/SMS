@@ -1,12 +1,15 @@
 <?php
+// File: /app/Controllers/StaffCategoryController.php
+
 namespace NexaT\Controllers;
 
 use NexaT\Core\Controller;
 use NexaT\Services\StaffService;
+use Throwable;
 
 class StaffCategoryController extends Controller
 {
-    private $staffService;
+    private StaffService $staffService;
 
     public function __construct()
     {
@@ -16,40 +19,27 @@ class StaffCategoryController extends Controller
 
     public function index(): void
     {
-        if (!$this->auth->check()) {
-            $this->redirect('/login');
-        }
+        $this->requireAuth();
 
-        $schoolId = $this->auth->getUser()->school_id ?? 1;
-        $categories = $this->staffService->getAllCategories($schoolId);
+        $categories = $this->staffService->getAllCategories($this->schoolId());
 
         echo $this->view->renderWithLayout('staff/categories/index', 'default', [
-            'title' => 'Staff Categories',
-            'categories' => $categories
+            'title'      => 'Staff Categories',
+            'categories' => $categories,
         ]);
     }
 
     public function store(): void
     {
-        if (!$this->auth->check()) {
-            $this->redirect('/login');
-        }
+        $this->requireAuth();
 
-        $schoolId = $this->auth->getUser()->school_id ?? 1;
-        
-        $data = [
-            'name' => trim($_POST['name'] ?? ''),
-            'code' => trim($_POST['code'] ?? ''),
-            'description' => trim($_POST['description'] ?? ''),
-            'display_order' => (int)($_POST['display_order'] ?? 0),
-            'status' => $_POST['status'] ?? 'active'
-        ];
+        $data = $this->collectInput();
 
         try {
-            $this->staffService->createCategory($data, $schoolId);
-            $_SESSION['flash_success'] = 'Category created successfully.';
-        } catch (\Exception $e) {
-            $_SESSION['flash_error'] = 'Failed to create category: ' . $e->getMessage();
+            $this->staffService->createCategory($data, $this->schoolId());
+            $this->flashSuccess('Category created successfully.');
+        } catch (Throwable $e) {
+            $this->flashError('Failed to create category: ' . $e->getMessage());
         }
 
         $this->redirect('/staff/categories');
@@ -57,28 +47,29 @@ class StaffCategoryController extends Controller
 
     public function update(): void
     {
-        if (!$this->auth->check()) {
-            $this->redirect('/login');
-        }
+        $this->requireAuth();
 
-        $schoolId = $this->auth->getUser()->school_id ?? 1;
         $id = (int)($_POST['id'] ?? 0);
-
-        $data = [
-            'name' => trim($_POST['name'] ?? ''),
-            'code' => trim($_POST['code'] ?? ''),
-            'description' => trim($_POST['description'] ?? ''),
-            'display_order' => (int)($_POST['display_order'] ?? 0),
-            'status' => $_POST['status'] ?? 'active'
-        ];
+        $data = $this->collectInput();
 
         try {
-            $this->staffService->updateCategory($id, $data, $schoolId);
-            $_SESSION['flash_success'] = 'Category updated successfully.';
-        } catch (\Exception $e) {
-            $_SESSION['flash_error'] = 'Failed to update category: ' . $e->getMessage();
+            $this->staffService->updateCategory($id, $data, $this->schoolId());
+            $this->flashSuccess('Category updated successfully.');
+        } catch (Throwable $e) {
+            $this->flashError('Failed to update category: ' . $e->getMessage());
         }
 
         $this->redirect('/staff/categories');
+    }
+
+    private function collectInput(): array
+    {
+        return [
+            'name'          => trim($_POST['name'] ?? ''),
+            'code'          => trim($_POST['code'] ?? ''),
+            'description'   => trim($_POST['description'] ?? ''),
+            'display_order' => (int)($_POST['display_order'] ?? 0),
+            'status'        => $_POST['status'] ?? 'active',
+        ];
     }
 }
