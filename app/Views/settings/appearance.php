@@ -1,41 +1,41 @@
 <?php
-//File: /app/Views/settings/appearance.php
-    use NexaT\Core\View;
-    $viewInstance = View::getInstance();
-    $flashSuccess = $viewInstance->getFlash('success');
-    $flashError   = $viewInstance->getFlash('error');
+// File: /app/Views/settings/appearance.php
+use NexaT\Core\View;
 
-    $colorSwatches = [
-        '#2563EB' => 'Blue',
-        '#EAB308' => 'Yellow',
-        '#EC4899' => 'Pink',
-        '#8B5CF6' => 'Purple',
-        '#F97316' => 'Orange',
-        '#10B981' => 'Green',
-    ];
+$viewInstance = View::getInstance();
+$flashSuccess = $viewInstance->getFlash('success');
+$flashError   = $viewInstance->getFlash('error');
 
-    $fontSizePresets = [
-        1 => 0.75,
-        2 => 0.875,
-        3 => 1.0,
-        4 => 1.125,
-        5 => 1.25,
-    ];
+$colorSwatches = [
+    '#2563EB' => 'Blue',
+    '#EAB308' => 'Yellow',
+    '#EC4899' => 'Pink',
+    '#8B5CF6' => 'Purple',
+    '#F97316' => 'Orange',
+    '#10B981' => 'Green',
+];
 
-    $currentFontSize = (float) ($theme['font_size_base'] ?? 0.875);
-    $currentPreset   = 2;
-    $closestDelta    = PHP_FLOAT_MAX;
-    foreach ($fontSizePresets as $step => $size) {
-        $delta = abs($size - $currentFontSize);
-        if ($delta < $closestDelta) {
-            $closestDelta  = $delta;
-            $currentPreset = $step;
-        }
+$fontSizePresets = [
+    1 => 0.75,
+    2 => 0.875,
+    3 => 1.0,
+    4 => 1.125,
+    5 => 1.25,
+];
+
+$currentFontSize = (float) ($theme['font_size_base'] ?? 0.875);
+$currentPreset   = 2;
+$closestDelta    = PHP_FLOAT_MAX;
+foreach ($fontSizePresets as $step => $size) {
+    $delta = abs($size - $currentFontSize);
+    if ($delta < $closestDelta) {
+        $closestDelta  = $delta;
+        $currentPreset = $step;
     }
+}
 
-    $isDarkMode = !empty($theme['dark_mode']);
-
-    $currentAccent = $theme['accent'] ?? '#2563EB';
+$isDarkMode    = !empty($theme['dark_mode']);
+$currentAccent = $theme['accent'] ?? '#2563EB';
 ?>
 
 <style>
@@ -313,10 +313,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const fontPresets = {1: 0.75, 2: 0.875, 3: 1.0, 4: 1.125, 5: 1.25};
 
+    function applyFontSize(size) {
+        const root = document.documentElement;
+        root.style.setProperty('--font-size-base',  size + 'rem');
+        root.style.setProperty('--font-size-small', (size * 0.85).toFixed(3) + 'rem');
+        root.style.setProperty('--font-size-heading', (size * 1.4).toFixed(3) + 'rem');
+    }
+
     fontSlider.addEventListener('input', function () {
         const size = fontPresets[this.value] || 0.875;
         fontSizeValue.value = size;
-        document.documentElement.style.setProperty('--font-size-base', size + 'rem');
+        applyFontSize(size);
     });
 
     document.querySelectorAll('#colorSwatches .color-swatch').forEach(function (btn) {

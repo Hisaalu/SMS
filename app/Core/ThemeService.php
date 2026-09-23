@@ -86,45 +86,52 @@ class ThemeService
         }
         $css .= "}\n";
 
-        // Dark palette — applied via [data-theme="dark"] on <html>,
-        // so it can be toggled at runtime by the user.
-        $css .= $this->darkModeOverrides();
+        $css .= $this->themeOverrides();
 
         return $css;
     }
 
-    /**
-     * Dark palette, activated when <html data-theme="dark"> is set.
-     * If admin enabled "use_system_setting", also honors OS preference
-     * when no explicit user choice is stored.
-     */
-    private function darkModeOverrides(): string
+    private function themeOverrides(): string
     {
         $t = $this->settings->getTheme();
 
-        $dark = [
-            '--primary-color'     => '#F1F5F9',
-            '--secondary-color'   => '#E2E8F0',
-            '--background-color'  => '#0B1220',
-            '--surface-color'     => '#111827',
-            '--text-color'        => '#E5E7EB',
-            '--text-muted'        => '#9CA3AF',
-            '--border-color'      => '#1F2937',
-            '--sidebar-bg'        => '#0F172A',
-            '--sidebar-text'      => '#CBD5E1',
-            '--navbar-bg'         => '#0F172A',
-            '--navbar-text'       => '#F1F5F9',
+        $light = [
+            '--input-bg'           => '#FFFFFF',
+            '--input-border'       => '#CBD5E1',
+            '--input-border-focus' => '#2563EB',
+            '--input-shadow'       => 'inset 0 1px 2px rgba(15, 23, 42, 0.04)',
         ];
 
-        $css = "[data-theme=\"dark\"] {\n";
+        $dark = [
+            '--primary-color'      => '#F8FAFC',
+            '--secondary-color'    => '#CBD5E1',
+            '--background-color'   => '#0F1115',
+            '--surface-color'      => '#171A21',
+            '--text-color'         => '#F1F5F9',
+            '--text-muted'         => '#94A3B8',
+            '--border-color'       => '#2A2F3A',
+            '--sidebar-bg'         => '#111318',
+            '--sidebar-text'       => '#CBD5E1',
+            '--navbar-bg'          => '#111318',
+            '--navbar-text'        => '#F8FAFC',
+            '--input-bg'           => '#0F1115',
+            '--input-border'       => '#3F4756',
+            '--input-border-focus' => '#60A5FA',
+            '--input-shadow'       => 'inset 0 1px 2px rgba(0, 0, 0, 0.35)',
+        ];
+
+        $css = ":root {\n";
+        foreach ($light as $name => $value) {
+            $css .= "    {$name}: {$value};\n";
+        }
+        $css .= "}\n";
+
+        $css .= "[data-theme=\"dark\"] {\n";
         foreach ($dark as $name => $value) {
             $css .= "    {$name}: {$value};\n";
         }
         $css .= "}\n";
 
-        // If admin allows system preference AND user hasn't made an explicit
-        // choice, follow the OS. The body-level JS sets data-theme on load
-        // based on stored preference, so this handles the "no JS yet" case.
         if (!empty($t['use_system_setting'])) {
             $css .= "@media (prefers-color-scheme: dark) {\n";
             $css .= "    :root:not([data-theme=\"light\"]):not([data-theme=\"dark\"]) {\n";

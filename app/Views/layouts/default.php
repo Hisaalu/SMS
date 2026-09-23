@@ -73,12 +73,8 @@ $userInitial = $initial !== '' ? $initial : 'U';
     <style>
         <?= $cssVariables ?>
 
-        :root {
-            color-scheme: light;
-        }
-        [data-theme="dark"] {
-            color-scheme: dark;
-        }
+        :root { color-scheme: light; }
+        [data-theme="dark"] { color-scheme: dark; }
 
         *, *::before, *::after { box-sizing: border-box; }
 
@@ -198,7 +194,7 @@ $userInitial = $initial !== '' ? $initial : 'U';
         }
 
         .sidebar-menu-wrapper .sub-link {
-            font-size: var(--font-size-small);
+            font-size: calc(var(--font-size-base) * 0.9);
             color: var(--text-muted);
         }
 
@@ -227,13 +223,13 @@ $userInitial = $initial !== '' ? $initial : 'U';
         .sub-menu-icon {
             width: 1.2rem;
             text-align: center;
-            font-size: calc(var(--font-size-small) * 1.05);
+            font-size: calc(var(--font-size-base) * 0.85);
             margin-right: 0.5rem;
         }
 
         .chevron-icon {
             transition: transform 0.2s ease;
-            font-size: calc(var(--font-size-small) * 0.85);
+            font-size: calc(var(--font-size-base) * 0.65);
             color: var(--text-muted);
         }
 
@@ -256,12 +252,18 @@ $userInitial = $initial !== '' ? $initial : 'U';
             .main-wrapper { margin-left: 0; padding: 1rem; }
         }
 
-        .card {
+        .card,
+        .modal-content,
+        .offcanvas,
+        .dropdown-menu {
             background: var(--surface-color);
+            color: var(--text-color);
+        }
+
+        .card {
             border: 1px solid var(--border-color) !important;
             border-radius: var(--border-radius-base);
             box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            color: var(--text-color);
         }
 
         .card-header {
@@ -287,20 +289,50 @@ $userInitial = $initial !== '' ? $initial : 'U';
         .form-control,
         .form-select,
         textarea.form-control {
-            background: var(--surface-color);
+            background: var(--input-bg);
             color: var(--text-color);
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--input-border);
             border-radius: var(--border-radius-base);
+            box-shadow: var(--input-shadow);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
         }
 
         .form-control::placeholder { color: var(--text-muted); opacity: 0.7; }
 
+        .form-control:hover,
+        .form-select:hover {
+            border-color: var(--input-border-focus);
+        }
+
         .form-control:focus,
         .form-select:focus {
-            background: var(--surface-color);
+            background: var(--input-bg);
             color: var(--text-color);
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
+            border-color: var(--input-border-focus);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+            outline: none;
+        }
+
+        .form-control-sm,
+        .form-select-sm {
+            background: var(--input-bg);
+            color: var(--text-color);
+            border-color: var(--input-border);
+        }
+
+        .form-select {
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2364748B'%3E%3Cpath d='M4.646 6.146a.5.5 0 0 1 .708 0L8 8.793l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 16px 12px;
+            padding-right: 2.25rem;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+        }
+
+        [data-theme="dark"] .form-select {
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2394A3B8'%3E%3Cpath d='M4.646 6.146a.5.5 0 0 1 .708 0L8 8.793l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
         }
 
         .form-select option {
@@ -308,29 +340,23 @@ $userInitial = $initial !== '' ? $initial : 'U';
             color: var(--text-color);
         }
 
-        .form-control-sm,
-        .form-select-sm {
-            background: var(--surface-color);
-            color: var(--text-color);
-        }
-
         .input-group-text {
-            background: var(--background-color);
+            background: var(--surface-color);
             color: var(--text-muted);
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--input-border);
         }
 
         .form-check-input {
-            background-color: var(--border-color);
-            border-color: var(--border-color);
+            background-color: var(--input-bg);
+            border-color: var(--input-border);
         }
         .form-check-input:checked {
             background-color: var(--accent-color);
             border-color: var(--accent-color);
         }
         .form-check-input:focus {
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
+            border-color: var(--input-border-focus);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
         }
 
         .table {
@@ -346,12 +372,18 @@ $userInitial = $initial !== '' ? $initial : 'U';
         }
 
         .table-light,
-        .table-secondary,
-        .table > thead.table-light > tr > th,
-        .table > thead.table-secondary > tr > th {
+        .table-secondary {
             background: var(--background-color) !important;
             color: var(--text-color) !important;
             border-color: var(--border-color) !important;
+        }
+        .table-light > th,
+        .table-light > td,
+        .table-secondary > th,
+        .table-secondary > td {
+            background: transparent;
+            color: var(--text-color);
+            border-color: var(--border-color);
         }
 
         .table-bordered,
@@ -385,8 +417,12 @@ $userInitial = $initial !== '' ? $initial : 'U';
         }
         .alert-warning {
             background: rgba(255, 212, 0, 0.15);
-            color: #a37c00;
+            color: var(--warning-color);
             border-color: rgba(255, 212, 0, 0.3);
+            filter: saturate(0.85) brightness(0.9);
+        }
+        [data-theme="dark"] .alert-warning {
+            filter: saturate(1.1) brightness(1.15);
         }
         .alert-info {
             background: rgba(37, 99, 235, 0.12);
@@ -417,7 +453,7 @@ $userInitial = $initial !== '' ? $initial : 'U';
         .btn-light {
             background: var(--surface-color);
             color: var(--text-color);
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--input-border);
         }
         .btn-secondary:hover,
         .btn-secondary:focus,
@@ -425,19 +461,19 @@ $userInitial = $initial !== '' ? $initial : 'U';
         .btn-light:focus {
             background: var(--border-color);
             color: var(--text-color);
-            border-color: var(--border-color);
+            border-color: var(--input-border);
         }
 
         .btn-outline-secondary {
             color: var(--text-color);
-            border-color: var(--border-color);
+            border-color: var(--input-border);
             background: transparent;
         }
         .btn-outline-secondary:hover,
         .btn-outline-secondary:focus {
             background: var(--border-color);
             color: var(--text-color);
-            border-color: var(--border-color);
+            border-color: var(--input-border);
         }
 
         .badge.bg-secondary {
@@ -465,6 +501,9 @@ $userInitial = $initial !== '' ? $initial : 'U';
             color: #a37c00;
             border: 1px solid rgba(255, 212, 0, 0.35);
         }
+        [data-theme="dark"] .badge.bg-warning-subtle {
+            color: #fbbf24;
+        }
         .badge.bg-info-subtle {
             background: rgba(13, 202, 240, 0.15);
             color: #0aa2c0;
@@ -477,8 +516,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
         }
 
         .modal-content {
-            background: var(--surface-color);
-            color: var(--text-color);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius-base);
         }
@@ -504,23 +541,23 @@ $userInitial = $initial !== '' ? $initial : 'U';
             color: #fff !important;
         }
 
-        .offcanvas { background: var(--surface-color); color: var(--text-color); }
+        .offcanvas { color: var(--text-color); }
         .offcanvas .offcanvas-header { border-bottom: 1px solid var(--border-color); }
 
         .dropdown-menu {
-            background: var(--surface-color);
             border: 1px solid var(--border-color);
-            color: var(--text-color);
         }
-        .dropdown-item {
-            color: var(--text-color);
-        }
+        .dropdown-item { color: var(--text-color); }
         .dropdown-item:hover,
         .dropdown-item:focus {
             background: var(--border-color);
             color: var(--text-color);
         }
         .dropdown-divider { border-color: var(--border-color); }
+
+        [data-theme="dark"] .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
 
         .text-muted     { color: var(--text-muted) !important; }
         .text-secondary { color: var(--text-muted) !important; }
@@ -552,7 +589,7 @@ $userInitial = $initial !== '' ? $initial : 'U';
         .preview-box {
             width: 64px;
             height: 64px;
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--input-border);
             border-radius: var(--border-radius-base);
             display: flex;
             align-items: center;
@@ -670,6 +707,7 @@ $userInitial = $initial !== '' ? $initial : 'U';
                 <?php endif; ?>
                 <span><?= $schoolTitle ?></span>
             </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body p-0">
             <?php include __DIR__ . '/_sidebar_menu.php'; ?>
