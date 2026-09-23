@@ -280,6 +280,29 @@ $userInitial = $initial !== '' ? $initial : 'U';
             color: var(--text-color);
         }
 
+        .list-group {
+            --bs-list-group-bg: transparent;
+            --bs-list-group-color: var(--text-color);
+            --bs-list-group-border-color: var(--border-color);
+            color: var(--text-color);
+        }
+        .list-group-item {
+            background: var(--surface-color);
+            color: var(--text-color);
+            border-color: var(--border-color);
+        }
+        .list-group-item-action {
+            color: var(--text-color);
+        }
+        .list-group-item-action:hover,
+        .list-group-item-action:focus {
+            background: var(--border-color);
+            color: var(--text-color);
+        }
+        .list-group-flush > .list-group-item {
+            border-color: var(--border-color);
+        }
+
         .form-label,
         .form-check-label,
         label {
@@ -289,7 +312,7 @@ $userInitial = $initial !== '' ? $initial : 'U';
         .form-control,
         .form-select,
         textarea.form-control {
-            background: var(--input-bg);
+            background-color: var(--input-bg);
             color: var(--text-color);
             border: 1px solid var(--input-border);
             border-radius: var(--border-radius-base);
@@ -306,7 +329,7 @@ $userInitial = $initial !== '' ? $initial : 'U';
 
         .form-control:focus,
         .form-select:focus {
-            background: var(--input-bg);
+            background-color: var(--input-bg);
             color: var(--text-color);
             border-color: var(--input-border-focus);
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
@@ -315,29 +338,41 @@ $userInitial = $initial !== '' ? $initial : 'U';
 
         .form-control-sm,
         .form-select-sm {
-            background: var(--input-bg);
+            background-color: var(--input-bg);
             color: var(--text-color);
             border-color: var(--input-border);
         }
 
+        /* Single-source select chevron — override Bootstrap's own arrow entirely */
         .form-select {
-            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2364748B'%3E%3Cpath d='M4.646 6.146a.5.5 0 0 1 .708 0L8 8.793l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 0.75rem center;
-            background-size: 16px 12px;
-            padding-right: 2.25rem;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2364748B'%3E%3Cpath d='M4.646 6.146a.5.5 0 0 1 .708 0L8 8.793l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 0.75rem center !important;
+            background-size: 16px 12px !important;
+            padding-right: 2.5rem;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+        }
+
+        .form-select::-ms-expand {
+            display: none;
         }
 
         [data-theme="dark"] .form-select {
-            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2394A3B8'%3E%3Cpath d='M4.646 6.146a.5.5 0 0 1 .708 0L8 8.793l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2394A3B8'%3E%3Cpath d='M4.646 6.146a.5.5 0 0 1 .708 0L8 8.793l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E") !important;
         }
 
         .form-select option {
             background: var(--surface-color);
             color: var(--text-color);
+        }
+
+        .form-select:focus {
+            background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%232563EB'%3E%3Cpath d='M4.646 6.146a.5.5 0 0 1 .708 0L8 8.793l2.646-2.647a.5.5 0 0 1 .708.708l-3 3a.5.5 0 0 1-.708 0l-3-3a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 0.75rem center !important;
+            background-size: 16px 12px !important;
         }
 
         .input-group-text {
@@ -478,41 +513,44 @@ $userInitial = $initial !== '' ? $initial : 'U';
 
         .badge.bg-secondary {
             background: var(--text-muted) !important;
-            color: #fff;
+            color: #fff !important;
         }
 
         .badge.bg-primary-subtle {
-            background: rgba(37, 99, 235, 0.15);
-            color: var(--accent-color);
-            border: 1px solid rgba(37, 99, 235, 0.3);
+            background: rgba(37, 99, 235, 0.15) !important;
+            color: var(--accent-color) !important;
+            border: 1px solid rgba(37, 99, 235, 0.35) !important;
         }
         .badge.bg-success-subtle {
-            background: rgba(0, 186, 124, 0.15);
-            color: var(--success-color);
-            border: 1px solid rgba(0, 186, 124, 0.3);
+            background: rgba(0, 186, 124, 0.15) !important;
+            color: var(--success-color) !important;
+            border: 1px solid rgba(0, 186, 124, 0.35) !important;
         }
         .badge.bg-danger-subtle {
-            background: rgba(244, 33, 46, 0.15);
-            color: var(--danger-color);
-            border: 1px solid rgba(244, 33, 46, 0.3);
+            background: rgba(244, 33, 46, 0.15) !important;
+            color: var(--danger-color) !important;
+            border: 1px solid rgba(244, 33, 46, 0.35) !important;
         }
         .badge.bg-warning-subtle {
-            background: rgba(255, 212, 0, 0.18);
-            color: #a37c00;
-            border: 1px solid rgba(255, 212, 0, 0.35);
+            background: rgba(255, 212, 0, 0.18) !important;
+            color: #a37c00 !important;
+            border: 1px solid rgba(255, 212, 0, 0.4) !important;
         }
         [data-theme="dark"] .badge.bg-warning-subtle {
-            color: #fbbf24;
+            color: #fbbf24 !important;
         }
         .badge.bg-info-subtle {
-            background: rgba(13, 202, 240, 0.15);
-            color: #0aa2c0;
-            border: 1px solid rgba(13, 202, 240, 0.3);
+            background: rgba(13, 202, 240, 0.15) !important;
+            color: #0aa2c0 !important;
+            border: 1px solid rgba(13, 202, 240, 0.35) !important;
         }
         .badge.bg-secondary-subtle {
-            background: rgba(100, 116, 139, 0.18);
-            color: var(--text-muted);
-            border: 1px solid rgba(100, 116, 139, 0.3);
+            background: rgba(100, 116, 139, 0.18) !important;
+            color: var(--text-color) !important;
+            border: 1px solid rgba(100, 116, 139, 0.35) !important;
+        }
+        [data-theme="dark"] .badge.bg-secondary-subtle {
+            color: var(--text-color) !important;
         }
 
         .modal-content {
@@ -707,7 +745,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
                 <?php endif; ?>
                 <span><?= $schoolTitle ?></span>
             </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body p-0">
             <?php include __DIR__ . '/_sidebar_menu.php'; ?>

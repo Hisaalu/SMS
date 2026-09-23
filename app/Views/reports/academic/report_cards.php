@@ -18,10 +18,9 @@
         </div>
     <?php endif; ?>
 
-    <form method="GET" action="<?= BASE_URL ?>/reports/academic/report-card/view" target="_blank">
+    <form method="GET" action="<?= BASE_URL ?>/reports/academic/report-card/view" target="_blank" id="reportCardForm">
 
         <?php
-            $formAction     = BASE_URL . '/reports/academic/report-card/view';
             $includeStudent = true;
             $defaults       = $defaults ?? [];
             include __DIR__ . '/_report_config.php';
@@ -78,3 +77,22 @@
         </div>
     </form>
 </div>
+
+<script>
+(function () {
+    const form = document.getElementById('reportCardForm');
+    if (!form) return;
+
+    form.addEventListener('submit', function () {
+        const examCheckboxes = form.querySelectorAll('input[name="examinations[]"]');
+        const anyChecked = Array.from(examCheckboxes).some(cb => cb.checked);
+
+        if (!anyChecked) {
+            const allBox = form.querySelector('#exam_all');
+            if (allBox) {
+                allBox.checked = true;
+            }
+        }
+    });
+})();
+</script>

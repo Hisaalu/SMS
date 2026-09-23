@@ -1,5 +1,6 @@
 <?php
-//File: app/Views/reports/academic/batch_report_cards_view.php
+// File: app/Views/reports/academic/report_card_view.php
+
 $settings = new \NexaT\Core\SettingsService();
 
 $schoolName    = $settings->get('school.name', 'School Name');
@@ -29,25 +30,28 @@ $assetUrl = static function (?string $path): ?string {
     return null;
 };
 
-$logoUrl      = $assetUrl($settings->get('branding.logo', ''));
-$faviconUrl   = $assetUrl($settings->get('branding.favicon', ''));
-$studentPhoto = $assetUrl($data['student']['photo_path'] ?? null);
+$logoUrl    = $assetUrl($settings->get('branding.logo', ''));
+$faviconUrl = $assetUrl($settings->get('branding.favicon', ''));
 
-$student         = $data['student'] ?? [];
-$exams           = $data['exams'] ?? [];
-$subjects        = $data['subjects'] ?? [];
-$marksByExam     = $data['marks_by_exam'] ?? [];
-$examTotals      = $data['exam_totals'] ?? [];
-$subjectAverages = $data['subject_averages'] ?? [];
-$options         = $data['options'] ?? [];
+$card = is_array($card ?? null) ? $card : [];
 
-$totalScore     = $data['total_score']     ?? 0;
-$totalAggregate = $data['total_aggregate'] ?? 0;
-$divisionCode   = $data['division_code']   ?? null;
-$position       = $data['position']        ?? null;
-$classSize      = $data['class_size']      ?? 0;
-$ctRemark       = $data['ct_remark']       ?? '';
-$nextTerm       = $data['next_term']       ?? null;
+$student         = is_array($card['student'] ?? null)          ? $card['student']          : [];
+$exams           = is_array($card['exams'] ?? null)            ? $card['exams']            : [];
+$subjects        = is_array($card['subjects'] ?? null)         ? $card['subjects']         : [];
+$marksByExam     = is_array($card['marks_by_exam'] ?? null)    ? $card['marks_by_exam']    : [];
+$examTotals      = is_array($card['exam_totals'] ?? null)      ? $card['exam_totals']      : [];
+$subjectAverages = is_array($card['subject_averages'] ?? null) ? $card['subject_averages'] : [];
+$options         = is_array($card['options'] ?? null)          ? $card['options']          : [];
+
+$totalScore     = (float)($card['total_score']     ?? 0);
+$totalAggregate = (float)($card['total_aggregate'] ?? 0);
+$divisionCode   = $card['division_code'] ?? null;
+$position       = $card['position']      ?? null;
+$classSize      = (int)($card['class_size'] ?? 0);
+$ctRemark       = $card['ct_remark'] ?? '';
+$nextTerm       = is_array($card['next_term'] ?? null) ? $card['next_term'] : null;
+
+$studentPhoto = $assetUrl($student['photo_path'] ?? null);
 
 $truthy = static fn($v) => $v === true || $v === 'yes' || $v === 1 || $v === '1';
 

@@ -84,15 +84,47 @@ class AcademicReportController extends Controller
             $this->redirect('/reports/academic/report-cards');
         }
 
-        $examinationIds = $this->resolveExaminationIds($_GET['examinations'] ?? [], $schoolId, $academicYearId, $termId);
-        $options        = $this->collectReportOptions($_GET);
+        $enrollment = $this->db->fetch(
+            "SELECT id FROM student_enrollments
+             WHERE student_id = :sid AND academic_year_id = :yid AND status = 'active'
+             LIMIT 1",
+            ['sid' => $studentId, 'yid' => $academicYearId]
+        );
+
+        if (!$enrollment) {
+            $this->flashError(
+                'This student is not enrolled for the selected academic year. '
+                . 'Please pick a different year or enroll the student first.'
+            );
+            $this->redirect('/reports/academic/report-cards');
+        }
+
+        $examinationIds = $this->resolveExaminationIds(
+            $_GET['examinations'] ?? ['all'],
+            $schoolId,
+            $academicYearId,
+            $termId
+        );
+
+        if (empty($examinationIds)) {
+            $this->flashError(
+                'No examinations found for the selected academic year and term. '
+                . 'Please create or select different exams.'
+            );
+            $this->redirect('/reports/academic/report-cards');
+        }
+
+        $options = $this->collectReportOptions($_GET);
 
         $data = $this->reportService->getMultiExamReportCard(
             $studentId, $academicYearId, $termId, $schoolId, $examinationIds, $options
         );
 
         if (empty($data) || empty($data['subjects'])) {
-            $this->flashError('No data found for the selected criteria.');
+            $this->flashError(
+                'No marks found for this student under the selected criteria. '
+                . 'Check that the student has marks entered for the selected exams.'
+            );
             $this->redirect('/reports/academic/report-cards');
         }
 
@@ -102,7 +134,7 @@ class AcademicReportController extends Controller
         $this->audit('Report Card Generated', 'reports', "Generated multi-exam report card for student ID: {$studentId}");
 
         echo $this->view->render('reports/academic/report_card_view', [
-            'data'             => $data,
+            'card'             => $data,
             'academicYearId'   => $academicYearId,
             'termId'           => $termId,
             'academicYearName' => $academicYear['name'] ?? '',
@@ -188,7 +220,12 @@ class AcademicReportController extends Controller
             $this->redirect('/reports/academic/batch-report-cards');
         }
 
-        $examinationIds = $this->resolveExaminationIds($_GET['examinations'] ?? ['all'], $schoolId, $academicYearId, $termId);
+        $examinationIds = $this->resolveExaminationIds(
+            $_GET['examinations'] ?? ['all'],
+            $schoolId,
+            $academicYearId,
+            $termId
+        );
 
         if (empty($examinationIds)) {
             $this->flashError('No examinations found for the selected year and term.');
@@ -234,7 +271,7 @@ class AcademicReportController extends Controller
             return array_column($rows, 'id');
         }
 
-        return array_map('intval', $selection);
+        return array_values(array_filter(array_map('intval', $selection)));
     }
 
     private function loadClassStudents(int $schoolId, int $yearId, int $classId, ?int $streamId): array

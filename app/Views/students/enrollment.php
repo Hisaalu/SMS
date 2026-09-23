@@ -1,6 +1,5 @@
 <div class="container-fluid px-3 py-3 bg-white border">
 
-    <!-- Flash Notifications -->
     <?php if (isset($_SESSION['flash_success'])): ?>
         <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
             <i class="fas fa-check-circle me-1"></i> <?= $_SESSION['flash_success']; unset($_SESSION['flash_success']); ?>
@@ -15,13 +14,12 @@
         </div>
     <?php endif; ?>
 
-    <!-- Filter & Action Bar Form -->
     <form method="GET" action="<?= BASE_URL . '/students/enrollments' ?>" id="filterForm">
         <div class="card mb-3 bg-light border">
             <div class="card-body p-2">
                 <div class="row g-2 align-items-center">
                     <div class="col-md-3 d-flex align-items-center">
-                        <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 100px;">Academic Year</label>
+                        <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 100px;">Ac. Year</label>
                         <select name="academic_year_id" form="enrollmentForm" class="form-select form-select-sm" onchange="submitFilter();">
                             <option value="">-- Select Year --</option>
                             <?php foreach ($academicYears as $ay): ?>
@@ -66,7 +64,6 @@
         </div>
     </form>
 
-    <!-- Student Table Grid Form -->
     <form method="POST" action="<?= BASE_URL . '/students/enrollments/store' ?>" id="enrollmentForm">
         <div class="table-responsive border" style="max-height: 550px; overflow-y: auto;">
             <table class="table table-bordered table-hover align-middle mb-0 text-nowrap small">
@@ -127,7 +124,6 @@
 function submitFilter() {
     let form = document.getElementById('filterForm');
     
-    // Copy select elements temporarily into filterForm to execute GET request
     document.querySelectorAll('[form="enrollmentForm"]').forEach(select => {
         if(select.tagName === 'SELECT') {
             let hidden = document.createElement('input');
