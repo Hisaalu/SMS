@@ -17,15 +17,15 @@
     <div class="card">
         <div class="card-body">
             <?php if (empty($students) || count($students) === 0): ?>
-                <div class="text-center py-4 text-muted">
-                    <i class="fas fa-users fa-2x mb-2 d-block"></i>
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-users fa-2x mb-2 d-block opacity-50"></i>
                     <p>No students enrolled for this examination.</p>
                 </div>
             <?php else: ?>
                 <form id="marksForm" method="POST">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
-                            <thead class="table-light">
+                            <thead>
                                 <tr>
                                     <th>#</th>
                                     <th>Admission No.</th>
@@ -43,18 +43,18 @@
                                         <td><?= htmlspecialchars($student['first_name'] . ' ' . $student['last_name']) ?></td>
                                         <td><?= htmlspecialchars($student['class_name'] ?? '') ?></td>
                                         <td>
-                                            <input type="number" 
-                                                   name="marks[<?= $student['id'] ?>][marks_obtained]" 
-                                                   class="form-control form-control-sm" 
+                                            <input type="number"
+                                                   name="marks[<?= $student['id'] ?>][marks_obtained]"
+                                                   class="form-control form-control-sm"
                                                    style="width: 120px;"
-                                                   min="0" 
+                                                   min="0"
                                                    max="100"
                                                    value="<?= htmlspecialchars($existingMarks[$student['id']]['marks_obtained'] ?? '') ?>"
                                                    step="0.01">
                                         </td>
                                         <td>
-                                            <input type="text" 
-                                                   name="marks[<?= $student['id'] ?>][remarks]" 
+                                            <input type="text"
+                                                   name="marks[<?= $student['id'] ?>][remarks]"
                                                    class="form-control form-control-sm"
                                                    placeholder="Optional remarks"
                                                    value="<?= htmlspecialchars($existingMarks[$student['id']]['remarks'] ?? '') ?>"
@@ -82,32 +82,26 @@ function saveMarks() {
     const form = document.getElementById('marksForm');
     const formData = new FormData(form);
     const marks = {};
-    
+
     formData.forEach((value, key) => {
         if (key.startsWith('marks[')) {
             const match = key.match(/marks\[(\d+)\]\[(marks_obtained|remarks)\]/);
             if (match) {
                 const studentId = match[1];
                 const field = match[2];
-                if (!marks[studentId]) {
-                    marks[studentId] = {};
-                }
+                if (!marks[studentId]) marks[studentId] = {};
                 marks[studentId][field] = value;
             }
         }
     });
-    
-    // Check if we have any data
-    const hasData = Object.keys(marks).length > 0;
-    if (!hasData) {
+
+    if (Object.keys(marks).length === 0) {
         alert('No marks to save.');
         return;
     }
-    
-    if (!confirm('Save all marks?')) {
-        return;
-    }
-    
+
+    if (!confirm('Save all marks?')) return;
+
     fetch('<?= BASE_URL ?>/marks/bulk-save/<?= $examination['id'] ?>', {
         method: 'POST',
         headers: {
@@ -125,8 +119,6 @@ function saveMarks() {
             alert('Error: ' + (data.error || 'Failed to save marks'));
         }
     })
-    .catch(error => {
-        alert('An error occurred: ' + error);
-    });
+    .catch(error => alert('An error occurred: ' + error));
 }
 </script>

@@ -5,7 +5,7 @@
             <h4 class="mb-0 fw-bold">Report Cards</h4>
             <small class="text-muted">Configure and generate student report cards</small>
         </div>
-        <a href="<?= BASE_URL ?>/reports/academic/batch-report-cards" class="btn btn-sm btn-outline-secondary">
+        <a href="<?= BASE_URL ?>/reports/academic/batch-report-cards" class="btn btn-sm btn-secondary">
             <i class="fas fa-layer-group me-1"></i> Batch Mode
         </a>
     </div>
@@ -27,9 +27,9 @@
             include __DIR__ . '/_report_config.php';
         ?>
 
-        <div class="card mt-3 border-0 shadow-sm">
-            <div class="card-header bg-white border-0 pt-3 pb-0">
-                <h6 class="mb-0 fw-bold text-primary">
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0 fw-bold" style="color: var(--accent-color);">
                     <i class="fas fa-user-graduate me-2"></i>Select Student and Period
                 </h6>
             </div>

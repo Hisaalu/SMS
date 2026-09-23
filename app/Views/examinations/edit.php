@@ -17,7 +17,6 @@
     <div class="card">
         <div class="card-body">
             <form method="POST" action="<?= BASE_URL ?>/examinations/<?= $examination['id'] ?>/update">
-                
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Examination Name <span class="text-danger">*</span></label>
@@ -75,11 +74,11 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Start Date</label>
-                        <input type="date" class="form-control" name="start_date" value="<?= $examination['start_date'] ?? '' ?>">
+                        <input type="date" class="form-control" name="start_date" value="<?= htmlspecialchars($examination['start_date'] ?? '') ?>">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">End Date</label>
-                        <input type="date" class="form-control" name="end_date" value="<?= $examination['end_date'] ?? '' ?>">
+                        <input type="date" class="form-control" name="end_date" value="<?= htmlspecialchars($examination['end_date'] ?? '') ?>">
                     </div>
                 </div>
 

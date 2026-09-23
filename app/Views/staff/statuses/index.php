@@ -1,3 +1,4 @@
+<!-- File: /app/Views/staff/statuses/index.php -->
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <h4 class="mb-0">Staff Statuses</h4>
@@ -7,17 +8,17 @@
         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addStatusModal">
             <i class="fas fa-plus me-1"></i> Add Status
         </button>
-        <a href="<?= BASE_URL ?>/staff" class="btn btn-outline-secondary btn-sm">
+        <a href="<?= BASE_URL ?>/staff" class="btn btn-secondary btn-sm">
             <i class="fas fa-arrow-left me-1"></i> Back to Directory
         </a>
     </div>
 </div>
 
-<div class="card shadow-sm">
+<div class="card">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+                <thead>
                     <tr>
                         <th>Order</th>
                         <th>Status Name</th>
@@ -47,20 +48,20 @@
                             </td>
                             <td><span class="badge bg-secondary"><?= $st['usage_count'] ?? 0 ?></span></td>
                             <td class="text-end">
-                                <button class="btn btn-sm btn-outline-primary me-1" 
-                                        data-bs-toggle="modal" 
+                                <button class="btn btn-sm btn-outline-primary me-1"
+                                        data-bs-toggle="modal"
                                         data-bs-target="#editStatusModal<?= $st['id'] ?>">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <?php if (($st['usage_count'] ?? 0) == 0): ?>
-                                    <button class="btn btn-sm btn-outline-danger" 
-                                            data-bs-toggle="modal" 
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            data-bs-toggle="modal"
                                             data-bs-target="#deleteStatusModal<?= $st['id'] ?>">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 <?php else: ?>
-                                    <button class="btn btn-sm btn-outline-secondary" 
-                                            disabled 
+                                    <button class="btn btn-sm btn-outline-secondary"
+                                            disabled
                                             title="Cannot delete status while assigned to staff members">
                                         <i class="fas fa-trash"></i>
                                     </button>
@@ -68,7 +69,6 @@
                             </td>
                         </tr>
 
-                        <!-- Edit Status Modal -->
                         <div class="modal fade" id="editStatusModal<?= $st['id'] ?>" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog">
                                 <div class="modal-content">
@@ -80,11 +80,11 @@
                                         </div>
                                         <div class="modal-body text-start">
                                             <div class="mb-3">
-                                                <label class="form-label required">Status Name</label>
+                                                <label class="form-label">Status Name</label>
                                                 <input type="text" name="name" class="form-control" value="<?= htmlspecialchars($st['name']) ?>" required>
                                             </div>
                                             <div class="mb-3">
-                                                <label class="form-label required">Code</label>
+                                                <label class="form-label">Code</label>
                                                 <input type="text" name="code" class="form-control" value="<?= htmlspecialchars($st['code']) ?>" required>
                                             </div>
                                             <div class="mb-3">
@@ -119,7 +119,6 @@
                             </div>
                         </div>
 
-                        <!-- Delete Status Modal -->
                         <div class="modal fade" id="deleteStatusModal<?= $st['id'] ?>" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered">
                                 <div class="modal-content">
@@ -153,7 +152,6 @@
     </div>
 </div>
 
-<!-- Add Status Modal -->
 <div class="modal fade" id="addStatusModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -164,11 +162,11 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label required">Status Name</label>
+                        <label class="form-label">Status Name</label>
                         <input type="text" name="name" class="form-control" placeholder="e.g. Active, Suspended" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label required">Code</label>
+                        <label class="form-label">Code</label>
                         <input type="text" name="code" class="form-control" placeholder="e.g. ACTIVE, SUSPENDED" required>
                     </div>
                     <div class="mb-3">

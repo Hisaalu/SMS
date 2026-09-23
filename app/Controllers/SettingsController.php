@@ -13,9 +13,17 @@ class SettingsController extends Controller
         'postal_address', 'telephone', 'email', 'website',
     ];
 
-    private const THEME_KEYS = [
-        'primary', 'secondary', 'accent', 'background', 'surface',
-        'text', 'muted', 'border', 'success', 'warning', 'danger',
+    private const ALLOWED_ACCENTS = [
+        '#2563EB', '#EAB308', '#EC4899',
+        '#8B5CF6', '#F97316', '#10B981',
+    ];
+
+    private const FONT_PRESETS = [
+        1 => 0.75,
+        2 => 0.875,
+        3 => 1.0,
+        4 => 1.125,
+        5 => 1.25,
     ];
 
     private const BRANDING_FIELDS = [
@@ -136,19 +144,27 @@ class SettingsController extends Controller
     {
         $this->requirePermission('branding.manage');
 
-        foreach (self::THEME_KEYS as $key) {
-            if (!empty($_POST[$key])) {
-                $this->settings->set('theme.' . $key, trim($_POST[$key]), 'string');
-            }
+        $accent = trim((string) ($_POST['accent'] ?? ''));
+        if (preg_match('/^#[0-9a-fA-F]{6}$/', $accent)
+            && in_array(strtoupper($accent), array_map('strtoupper', self::ALLOWED_ACCENTS), true)) {
+            $this->settings->set('theme.accent', $accent, 'string');
         }
 
+        $preset = (int) ($_POST['font_preset'] ?? 0);
+        if (isset(self::FONT_PRESETS[$preset])) {
+            $this->settings->set('theme.font_size_base', self::FONT_PRESETS[$preset], 'decimal');
+        }
+
+        $darkMode = ($_POST['dark_mode'] ?? '0') === '1';
+        $this->settings->set('theme.dark_mode', $darkMode ? 'true' : 'false', 'boolean');
+
         $this->settings->set(
-            'theme.dark_mode',
-            isset($_POST['dark_mode']) ? 'true' : 'false',
+            'theme.use_system_setting',
+            isset($_POST['use_system_setting']) ? 'true' : 'false',
             'boolean'
         );
 
-        $this->audit('Appearance Updated', 'settings', 'Theme colors and appearance settings updated');
+        $this->audit('Appearance Updated', 'settings', 'Theme colors, font size and background updated');
         $this->flashSuccess('Appearance settings saved successfully!');
         $this->redirect('/settings/appearance');
     }

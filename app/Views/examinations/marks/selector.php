@@ -1,7 +1,6 @@
 <!-- File: /app/Views/examinations/marks/selector.php -->
-<div class="container-fluid px-3 py-3 bg-white border">
+<div class="container-fluid px-0">
 
-    <!-- Flash Notifications -->
     <?php if (isset($_SESSION['flash_error'])): ?>
         <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
             <i class="fas fa-exclamation-triangle me-1"></i> <?= htmlspecialchars($_SESSION['flash_error']); unset($_SESSION['flash_error']); ?>
@@ -9,16 +8,13 @@
         </div>
     <?php endif; ?>
 
-    <!-- Filter Bar Card -->
-    <div class="card mb-3 bg-light border">
-        <div class="card-body p-2">
+    <div class="card mb-3">
+        <div class="card-body">
             <form method="GET" action="<?= BASE_URL ?>/marks/entry" id="marksEntryForm">
-                
-                <div class="row g-2 align-items-center">
-                    
-                    <!-- Academic Year Filter -->
-                    <div class="col-md-4 d-flex align-items-center">
-                        <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 110px;">Academic Year <span class="text-danger">*</span></label>
+                <div class="row g-3 align-items-center">
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold mb-1">Academic Year <span class="text-danger">*</span></label>
                         <select name="academic_year_id" class="form-select form-select-sm" required>
                             <option value="">-- Select Year --</option>
                             <?php foreach ($academicYears as $year): ?>
@@ -29,9 +25,8 @@
                         </select>
                     </div>
 
-                    <!-- Term Filter -->
-                    <div class="col-md-4 d-flex align-items-center">
-                        <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 100px;">Term <span class="text-danger">*</span></label>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold mb-1">Term <span class="text-danger">*</span></label>
                         <select name="term_id" class="form-select form-select-sm" required>
                             <option value="">-- Select Term --</option>
                             <?php foreach ($terms as $term): ?>
@@ -42,9 +37,8 @@
                         </select>
                     </div>
 
-                    <!-- Examination Filter -->
-                    <div class="col-md-4 d-flex align-items-center">
-                        <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 100px;">Examination <span class="text-danger">*</span></label>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold mb-1">Examination <span class="text-danger">*</span></label>
                         <select name="examination_id" class="form-select form-select-sm" required>
                             <option value="">-- Select Exam --</option>
                             <?php foreach ($examinations as $exam): ?>
@@ -55,9 +49,8 @@
                         </select>
                     </div>
 
-                    <!-- Class Filter -->
-                    <div class="col-md-4 d-flex align-items-center">
-                        <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 110px;">Class <span class="text-danger">*</span></label>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold mb-1">Class <span class="text-danger">*</span></label>
                         <select name="class_id" class="form-select form-select-sm" required>
                             <option value="">-- Select Class --</option>
                             <?php foreach ($classes as $class): ?>
@@ -68,9 +61,8 @@
                         </select>
                     </div>
 
-                    <!-- Stream Filter -->
-                    <div class="col-md-4 d-flex align-items-center">
-                        <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 100px;">Stream</label>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold mb-1">Stream</label>
                         <select name="stream_id" class="form-select form-select-sm">
                             <option value="">-- All Streams --</option>
                             <?php foreach ($streams as $stream): ?>
@@ -81,9 +73,8 @@
                         </select>
                     </div>
 
-                    <!-- Subject Filter -->
-                    <div class="col-md-4 d-flex align-items-center">
-                        <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 100px;">Subject <span class="text-danger">*</span></label>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold mb-1">Subject <span class="text-danger">*</span></label>
                         <select name="subject_id" class="form-select form-select-sm" required>
                             <option value="">-- Select Subject --</option>
                             <?php foreach ($subjects as $subj): ?>
@@ -96,21 +87,17 @@
 
                 </div>
 
-                <!-- Action Bar -->
-                <div class="row mt-3">
-                    <div class="col-12 text-end">
-                        <button type="submit" class="btn btn-sm btn-primary fw-bold text-nowrap me-1">
-                            <i class="fas fa-pencil-alt me-1"></i> Enter Marks
-                        </button>
-                        <a href="<?= BASE_URL ?>/marks/entry" class="btn btn-sm btn-outline-secondary me-1" title="Reset Filters">
-                            <i class="fas fa-undo me-1"></i> Reset
-                        </a>
-                        <a href="<?= BASE_URL ?>/examinations" class="btn btn-sm btn-secondary">
-                            <i class="fas fa-arrow-left me-1"></i> Back
-                        </a>
-                    </div>
+                <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+                    <button type="submit" class="btn btn-sm btn-primary fw-bold">
+                        <i class="fas fa-pencil-alt me-1"></i> Enter Marks
+                    </button>
+                    <a href="<?= BASE_URL ?>/marks/entry" class="btn btn-sm btn-secondary" title="Reset Filters">
+                        <i class="fas fa-undo me-1"></i> Reset
+                    </a>
+                    <a href="<?= BASE_URL ?>/examinations" class="btn btn-sm btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Back
+                    </a>
                 </div>
-
             </form>
         </div>
     </div>

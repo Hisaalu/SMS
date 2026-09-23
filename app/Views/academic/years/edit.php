@@ -14,7 +14,7 @@
     <div class="card p-3">
         <form method="POST" action="<?= BASE_URL ?>/academic/years/<?= $year->id ?>">
             <input type="hidden" name="_method" value="PUT">
-            
+
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label">Year Name</label>
@@ -22,7 +22,7 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Status</label>
-                    <select class="form-control" name="status">
+                    <select class="form-select" name="status">
                         <option value="active" <?= $year->status === 'active' ? 'selected' : '' ?>>Active</option>
                         <option value="inactive" <?= $year->status === 'inactive' ? 'selected' : '' ?>>Inactive</option>
                         <option value="archived" <?= $year->status === 'archived' ? 'selected' : '' ?>>Archived</option>
@@ -30,11 +30,11 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Start Date</label>
-                    <input type="date" class="form-control" name="start_date" value="<?= $year->start_date ?>" required>
+                    <input type="date" class="form-control" name="start_date" value="<?= htmlspecialchars($year->start_date) ?>" required>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">End Date</label>
-                    <input type="date" class="form-control" name="end_date" value="<?= $year->end_date ?>" required>
+                    <input type="date" class="form-control" name="end_date" value="<?= htmlspecialchars($year->end_date) ?>" required>
                 </div>
                 <div class="col-12">
                     <div class="form-check form-switch">

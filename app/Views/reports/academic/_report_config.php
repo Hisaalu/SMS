@@ -8,9 +8,9 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
 <div class="row g-3">
 
     <div class="col-lg-6">
-        <div class="card h-100 border-0 shadow-sm">
-            <div class="card-header bg-white border-0 pt-3 pb-0">
-                <h6 class="mb-0 fw-bold text-primary">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0 fw-bold" style="color: var(--accent-color);">
                     <i class="fas fa-file-alt me-2"></i>Report Definition
                 </h6>
             </div>
@@ -59,10 +59,10 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
 
                 <hr class="my-3">
 
-                <h6 class="fw-bold text-primary small text-uppercase mb-2">
+                <h6 class="fw-bold small text-uppercase mb-2" style="color: var(--accent-color);">
                     <i class="fas fa-calculator me-1"></i> Final Grade Source
                 </h6>
-                <div class="alert alert-light border small py-2 px-3 mb-3">
+                <div class="alert alert-light small py-2 px-3 mb-3">
                     Determines which exam set (or combination) produces the final
                     <strong>Grade</strong>, <strong>Total Score</strong>, <strong>Aggregate</strong>,
                     <strong>Division</strong>, <strong>Position</strong> and <strong>Comment</strong>.
@@ -87,10 +87,10 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
 
                 <hr class="my-3">
 
-                <h6 class="fw-bold text-primary small text-uppercase mb-2">
+                <h6 class="fw-bold small text-uppercase mb-2" style="color: var(--accent-color);">
                     <i class="fas fa-sort-numeric-down me-1"></i> Position Ranking
                 </h6>
-                <div class="alert alert-light border small py-2 px-3 mb-3">
+                <div class="alert alert-light small py-2 px-3 mb-3">
                     Determines how student positions are ordered within the class.
                 </div>
                 <?php $currentRanking = $opt('position_ranking', 'aggregate'); ?>
@@ -131,15 +131,15 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
     </div>
 
     <div class="col-lg-6">
-        <div class="card h-100 border-0 shadow-sm">
-            <div class="card-header bg-white border-0 pt-3 pb-0">
-                <h6 class="mb-0 fw-bold text-primary">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0 fw-bold" style="color: var(--accent-color);">
                     <i class="fas fa-list-check me-2"></i>Report Includes
                 </h6>
             </div>
             <div class="card-body">
 
-                <h6 class="fw-bold text-secondary small text-uppercase mb-2">Student Information</h6>
+                <h6 class="fw-bold text-muted small text-uppercase mb-2">Student Information</h6>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
                         <label class="form-label small fw-semibold">Show Photo</label>
@@ -161,7 +161,7 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
 
                 <hr class="my-3">
 
-                <h6 class="fw-bold text-secondary small text-uppercase mb-2">Marks Display</h6>
+                <h6 class="fw-bold text-muted small text-uppercase mb-2">Marks Display</h6>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
                         <label class="form-label small fw-semibold">Show Grades (Scores)</label>
@@ -199,7 +199,7 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
 
                 <hr class="my-3">
 
-                <h6 class="fw-bold text-secondary small text-uppercase mb-2">Comments &amp; Remarks</h6>
+                <h6 class="fw-bold text-muted small text-uppercase mb-2">Comments &amp; Remarks</h6>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
                         <label class="form-label small fw-semibold">Class Teacher Comment</label>
@@ -235,7 +235,7 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
 
                 <hr class="my-3">
 
-                <h6 class="fw-bold text-secondary small text-uppercase mb-2">Additional Sections</h6>
+                <h6 class="fw-bold text-muted small text-uppercase mb-2">Additional Sections</h6>
                 <div class="row g-2 mb-0">
                     <div class="col-6">
                         <label class="form-label small fw-semibold">Other Activities (Skills)</label>

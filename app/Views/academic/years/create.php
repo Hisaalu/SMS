@@ -20,7 +20,7 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Status</label>
-                    <select class="form-control" name="status">
+                    <select class="form-select" name="status">
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                     </select>

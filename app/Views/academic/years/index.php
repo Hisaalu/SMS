@@ -10,7 +10,7 @@
     <?php if ($flash = $this->getFlash('success')): ?>
         <div class="alert alert-success mb-2"><?= $flash ?></div>
     <?php endif; ?>
-    
+
     <?php if ($flash = $this->getFlash('error')): ?>
         <div class="alert alert-danger mb-2"><?= $flash ?></div>
     <?php endif; ?>
@@ -18,7 +18,7 @@
     <div class="card p-3">
         <?php if (count($years) > 0): ?>
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover align-middle mb-0">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -40,7 +40,7 @@
                                     <?php if ($year->status === 'active'): ?>
                                         <span class="badge bg-success">Active</span>
                                     <?php else: ?>
-                                        <span class="badge bg-secondary"><?= $year->status ?></span>
+                                        <span class="badge bg-secondary"><?= htmlspecialchars($year->status) ?></span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
@@ -81,9 +81,7 @@ function deleteYear(id) {
     if (confirm('Are you sure you want to delete this academic year?')) {
         fetch('<?= BASE_URL ?>/academic/years/' + id, {
             method: 'DELETE',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(response => response.json())
         .then(data => {
@@ -93,9 +91,7 @@ function deleteYear(id) {
                 alert(data.error || 'Failed to delete academic year');
             }
         })
-        .catch(error => {
-            alert('An error occurred');
-        });
+        .catch(() => alert('An error occurred'));
     }
 }
 </script>

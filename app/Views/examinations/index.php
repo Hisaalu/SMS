@@ -22,7 +22,7 @@
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
                             <th>Name</th>
                             <th>Code</th>
@@ -58,15 +58,12 @@
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-end">
-                                        <!-- Edit Button -->
                                         <a href="<?= BASE_URL ?>/examinations/<?= $exam['id'] ?>/edit" class="btn btn-sm btn-outline-primary" title="Edit Examination">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <!-- View Results Button -->
                                         <a href="<?= BASE_URL ?>/results/examination/<?= $exam['id'] ?>" class="btn btn-sm btn-outline-info" title="View Results">
                                             <i class="fas fa-chart-bar"></i>
                                         </a>
-                                        <!-- Delete Button -->
                                         <button onclick="deleteExam(<?= $exam['id'] ?>)" class="btn btn-sm btn-outline-danger" title="Delete Examination">
                                             <i class="fas fa-trash"></i>
                                         </button>
@@ -86,9 +83,7 @@ function deleteExam(id) {
     if (confirm('Are you sure you want to delete this examination?')) {
         fetch('<?= BASE_URL ?>/examinations/' + id, {
             method: 'DELETE',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(response => response.json())
         .then(data => {
@@ -98,9 +93,7 @@ function deleteExam(id) {
                 alert(data.error || 'Failed to delete examination');
             }
         })
-        .catch(error => {
-            alert('An error occurred');
-        });
+        .catch(() => alert('An error occurred'));
     }
 }
 </script>

@@ -1,3 +1,4 @@
+<!-- File: /app/Views/staff/categories/index.php -->
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <h4 class="mb-0">Staff Categories</h4>
@@ -7,17 +8,17 @@
         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
             <i class="fas fa-plus me-1"></i> Add Category
         </button>
-        <a href="<?= BASE_URL ?>/staff" class="btn btn-outline-secondary btn-sm">
+        <a href="<?= BASE_URL ?>/staff" class="btn btn-secondary btn-sm">
             <i class="fas fa-arrow-left me-1"></i> Back to Directory
         </a>
     </div>
 </div>
 
-<div class="card shadow-sm">
+<div class="card">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+                <thead>
                     <tr>
                         <th>Order</th>
                         <th>Name</th>
@@ -43,15 +44,14 @@
                                 </span>
                             </td>
                             <td class="text-end">
-                                <button class="btn btn-sm btn-outline-primary" 
-                                        data-bs-toggle="modal" 
+                                <button class="btn btn-sm btn-outline-primary"
+                                        data-bs-toggle="modal"
                                         data-bs-target="#editCategoryModal<?= $cat['id'] ?>">
                                     <i class="fas fa-edit"></i>
                                 </button>
                             </td>
                         </tr>
 
-                        <!-- Edit Category Modal -->
                         <div class="modal fade" id="editCategoryModal<?= $cat['id'] ?>" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog">
                                 <div class="modal-content">
@@ -63,11 +63,11 @@
                                         </div>
                                         <div class="modal-body text-start">
                                             <div class="mb-3">
-                                                <label class="form-label required">Category Name</label>
+                                                <label class="form-label">Category Name</label>
                                                 <input type="text" name="name" class="form-control" value="<?= htmlspecialchars($cat['name']) ?>" required>
                                             </div>
                                             <div class="mb-3">
-                                                <label class="form-label required">Code</label>
+                                                <label class="form-label">Code</label>
                                                 <input type="text" name="code" class="form-control" value="<?= htmlspecialchars($cat['code']) ?>" required>
                                             </div>
                                             <div class="mb-3">
@@ -108,7 +108,6 @@
     </div>
 </div>
 
-<!-- Add Category Modal -->
 <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -119,11 +118,11 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label required">Category Name</label>
+                        <label class="form-label">Category Name</label>
                         <input type="text" name="name" class="form-control" placeholder="e.g. Teaching Staff" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label required">Code</label>
+                        <label class="form-label">Code</label>
                         <input type="text" name="code" class="form-control" placeholder="e.g. TEACHING" required>
                     </div>
                     <div class="mb-3">
