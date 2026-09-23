@@ -1,5 +1,5 @@
-<!-- File: /app/Views/reports/academic/report_card_view.php -->
 <?php
+//File: app/Views/reports/academic/batch_report_cards_view.php
 $settings = new \NexaT\Core\SettingsService();
 
 $schoolName    = $settings->get('school.name', 'School Name');
@@ -12,12 +12,12 @@ $schoolEmail   = $settings->get('school.email', '');
 $primaryColor = $settings->get('branding.primary_color', '#1a237e');
 $accentColor  = $settings->get('branding.accent_color',  '#e91e63');
 $mottoColor   = $settings->get('branding.motto_color',   '#b71c1c');
-$textColor    = $settings->get('branding.text_color',    '#000000');
-$borderColor  = '#1a1a1a';
-$tableHeadBg  = '#eef1f7';
-$softBg       = '#f8f9fb';
+$textColor    = $settings->get('branding.text_color',    '#111111');
+$borderColor  = '#222222';
+$tableHeadBg  = '#eef2f7';
+$softBg       = '#f9fafc';
 
-$assetUrl = function (?string $path): ?string {
+$assetUrl = static function (?string $path): ?string {
     if (empty($path)) return null;
     $clean = ltrim($path, '/');
     if (file_exists(ROOT_PATH . '/public/' . $clean)) {
@@ -29,15 +29,15 @@ $assetUrl = function (?string $path): ?string {
     return null;
 };
 
-$logoUrl       = $assetUrl($settings->get('branding.logo', ''));
-$faviconUrl    = $assetUrl($settings->get('branding.favicon', ''));
-$studentPhoto  = $assetUrl($data['student']['photo_path'] ?? null);
+$logoUrl      = $assetUrl($settings->get('branding.logo', ''));
+$faviconUrl   = $assetUrl($settings->get('branding.favicon', ''));
+$studentPhoto = $assetUrl($data['student']['photo_path'] ?? null);
 
-$student         = $data['student'];
-$exams           = $data['exams'];
-$subjects        = $data['subjects'];
-$marksByExam     = $data['marks_by_exam'];
-$examTotals      = $data['exam_totals'];
+$student         = $data['student'] ?? [];
+$exams           = $data['exams'] ?? [];
+$subjects        = $data['subjects'] ?? [];
+$marksByExam     = $data['marks_by_exam'] ?? [];
+$examTotals      = $data['exam_totals'] ?? [];
 $subjectAverages = $data['subject_averages'] ?? [];
 $options         = $data['options'] ?? [];
 
@@ -51,14 +51,14 @@ $nextTerm       = $data['next_term']       ?? null;
 
 $truthy = static fn($v) => $v === true || $v === 'yes' || $v === 1 || $v === '1';
 
-$showPhoto         = $truthy($options['show_photo']       ?? false);
-$showPositions     = $truthy($options['show_positions']   ?? false);
-$showDivision      = $truthy($options['show_division']    ?? false);
-$showGrades        = $truthy($options['show_grades']      ?? false);
-$showInitials      = array_key_exists('show_initials', $options) ? $truthy($options['show_initials']) : true;
-$showNextTerm      = $truthy($options['show_next_term']   ?? false);
-$showCtComment     = !empty($options['ct_comment']) && $options['ct_comment'] !== 'no';
-$showHmComment     = !empty($options['hm_comment']) && $options['hm_comment'] !== 'no';
+$showPhoto     = $truthy($options['show_photo']     ?? false);
+$showPositions = $truthy($options['show_positions'] ?? false);
+$showDivision  = $truthy($options['show_division']  ?? false);
+$showGrades    = $truthy($options['show_grades']    ?? false);
+$showInitials  = array_key_exists('show_initials', $options) ? $truthy($options['show_initials']) : true;
+$showNextTerm  = $truthy($options['show_next_term'] ?? false);
+$showCtComment = !empty($options['ct_comment']) && $options['ct_comment'] !== 'no';
+$showHmComment = !empty($options['hm_comment']) && $options['hm_comment'] !== 'no';
 
 if (!$showPhoto) {
     $studentPhoto = null;
@@ -68,128 +68,129 @@ $displayExams = array_slice($exams, 0, 3);
 $subjectCount = count($subjects);
 $average      = $subjectCount > 0 ? round($totalScore / $subjectCount) : 0;
 
-$thStyle = "border:1px solid {$borderColor};padding:8px 6px;background:{$tableHeadBg};color:{$primaryColor};font-weight:700;letter-spacing:.6px;text-transform:uppercase;";
-$tdStyle = "border:1px solid {$borderColor};padding:8px 6px;text-align:center;";
+$thStyle = "border:1px solid {$borderColor};padding:7px 5px;background:{$tableHeadBg};color:{$primaryColor};font-weight:700;letter-spacing:.4px;text-transform:uppercase;";
+$tdStyle = "border:1px solid {$borderColor};padding:6px 5px;text-align:center;";
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Report Card - <?= htmlspecialchars($student['first_name'] . ' ' . $student['last_name']) ?></title>
+    <title>Report Card - <?= htmlspecialchars(($student['first_name'] ?? '') . ' ' . ($student['last_name'] ?? '')) ?></title>
     <?php if ($faviconUrl): ?>
         <link rel="icon" href="<?= htmlspecialchars($faviconUrl) ?>">
     <?php endif; ?>
+    <style>
+        @page { size: A4; margin: 10mm 12mm; }
+        body { font-family: 'Cambria', 'Book Antiqua', 'Palatino Linotype', serif; margin: 0; padding: 0; background: #e4e7eb; color: <?= htmlspecialchars($textColor) ?>; font-size: 13px; }
+        .report-card { width: 210mm; min-height: 297mm; box-sizing: border-box; margin: 0 auto; background: #fff; padding: 18mm 20mm; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,.08); }
+        @media print { body { background: #fff; } .report-card { width: 100%; min-height: auto; box-shadow: none; border-radius: 0; padding: 0; margin: 0; } .no-print { display: none; } }
+    </style>
 </head>
-<body style="font-family:'Cambria','Book Antiqua','Palatino Linotype',serif;margin:0;padding:24px 16px;background:#dfe3e8;color:<?= htmlspecialchars($textColor) ?>;font-size:14px;">
+<body>
 
-<div style="max-width:1000px;margin:0 auto;background:#fff;padding:40px 46px;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,.12);">
+<div class="report-card">
 
-    <table style="width:100%;border-collapse:collapse;margin-bottom:4px;">
+    <div style="text-align:center;margin-bottom:6px;">
+        <h1 style="margin:0;font-family:'Cambria',Georgia,serif;font-size:26px;font-weight:900;color:<?= htmlspecialchars($accentColor) ?>;letter-spacing:2px;text-transform:uppercase;line-height:1.2;">
+            <?= htmlspecialchars($schoolName) ?>
+        </h1>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:2px;">
         <tr>
-            <td style="width:120px;vertical-align:middle;padding:0;">
+            <td style="width:110px;vertical-align:bottom;padding:0;">
                 <?php if ($logoUrl): ?>
-                    <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo"
-                         style="width:110px;height:110px;object-fit:contain;display:block;">
+                    <img src="<?= htmlspecialchars($logoUrl) ?>" alt="School Logo" style="width:95px;height:95px;object-fit:contain;display:block;">
                 <?php endif; ?>
             </td>
-            <td style="text-align:center;vertical-align:middle;padding:0 10px;">
-                <h1 style="margin:0;font-family:'Cambria',Georgia,serif;font-size:34px;font-weight:900;color:<?= htmlspecialchars($accentColor) ?>;letter-spacing:4px;text-transform:uppercase;line-height:1.1;">
-                    <?= htmlspecialchars($schoolName) ?>
-                </h1>
-
-                <div style="margin-top:10px;font-size:13px;color:<?= htmlspecialchars($primaryColor) ?>;font-weight:700;line-height:1.7;letter-spacing:.3px;">
+            <td style="text-align:center;vertical-align:middle;padding:0 6px;">
+                <div style="font-size:12px;color:<?= htmlspecialchars($primaryColor) ?>;font-weight:700;line-height:1.5;letter-spacing:.2px;">
                     <?php if ($schoolPoBox): ?><div><?= htmlspecialchars($schoolPoBox) ?></div><?php endif; ?>
-                    <?php if ($schoolAddress): ?><div><?= htmlspecialchars($schoolAddress) ?></div><?php endif; ?>
-                    <div>
-                        <?php if ($schoolPhone): ?>Tel: <?= htmlspecialchars($schoolPhone) ?><?php endif; ?>
-                        <?php if ($schoolPhone && $schoolEmail): ?>&nbsp;&nbsp;&bull;&nbsp;&nbsp;<?php endif; ?>
-                        <?php if ($schoolEmail): ?>Email: <?= htmlspecialchars($schoolEmail) ?><?php endif; ?>
-                    </div>
+                    <?php if ($schoolPhone): ?><div>Tel: <?= htmlspecialchars($schoolPhone) ?></div><?php endif; ?>
+                    <?php if ($schoolEmail): ?><div>EMAIL: <?= htmlspecialchars($schoolEmail) ?></div><?php endif; ?>
                 </div>
 
                 <?php if ($schoolMotto): ?>
-                    <div style="font-size:12px;color:<?= htmlspecialchars($mottoColor) ?>;font-style:italic;font-weight:700;letter-spacing:2.5px;margin-top:10px;text-transform:uppercase;">
-                        <?= htmlspecialchars($schoolMotto) ?>
+                    <div style="font-size:11px;color:<?= htmlspecialchars($mottoColor) ?>;font-style:italic;font-weight:700;letter-spacing:1.8px;margin-top:6px;text-transform:uppercase;">
+                        &ldquo;<?= htmlspecialchars($schoolMotto) ?>&rdquo;
                     </div>
                 <?php endif; ?>
             </td>
-            <td style="width:120px;vertical-align:top;padding:0;">
+            <td style="width:110px;vertical-align:bottom;padding:0;text-align:right;">
                 <?php if ($studentPhoto): ?>
-                    <img src="<?= htmlspecialchars($studentPhoto) ?>" alt="Student"
-                         style="width:110px;height:120px;object-fit:cover;display:block;margin:0 auto;">
+                    <img src="<?= htmlspecialchars($studentPhoto) ?>" alt="Student Photo" style="width:95px;height:110px;object-fit:cover;display:block;margin-left:auto;border:1px solid #ccc;border-radius:3px;">
                 <?php endif; ?>
             </td>
         </tr>
     </table>
 
-    <div style="text-align:center;font-family:'Cambria',Georgia,serif;font-size:19px;font-weight:900;letter-spacing:5px;text-transform:uppercase;padding:12px 0;margin:22px 0 20px;color:<?= htmlspecialchars($primaryColor) ?>;border-top:3px double <?= htmlspecialchars($primaryColor) ?>;border-bottom:3px double <?= htmlspecialchars($primaryColor) ?>;">
-        <?= htmlspecialchars($options['report_name'] ?? 'END OF TERM REPORT') ?>
+    <div style="text-align:center;font-family:'Cambria',Georgia,serif;font-size:16px;font-weight:900;letter-spacing:3.5px;text-transform:uppercase;padding:8px 0;margin:14px 0 14px;color:<?= htmlspecialchars($primaryColor) ?>;border-top:2px double <?= htmlspecialchars($primaryColor) ?>;border-bottom:2px double <?= htmlspecialchars($primaryColor) ?>;background:<?= htmlspecialchars($softBg) ?>;">
+        <?= htmlspecialchars($options['report_name'] ?? 'END OF TERM REPORT CARD') ?>
     </div>
 
-    <table style="width:100%;border-collapse:collapse;font-size:14px;font-weight:700;margin-bottom:22px;line-height:1.9;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;font-weight:700;margin-bottom:14px;line-height:1.7;">
         <tr>
-            <td style="padding:4px 0;width:50%;vertical-align:top;">
-                <span style="color:<?= htmlspecialchars($primaryColor) ?>;display:inline-block;min-width:135px;">NAME:</span>
-                <?= htmlspecialchars(strtoupper($student['first_name'] . ' ' . ($student['middle_name'] ?? '') . ' ' . $student['last_name'])) ?>
+            <td style="padding:2px 0;width:52%;vertical-align:top;">
+                <span style="color:<?= htmlspecialchars($primaryColor) ?>;display:inline-block;min-width:125px;">NAME :</span>
+                <?= htmlspecialchars(strtoupper(($student['first_name'] ?? '') . ' ' . ($student['middle_name'] ?? '') . ' ' . ($student['last_name'] ?? ''))) ?>
             </td>
-            <td style="padding:4px 0;vertical-align:top;">
-                <span style="color:<?= htmlspecialchars($primaryColor) ?>;display:inline-block;min-width:135px;">REG NO:</span>
+            <td style="padding:2px 0;vertical-align:top;">
+                <span style="color:<?= htmlspecialchars($primaryColor) ?>;display:inline-block;min-width:120px;">REG NO :</span>
                 <?= htmlspecialchars($student['admission_number'] ?? '-') ?>
             </td>
         </tr>
         <tr>
-            <td style="padding:4px 0;vertical-align:top;">
-                <span style="color:<?= htmlspecialchars($primaryColor) ?>;display:inline-block;min-width:135px;">ACADEMIC YEAR:</span>
+            <td style="padding:2px 0;vertical-align:top;">
+                <span style="color:<?= htmlspecialchars($primaryColor) ?>;display:inline-block;min-width:125px;">ACADEMIC YEAR :</span>
                 <?= htmlspecialchars($academicYearName ?? '') ?>
             </td>
-            <td style="padding:4px 0;vertical-align:top;">
-                <span style="color:<?= htmlspecialchars($primaryColor) ?>;display:inline-block;min-width:135px;">TERM:</span>
+            <td style="padding:2px 0;vertical-align:top;">
+                <span style="color:<?= htmlspecialchars($primaryColor) ?>;display:inline-block;min-width:120px;">TERM :</span>
                 <?= htmlspecialchars($termName ?? '') ?>
             </td>
         </tr>
         <tr>
-            <td style="padding:4px 0;vertical-align:top;">
-                <span style="color:<?= htmlspecialchars($primaryColor) ?>;display:inline-block;min-width:135px;">CLASS:</span>
+            <td style="padding:2px 0;vertical-align:top;">
+                <span style="color:<?= htmlspecialchars($primaryColor) ?>;display:inline-block;min-width:125px;">CLASS :</span>
                 <?= htmlspecialchars($student['class_name'] ?? '-') ?>
             </td>
-            <td style="padding:4px 0;vertical-align:top;">
-                <span style="color:<?= htmlspecialchars($primaryColor) ?>;display:inline-block;min-width:135px;">STREAM:</span>
+            <td style="padding:2px 0;vertical-align:top;">
+                <span style="color:<?= htmlspecialchars($primaryColor) ?>;display:inline-block;min-width:120px;">STREAM :</span>
                 <?= htmlspecialchars($student['stream_name'] ?? 'N/A') ?>
             </td>
         </tr>
     </table>
 
     <?php if (!empty($subjects) && !empty($displayExams)): ?>
-
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
             <thead>
                 <tr>
-                    <th rowspan="2" style="<?= $thStyle ?>text-align:left;padding-left:12px;font-size:11px;width:20%;">SUBJECT</th>
-                    <th colspan="<?= count($displayExams) * 2 ?>" style="<?= $thStyle ?>font-size:12px;letter-spacing:3px;">MARKS</th>
+                    <th rowspan="2" style="<?= $thStyle ?>text-align:left;padding-left:8px;font-size:10px;width:22%;">SUBJECT</th>
+                    <th colspan="<?= count($displayExams) * 2 ?>" style="<?= $thStyle ?>font-size:11px;letter-spacing:1.8px;">MARKS</th>
                     <?php if ($showGrades): ?>
-                        <th rowspan="2" style="<?= $thStyle ?>font-size:11px;width:9%;">GRADE</th>
+                        <th rowspan="2" style="<?= $thStyle ?>font-size:10px;width:8%;">GRADE</th>
                     <?php endif; ?>
-                    <th rowspan="2" style="<?= $thStyle ?>font-size:11px;<?= $showInitials ? 'width:18%;' : 'width:24%;' ?>">COMMENTS</th>
+                    <th rowspan="2" style="<?= $thStyle ?>font-size:10px;<?= $showInitials ? 'width:18%;' : 'width:24%;' ?>">COMMENTS</th>
                     <?php if ($showInitials): ?>
-                        <th rowspan="2" style="<?= $thStyle ?>font-size:11px;width:10%;line-height:1.3;">TR'S<br>INITIALS</th>
+                        <th rowspan="2" style="<?= $thStyle ?>font-size:10px;width:9%;line-height:1.1;">TR'S<br>INITIALS</th>
                     <?php endif; ?>
                 </tr>
                 <tr>
                     <?php foreach ($displayExams as $exam): ?>
-                        <th colspan="2" style="<?= $thStyle ?>font-size:11px;letter-spacing:1.2px;">
+                        <th colspan="2" style="<?= $thStyle ?>font-size:10px;letter-spacing:.8px;">
                             <?= htmlspecialchars(strtoupper($exam['name'])) ?>
                         </th>
                     <?php endforeach; ?>
                 </tr>
                 <tr>
-                    <th style="<?= $thStyle ?>height:6px;"></th>
+                    <th style="<?= $thStyle ?>height:3px;padding:1px;"></th>
                     <?php foreach ($displayExams as $exam): ?>
-                        <th style="<?= $thStyle ?>font-size:10px;letter-spacing:1px;">MARK</th>
-                        <th style="<?= $thStyle ?>font-size:10px;letter-spacing:1px;">SCORE</th>
+                        <th style="<?= $thStyle ?>font-size:9px;letter-spacing:.5px;width:9%;">MARK</th>
+                        <th style="<?= $thStyle ?>font-size:9px;letter-spacing:.5px;width:9%;">SCORE</th>
                     <?php endforeach; ?>
-                    <?php if ($showGrades): ?><th style="<?= $thStyle ?>font-size:10px;">&nbsp;</th><?php endif; ?>
-                    <th style="<?= $thStyle ?>font-size:10px;">&nbsp;</th>
-                    <?php if ($showInitials): ?><th style="<?= $thStyle ?>font-size:10px;">&nbsp;</th><?php endif; ?>
+                    <?php if ($showGrades): ?><th style="<?= $thStyle ?>font-size:9px;"></th><?php endif; ?>
+                    <th style="<?= $thStyle ?>font-size:9px;"></th>
+                    <?php if ($showInitials): ?><th style="<?= $thStyle ?>font-size:9px;"></th><?php endif; ?>
                 </tr>
             </thead>
             <tbody>
@@ -201,21 +202,21 @@ $tdStyle = "border:1px solid {$borderColor};padding:8px 6px;text-align:center;";
                         $sa = $subjectAverages[$subject['id']] ?? ['grade' => '-', 'remark' => '', 'initials' => ''];
                     ?>
                     <tr>
-                        <td style="border:1px solid <?= htmlspecialchars($borderColor) ?>;padding:9px 12px;text-align:left;font-weight:700;color:<?= htmlspecialchars($primaryColor) ?>;text-transform:uppercase;letter-spacing:.5px;">
+                        <td style="border:1px solid <?= htmlspecialchars($borderColor) ?>;padding:6px 8px;text-align:left;font-weight:700;color:<?= htmlspecialchars($primaryColor) ?>;text-transform:uppercase;letter-spacing:.3px;">
                             <?= htmlspecialchars($subject['name']) ?>
                         </td>
 
                         <?php foreach ($displayExams as $exam): ?>
                             <?php
-                                $row     = $marksByExam[$exam['id']][$subject['id']] ?? null;
-                                $markVal = $row ? (int)round((float)$row['marks_obtained']) : null;
-                                $scoreVal = $row ? (int)round((float)($row['score'] ?? 0)) : null;
+                                $row      = $marksByExam[$exam['id']][$subject['id']] ?? null;
+                                $markVal  = $row !== null ? (int)round((float)$row['marks_obtained']) : null;
+                                $scoreVal = $row !== null ? (int)round((float)($row['score'] ?? 0)) : null;
                                 if ($markVal !== null) {
                                     $totalMarksPerExam[$exam['id']] += $markVal;
                                 }
                             ?>
-                            <td style="<?= $tdStyle ?>font-size:13px;"><?= $markVal ?? '-' ?></td>
-                            <td style="<?= $tdStyle ?>font-weight:700;color:<?= htmlspecialchars($primaryColor) ?>;"><?= $scoreVal ?? '-' ?></td>
+                            <td style="<?= $tdStyle ?>font-size:12px;"><?= $markVal !== null ? $markVal : '-' ?></td>
+                            <td style="<?= $tdStyle ?>font-weight:700;color:<?= htmlspecialchars($primaryColor) ?>;"><?= $scoreVal !== null ? $scoreVal : '-' ?></td>
                         <?php endforeach; ?>
 
                         <?php if ($showGrades): ?>
@@ -224,12 +225,12 @@ $tdStyle = "border:1px solid {$borderColor};padding:8px 6px;text-align:center;";
                             </td>
                         <?php endif; ?>
 
-                        <td style="border:1px solid <?= htmlspecialchars($borderColor) ?>;padding:9px 10px;text-align:left;font-size:11px;text-transform:uppercase;color:<?= htmlspecialchars($mottoColor) ?>;font-weight:700;letter-spacing:.6px;">
+                        <td style="border:1px solid <?= htmlspecialchars($borderColor) ?>;padding:6px 6px;text-align:left;font-size:10px;text-transform:uppercase;color:<?= htmlspecialchars($mottoColor) ?>;font-weight:700;letter-spacing:.3px;">
                             <?= htmlspecialchars($sa['remark'] ?? '') ?>
                         </td>
 
                         <?php if ($showInitials): ?>
-                            <td style="<?= $tdStyle ?>color:<?= htmlspecialchars($primaryColor) ?>;font-weight:700;letter-spacing:1.5px;">
+                            <td style="<?= $tdStyle ?>color:<?= htmlspecialchars($primaryColor) ?>;font-weight:700;letter-spacing:.8px;font-size:10.5px;">
                                 <?= htmlspecialchars($sa['initials'] ?? '') ?>
                             </td>
                         <?php endif; ?>
@@ -237,28 +238,28 @@ $tdStyle = "border:1px solid {$borderColor};padding:8px 6px;text-align:center;";
                 <?php endforeach; ?>
 
                 <tr style="background:<?= htmlspecialchars($tableHeadBg) ?>;font-weight:900;">
-                    <td style="border:1px solid <?= htmlspecialchars($borderColor) ?>;padding:10px 12px;text-align:left;color:<?= htmlspecialchars($primaryColor) ?>;text-transform:uppercase;letter-spacing:2px;">
+                    <td style="border:1px solid <?= htmlspecialchars($borderColor) ?>;padding:7px 8px;text-align:left;color:<?= htmlspecialchars($primaryColor) ?>;text-transform:uppercase;letter-spacing:1.2px;">
                         TOTAL
                     </td>
                     <?php foreach ($displayExams as $exam): ?>
                         <?php $t = $examTotals[$exam['id']] ?? ['score' => 0]; ?>
-                        <td style="<?= $tdStyle ?>font-size:14px;"><?= (int)round($totalMarksPerExam[$exam['id']]) ?></td>
-                        <td style="<?= $tdStyle ?>color:<?= htmlspecialchars($primaryColor) ?>;font-size:14px;"><?= (int)round($t['score'] ?? 0) ?></td>
+                        <td style="<?= $tdStyle ?>font-size:12px;"><?= (int)round($totalMarksPerExam[$exam['id']]) ?></td>
+                        <td style="<?= $tdStyle ?>color:<?= htmlspecialchars($primaryColor) ?>;font-size:12px;"><?= (int)round($t['score'] ?? 0) ?></td>
                     <?php endforeach; ?>
 
                     <?php if ($showGrades): ?>
-                        <td style="<?= $tdStyle ?>color:<?= htmlspecialchars($primaryColor) ?>;font-size:14px;"><?= (int)round($totalAggregate) ?></td>
+                        <td style="<?= $tdStyle ?>color:<?= htmlspecialchars($primaryColor) ?>;font-size:12px;"><?= (int)round($totalAggregate) ?></td>
                     <?php endif; ?>
 
-                    <td colspan="<?= $showInitials ? 2 : 1 ?>" style="border:1px solid <?= htmlspecialchars($borderColor) ?>;padding:10px 12px;text-align:center;color:<?= htmlspecialchars($primaryColor) ?>;font-weight:900;letter-spacing:1.5px;font-size:12px;">
+                    <td colspan="<?= $showInitials ? 2 : 1 ?>" style="border:1px solid <?= htmlspecialchars($borderColor) ?>;padding:7px 8px;text-align:center;color:<?= htmlspecialchars($primaryColor) ?>;font-weight:900;letter-spacing:.8px;font-size:11px;">
                         <?php if ($showDivision): ?>
-                            DIV: <?= htmlspecialchars($divisionCode ?? '-') ?>
+                            DIV : <?= htmlspecialchars($divisionCode ?? '-') ?>
                         <?php endif; ?>
                         <?php if ($showDivision && $showPositions): ?>
-                            &nbsp;&nbsp;<span style="color:#b0bec5;">|</span>&nbsp;&nbsp;
+                            &nbsp;&nbsp;<span style="color:#90a4ae;">|</span>&nbsp;&nbsp;
                         <?php endif; ?>
                         <?php if ($showPositions): ?>
-                            POS: <?= $position ? (int)$position : '-' ?><?= $classSize ? ' / ' . (int)$classSize : '' ?>
+                            POS : <?= $position ? (int)$position : '-' ?><?= $classSize ? ' / ' . (int)$classSize : '' ?>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -270,47 +271,47 @@ $tdStyle = "border:1px solid {$borderColor};padding:8px 6px;text-align:center;";
             ['Average',     (int)$average],
             ['Aggregate',   (int)round($totalAggregate)],
         ]; ?>
-        <table style="width:100%;border-collapse:collapse;margin-top:18px;font-size:13px;font-weight:700;border:2px solid <?= htmlspecialchars($borderColor) ?>;background:<?= htmlspecialchars($softBg) ?>;">
+        <table style="width:100%;border-collapse:collapse;margin-top:14px;font-size:12px;font-weight:700;border:1.2px solid <?= htmlspecialchars($borderColor) ?>;background:<?= htmlspecialchars($softBg) ?>;">
             <tr>
                 <?php foreach ($summaryCells as [$label, $value]): ?>
-                    <td style="padding:14px 16px;border-right:1px solid <?= htmlspecialchars($borderColor) ?>;text-align:center;">
-                        <div style="font-size:10px;color:#607d8b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;"><?= $label ?></div>
-                        <div style="font-size:18px;color:<?= htmlspecialchars($primaryColor) ?>;"><?= $value ?></div>
+                    <td style="padding:10px 12px;border-right:1px solid <?= htmlspecialchars($borderColor) ?>;text-align:center;">
+                        <div style="font-size:9px;color:#546e7a;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;"><?= $label ?></div>
+                        <div style="font-size:16px;color:<?= htmlspecialchars($primaryColor) ?>;"><?= $value ?></div>
                     </td>
                 <?php endforeach; ?>
 
                 <?php if ($showDivision): ?>
-                    <td style="padding:14px 16px;border-right:1px solid <?= htmlspecialchars($borderColor) ?>;text-align:center;">
-                        <div style="font-size:10px;color:#607d8b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">Division</div>
-                        <div style="font-size:18px;color:<?= htmlspecialchars($primaryColor) ?>;"><?= htmlspecialchars($divisionCode ?? '-') ?></div>
+                    <td style="padding:10px 12px;border-right:1px solid <?= htmlspecialchars($borderColor) ?>;text-align:center;">
+                        <div style="font-size:9px;color:#546e7a;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">Division</div>
+                        <div style="font-size:16px;color:<?= htmlspecialchars($primaryColor) ?>;"><?= htmlspecialchars($divisionCode ?? '-') ?></div>
                     </td>
                 <?php endif; ?>
 
                 <?php if ($showPositions): ?>
-                    <td style="padding:14px 16px;border-right:1px solid <?= htmlspecialchars($borderColor) ?>;text-align:center;">
-                        <div style="font-size:10px;color:#607d8b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">Position</div>
-                        <div style="font-size:18px;color:<?= htmlspecialchars($primaryColor) ?>;">
+                    <td style="padding:10px 12px;border-right:1px solid <?= htmlspecialchars($borderColor) ?>;text-align:center;">
+                        <div style="font-size:9px;color:#546e7a;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">Position</div>
+                        <div style="font-size:16px;color:<?= htmlspecialchars($primaryColor) ?>;">
                             <?= $position ? (int)$position : '-' ?>
-                            <span style="font-size:12px;color:#607d8b;"> / <?= $classSize ?: '-' ?></span>
+                            <span style="font-size:10.5px;color:#546e7a;"> / <?= $classSize ?: '-' ?></span>
                         </div>
                     </td>
                 <?php endif; ?>
 
-                <td style="padding:14px 16px;text-align:center;">
-                    <div style="font-size:10px;color:#607d8b;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">Subjects</div>
-                    <div style="font-size:18px;color:<?= htmlspecialchars($primaryColor) ?>;"><?= $subjectCount ?></div>
+                <td style="padding:10px 12px;text-align:center;">
+                    <div style="font-size:9px;color:#546e7a;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;">Subjects</div>
+                    <div style="font-size:16px;color:<?= htmlspecialchars($primaryColor) ?>;"><?= $subjectCount ?></div>
                 </td>
             </tr>
         </table>
 
         <?php if ($showCtComment && $ctRemark !== ''): ?>
-            <table style="width:100%;border-collapse:collapse;margin-top:18px;">
+            <table style="width:100%;border-collapse:collapse;margin-top:14px;">
                 <tr>
                     <td style="border:1px solid <?= htmlspecialchars($borderColor) ?>;padding:0;">
-                        <div style="background:<?= htmlspecialchars($tableHeadBg) ?>;color:<?= htmlspecialchars($primaryColor) ?>;font-weight:700;padding:8px 14px;font-size:11px;text-transform:uppercase;border-bottom:1px solid <?= htmlspecialchars($borderColor) ?>;letter-spacing:1.5px;">
+                        <div style="background:<?= htmlspecialchars($tableHeadBg) ?>;color:<?= htmlspecialchars($primaryColor) ?>;font-weight:700;padding:6px 10px;font-size:10px;text-transform:uppercase;border-bottom:1px solid <?= htmlspecialchars($borderColor) ?>;letter-spacing:1px;">
                             Class Teacher's Comment
                         </div>
-                        <div style="padding:16px 14px;font-size:12.5px;min-height:34px;font-style:italic;color:#37474f;line-height:1.6;">
+                        <div style="padding:10px 10px;font-size:11.5px;min-height:24px;font-style:italic;color:#37474f;line-height:1.4;">
                             <?= htmlspecialchars($ctRemark) ?>
                         </div>
                     </td>
@@ -319,20 +320,20 @@ $tdStyle = "border:1px solid {$borderColor};padding:8px 6px;text-align:center;";
         <?php endif; ?>
 
         <?php if ($showHmComment): ?>
-            <table style="width:100%;border-collapse:collapse;margin-top:12px;">
+            <table style="width:100%;border-collapse:collapse;margin-top:10px;">
                 <tr>
                     <td style="border:1px solid <?= htmlspecialchars($borderColor) ?>;padding:0;">
-                        <div style="background:<?= htmlspecialchars($tableHeadBg) ?>;color:<?= htmlspecialchars($primaryColor) ?>;font-weight:700;padding:8px 14px;font-size:11px;text-transform:uppercase;border-bottom:1px solid <?= htmlspecialchars($borderColor) ?>;letter-spacing:1.5px;">
+                        <div style="background:<?= htmlspecialchars($tableHeadBg) ?>;color:<?= htmlspecialchars($primaryColor) ?>;font-weight:700;padding:6px 10px;font-size:10px;text-transform:uppercase;border-bottom:1px solid <?= htmlspecialchars($borderColor) ?>;letter-spacing:1px;">
                             Head Teacher's Comment
                         </div>
-                        <div style="padding:16px 14px;font-size:12.5px;min-height:34px;"></div>
+                        <div style="padding:10px 10px;font-size:11.5px;min-height:24px;"></div>
                     </td>
                 </tr>
             </table>
         <?php endif; ?>
 
         <?php if ($showNextTerm && $nextTerm): ?>
-            <div style="margin-top:16px;padding:12px 16px;border:1px solid <?= htmlspecialchars($borderColor) ?>;font-size:12px;font-weight:700;color:<?= htmlspecialchars($primaryColor) ?>;background:<?= htmlspecialchars($softBg) ?>;letter-spacing:.8px;text-align:center;">
+            <div style="margin-top:12px;padding:8px 12px;border:1px solid <?= htmlspecialchars($borderColor) ?>;font-size:11px;font-weight:700;color:<?= htmlspecialchars($primaryColor) ?>;background:<?= htmlspecialchars($softBg) ?>;letter-spacing:.5px;text-align:center;">
                 NEXT TERM BEGINS:
                 <span style="color:#37474f;font-weight:600;"><?= htmlspecialchars(date('d/m/Y', strtotime($nextTerm['start_date']))) ?></span>
                 &nbsp;&nbsp;&bull;&nbsp;&nbsp;
@@ -341,31 +342,31 @@ $tdStyle = "border:1px solid {$borderColor};padding:8px 6px;text-align:center;";
             </div>
         <?php endif; ?>
 
-        <table style="width:100%;border-collapse:collapse;margin-top:45px;font-size:11px;">
+        <table style="width:100%;border-collapse:collapse;margin-top:35px;font-size:10px;">
             <tr>
-                <td style="width:50%;border-top:1px solid <?= htmlspecialchars($borderColor) ?>;padding-top:10px;text-align:center;color:<?= htmlspecialchars($primaryColor) ?>;font-weight:700;letter-spacing:1px;text-transform:uppercase;">
+                <td style="width:50%;border-top:1px solid <?= htmlspecialchars($borderColor) ?>;padding-top:6px;text-align:center;color:<?= htmlspecialchars($primaryColor) ?>;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">
                     Class Teacher's Signature
                 </td>
-                <td style="width:50%;border-top:1px solid <?= htmlspecialchars($borderColor) ?>;padding-top:10px;text-align:center;color:<?= htmlspecialchars($primaryColor) ?>;font-weight:700;letter-spacing:1px;text-transform:uppercase;">
+                <td style="width:50%;border-top:1px solid <?= htmlspecialchars($borderColor) ?>;padding-top:6px;text-align:center;color:<?= htmlspecialchars($primaryColor) ?>;font-weight:700;letter-spacing:.6px;text-transform:uppercase;">
                     Head Teacher's Signature / Stamp
                 </td>
             </tr>
         </table>
 
     <?php else: ?>
-        <div style="text-align:center;padding:60px 20px;color:#888;">
-            <h3>No marks found for the selected criteria</h3>
-            <p>Please verify the selected exams contain marks for this student.</p>
+        <div style="text-align:center;padding:40px 20px;color:#888;">
+            <h3 style="font-family:Arial,sans-serif;margin-bottom:6px;">No marks found for the selected criteria</h3>
+            <p style="font-family:Arial,sans-serif;font-size:12px;">Please verify the selected exams contain marks for this student.</p>
         </div>
     <?php endif; ?>
 
-    <div style="margin-top:36px;text-align:right;font-family:Arial,sans-serif;border-top:1px solid #eceff1;padding-top:18px;">
+    <div class="no-print" style="margin-top:28px;text-align:right;font-family:Arial,sans-serif;border-top:1px solid #e0e0e0;padding-top:14px;">
         <a href="<?= BASE_URL ?>/reports/academic/report-cards"
-           style="display:inline-block;padding:10px 24px;background:#607d8b;color:#fff;text-decoration:none;border-radius:5px;font-size:13px;margin-right:8px;font-weight:700;letter-spacing:.5px;">
-            ← Back
+           style="display:inline-block;padding:8px 18px;background:#546e7a;color:#fff;text-decoration:none;border-radius:4px;font-size:12px;margin-right:6px;font-weight:700;">
+            &larr; Back
         </a>
         <a href="javascript:window.print()"
-           style="display:inline-block;padding:10px 24px;background:<?= htmlspecialchars($primaryColor) ?>;color:#fff;text-decoration:none;border-radius:5px;font-size:13px;font-weight:700;letter-spacing:.5px;">
+           style="display:inline-block;padding:8px 18px;background:<?= htmlspecialchars($primaryColor) ?>;color:#fff;text-decoration:none;border-radius:4px;font-size:12px;font-weight:700;">
             Print Report
         </a>
     </div>
