@@ -41,6 +41,7 @@ class StaffController extends Controller
             'categories'   => $categories,
             'statuses'     => $statuses,
             'departments'  => $departments,
+            'filters'      => $filters,
         ]);
     }
 
@@ -345,12 +346,21 @@ class StaffController extends Controller
 
     private function collectFilters(): array
     {
-        return array_filter([
-            'search'        => trim($_GET['search'] ?? ''),
-            'category_id'   => trim($_GET['category_id'] ?? ''),
-            'status_id'     => trim($_GET['status_id'] ?? ''),
-            'department_id' => trim($_GET['department_id'] ?? ''),
-        ], fn($value) => $value !== '');
+        $filters = [];
+
+        $search = trim((string)($_GET['search'] ?? ''));
+        if ($search !== '') {
+            $filters['search'] = $search;
+        }
+
+        foreach (['category_id', 'status_id', 'department_id'] as $key) {
+            $raw = $_GET[$key] ?? '';
+            if ($raw !== '' && ctype_digit((string)$raw) && (int)$raw > 0) {
+                $filters[$key] = (int)$raw;
+            }
+        }
+
+        return $filters;
     }
 
     private function collectStaffForm(): array
@@ -448,7 +458,12 @@ class StaffController extends Controller
             mkdir($dir, 0777, true);
         }
 
-        $ext      = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
+        $ext      = strtolower(pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION));
+        $allowed  = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        if (!in_array($ext, $allowed, true)) {
+            return null;
+        }
+
         $filename = 'staff_' . time() . '_' . uniqid() . '.' . $ext;
 
         if (!move_uploaded_file($_FILES['photo']['tmp_name'], $dir . $filename)) {
@@ -514,6 +529,10 @@ class StaffController extends Controller
 
     private function lookupTable(string $table, int $schoolId): array
     {
+        $allowed = ['classes', 'streams', 'subjects'];
+        if (!in_array($table, $allowed, true)) {
+            return [];
+        }
         return $this->db->fetchAll(
             "SELECT id, name FROM {$table} WHERE school_id = :s ORDER BY name",
             ['s' => $schoolId]

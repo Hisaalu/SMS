@@ -34,32 +34,52 @@ class StaffService
         $params = ['school_id' => $schoolId];
 
         if (!empty($filters['search'])) {
-            $sql .= " AND (st.first_name LIKE :search
-                        OR st.last_name  LIKE :search
-                        OR st.username   LIKE :search
-                        OR st.staff_number LIKE :search
-                        OR st.email      LIKE :search
-                        OR st.phone      LIKE :search
-                        OR CONCAT(st.first_name, ' ', st.last_name) LIKE :search)";
-            $params['search'] = '%' . $filters['search'] . '%';
+            $term = addcslashes((string) $filters['search'], '%_\\');
+            $like = '%' . $term . '%';
+
+            $sql .= " AND (
+                        st.first_name   LIKE :search_first
+                     OR st.middle_name  LIKE :search_middle
+                     OR st.last_name    LIKE :search_last
+                     OR st.username     LIKE :search_username
+                     OR st.staff_number LIKE :search_number
+                     OR st.email        LIKE :search_email
+                     OR st.phone        LIKE :search_phone
+                     OR st.alt_phone    LIKE :search_alt_phone
+                     OR CONCAT_WS(' ', st.first_name, st.middle_name, st.last_name) LIKE :search_full
+                     OR u.email         LIKE :search_user_email
+                     OR u.username      LIKE :search_user_username
+                  )";
+
+            $params['search_first']         = $like;
+            $params['search_middle']        = $like;
+            $params['search_last']          = $like;
+            $params['search_username']      = $like;
+            $params['search_number']        = $like;
+            $params['search_email']         = $like;
+            $params['search_phone']         = $like;
+            $params['search_alt_phone']     = $like;
+            $params['search_full']          = $like;
+            $params['search_user_email']    = $like;
+            $params['search_user_username'] = $like;
         }
 
         if (!empty($filters['category_id'])) {
-            $sql .= " AND st.staff_category_id = :category_id";
-            $params['category_id'] = (int)$filters['category_id'];
+            $sql .= " AND st.staff_category_id = :filter_category";
+            $params['filter_category'] = (int) $filters['category_id'];
         }
 
         if (!empty($filters['status_id'])) {
-            $sql .= " AND st.staff_status_id = :status_id";
-            $params['status_id'] = (int)$filters['status_id'];
+            $sql .= " AND st.staff_status_id = :filter_status";
+            $params['filter_status'] = (int) $filters['status_id'];
         }
 
         if (!empty($filters['department_id'])) {
-            $sql .= " AND st.department_id = :department_id";
-            $params['department_id'] = (int)$filters['department_id'];
+            $sql .= " AND st.department_id = :filter_department";
+            $params['filter_department'] = (int) $filters['department_id'];
         }
 
-        $sql .= " ORDER BY st.created_at DESC";
+        $sql .= " ORDER BY st.first_name ASC, st.last_name ASC";
 
         return $this->db->fetchAll($sql, $params);
     }
@@ -87,7 +107,7 @@ class StaffService
     public function getDepartments(int $schoolId): array
     {
         return $this->db->fetchAll(
-            "SELECT * FROM departments WHERE school_id = :school_id",
+            "SELECT * FROM departments WHERE school_id = :school_id ORDER BY name ASC",
             ['school_id' => $schoolId]
         );
     }
@@ -123,17 +143,17 @@ class StaffService
                 'email'          => $data['email'] ?? null,
                 'address'        => $data['address'] ?? null,
                 'photo_path'     => $data['photo_path'] ?? null,
-                'category_id'    => (int)$data['category_id'],
-                'status_id'      => (int)$data['status_id'],
-                'department_id'  => !empty($data['department_id']) ? (int)$data['department_id'] : null,
+                'category_id'    => (int) $data['category_id'],
+                'status_id'      => (int) $data['status_id'],
+                'department_id'  => !empty($data['department_id']) ? (int) $data['department_id'] : null,
                 'position'       => $data['position'] ?? null,
                 'emp_date'       => $data['emp_date'] ?? null,
                 'emp_type'       => $data['emp_type'] ?? 'full_time',
-                'user_id'        => !empty($data['user_id']) ? (int)$data['user_id'] : null,
+                'user_id'        => !empty($data['user_id']) ? (int) $data['user_id'] : null,
             ]
         );
 
-        $staffId = (int)$this->db->lastInsertId();
+        $staffId = (int) $this->db->lastInsertId();
 
         if ($staffId) {
             $this->db->execute(
@@ -143,7 +163,7 @@ class StaffService
                     (:staff_id, NULL, :new_status, CURDATE(), 'Initial Employment Registration', :changed_by)",
                 [
                     'staff_id'   => $staffId,
-                    'new_status' => (int)$data['status_id'],
+                    'new_status' => (int) $data['status_id'],
                     'changed_by' => $userId,
                 ]
             );
@@ -169,7 +189,7 @@ class StaffService
             return false;
         }
 
-        $oldStatusId = (int)$staff['staff_status_id'];
+        $oldStatusId = (int) $staff['staff_status_id'];
 
         if ($oldStatusId === $newStatusId) {
             return false;
@@ -250,7 +270,8 @@ class StaffService
             "SELECT u.id, u.username, u.email
              FROM users u
              LEFT JOIN staff st ON st.user_id = u.id
-             WHERE u.school_id = :school_id AND st.id IS NULL",
+             WHERE u.school_id = :school_id AND st.id IS NULL
+             ORDER BY u.username ASC",
             ['school_id' => $schoolId]
         );
     }
@@ -262,9 +283,9 @@ class StaffService
             ['school_id' => $schoolId]
         );
 
-        $next = (int)($row['id'] ?? 0) + 1;
+        $next = (int) ($row['id'] ?? 0) + 1;
 
-        return 'STF-' . str_pad((string)$next, 4, '0', STR_PAD_LEFT);
+        return 'STF-' . str_pad((string) $next, 4, '0', STR_PAD_LEFT);
     }
 
     public function checkUsernameAvailability(string $username, int $schoolId): bool
@@ -302,9 +323,9 @@ class StaffService
             'alt_phone'      => $data['alt_phone'] ?? null,
             'email'          => $data['email'] ?? null,
             'address'        => $data['address'] ?? null,
-            'category_id'    => (int)$data['category_id'],
-            'status_id'      => (int)$data['status_id'],
-            'department_id'  => !empty($data['department_id']) ? (int)$data['department_id'] : null,
+            'category_id'    => (int) $data['category_id'],
+            'status_id'      => (int) $data['status_id'],
+            'department_id'  => !empty($data['department_id']) ? (int) $data['department_id'] : null,
             'position'       => $data['position'] ?? null,
             'emp_date'       => $data['emp_date'] ?? null,
             'emp_type'       => $data['emp_type'] ?? 'full_time',
@@ -380,7 +401,7 @@ class StaffService
                 'name'          => $data['name'],
                 'code'          => strtoupper($data['code']),
                 'description'   => $data['description'] ?? null,
-                'display_order' => (int)($data['display_order'] ?? 0),
+                'display_order' => (int) ($data['display_order'] ?? 0),
                 'status'        => $data['status'] ?? 'active',
             ]
         );
@@ -399,7 +420,7 @@ class StaffService
                 'name'          => $data['name'],
                 'code'          => strtoupper($data['code']),
                 'description'   => $data['description'] ?? null,
-                'display_order' => (int)($data['display_order'] ?? 0),
+                'display_order' => (int) ($data['display_order'] ?? 0),
                 'status'        => $data['status'] ?? 'active',
             ]
         );
@@ -431,7 +452,7 @@ class StaffService
                 'description'      => $data['description'] ?? null,
                 'is_active_status' => !empty($data['is_active_status']) ? 1 : 0,
                 'allows_login'     => !empty($data['allows_login']) ? 1 : 0,
-                'display_order'    => (int)($data['display_order'] ?? 0),
+                'display_order'    => (int) ($data['display_order'] ?? 0),
                 'status'           => $data['status'] ?? 'active',
             ]
         );
@@ -453,7 +474,7 @@ class StaffService
                 'description'      => $data['description'] ?? null,
                 'is_active_status' => !empty($data['is_active_status']) ? 1 : 0,
                 'allows_login'     => !empty($data['allows_login']) ? 1 : 0,
-                'display_order'    => (int)($data['display_order'] ?? 0),
+                'display_order'    => (int) ($data['display_order'] ?? 0),
                 'status'           => $data['status'] ?? 'active',
             ]
         );
@@ -484,10 +505,10 @@ class StaffService
                     st.name  AS stream_name,
                     tat.name AS assignment_type_name
              FROM teacher_assignments ta
-             LEFT JOIN classes c                 ON ta.class_id = c.id
-             LEFT JOIN subjects s                ON ta.subject_id = s.id
-             LEFT JOIN streams st                ON ta.stream_id = st.id
-             LEFT JOIN teacher_assignment_types tat ON ta.assignment_type_id = tat.id
+             LEFT JOIN classes c                     ON ta.class_id = c.id
+             LEFT JOIN subjects s                    ON ta.subject_id = s.id
+             LEFT JOIN streams st                    ON ta.stream_id = st.id
+             LEFT JOIN teacher_assignment_types tat  ON ta.assignment_type_id = tat.id
              WHERE ta.staff_id = :staff_id AND ta.school_id = :school_id
              ORDER BY c.name, s.name",
             ['staff_id' => $staffId, 'school_id' => $schoolId]
@@ -532,7 +553,7 @@ class StaffService
 
         $this->db->update('staff', ['user_id' => $userId], ['id' => $staffId]);
 
-        return (int)$userId;
+        return (int) $userId;
     }
 
     public function updateLinkedUser(int $staffId, array $userData, ?int $roleId, int $schoolId): void
@@ -594,7 +615,7 @@ class StaffService
             ['username' => $username]
         );
 
-        if ($user && (empty($linkedUserId) || (int)$user['id'] !== (int)$linkedUserId)) {
+        if ($user && (empty($linkedUserId) || (int) $user['id'] !== (int) $linkedUserId)) {
             throw new RuntimeException("Username '{$username}' is already taken by a system user.");
         }
     }
