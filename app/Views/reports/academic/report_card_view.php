@@ -95,7 +95,7 @@ $tdStyle = "border:1px solid {$borderColor};padding:6px 5px;text-align:center;";
 <div class="report-card">
 
     <div style="text-align:center;margin-bottom:6px;">
-        <h1 style="margin:0;font-family:'Cambria',Georgia,serif;font-size:26px;font-weight:900;color:<?= htmlspecialchars($accentColor) ?>;letter-spacing:2px;text-transform:uppercase;line-height:1.2;">
+        <h1 style="margin:0;font-family:'Cambria',Georgia,serif;font-size:45px;font-weight:1000;color:<?= htmlspecialchars($accentColor) ?>;letter-spacing:2px;text-transform:uppercase;line-height:1.2;">
             <?= htmlspecialchars($schoolName) ?>
         </h1>
     </div>
