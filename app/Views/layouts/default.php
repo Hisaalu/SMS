@@ -102,9 +102,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
         }
         h5 { font-size: var(--font-size-heading); }
 
-        /* ============================================================
-           NAVBAR
-           ============================================================ */
         .navbar-custom {
             background: var(--navbar-bg);
             min-height: 60px;
@@ -126,7 +123,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
             color: var(--navbar-text) !important;
         }
 
-        /* Theme toggle button */
         .theme-toggle {
             background: transparent;
             border: 1px solid var(--border-color);
@@ -151,9 +147,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
             outline-offset: 2px;
         }
 
-        /* ============================================================
-           SIDEBAR
-           ============================================================ */
         .desktop-sidebar {
             width: var(--sidebar-width);
             position: fixed;
@@ -253,9 +246,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
             color: var(--accent-color);
         }
 
-        /* ============================================================
-           MAIN CONTENT
-           ============================================================ */
         .main-wrapper {
             margin-left: var(--sidebar-width);
             padding: 1.5rem;
@@ -266,9 +256,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
             .main-wrapper { margin-left: 0; padding: 1rem; }
         }
 
-        /* ============================================================
-           CARDS
-           ============================================================ */
         .card {
             background: var(--surface-color);
             border: 1px solid var(--border-color) !important;
@@ -283,9 +270,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
             color: var(--text-color);
         }
 
-        /* ============================================================
-           BACKGROUND UTILITIES
-           ============================================================ */
         .bg-white,
         .bg-light,
         .bg-body,
@@ -294,9 +278,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
             color: var(--text-color);
         }
 
-        /* ============================================================
-           FORMS
-           ============================================================ */
         .form-label,
         .form-check-label,
         label {
@@ -339,7 +320,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
             border: 1px solid var(--border-color);
         }
 
-        /* Toggle switch */
         .form-check-input {
             background-color: var(--border-color);
             border-color: var(--border-color);
@@ -353,9 +333,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
             box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.15);
         }
 
-        /* ============================================================
-           TABLES
-           ============================================================ */
         .table {
             color: var(--text-color);
             border-color: var(--border-color);
@@ -392,9 +369,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
             color: var(--text-color);
         }
 
-        /* ============================================================
-           ALERTS
-           ============================================================ */
         .alert {
             border-radius: var(--border-radius-base);
             border: 1px solid transparent;
@@ -426,9 +400,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
         }
         .alert-light strong { color: var(--text-color); }
 
-        /* ============================================================
-           BUTTONS
-           ============================================================ */
         .btn-primary {
             background: var(--accent-color);
             border-color: var(--accent-color);
@@ -469,9 +440,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
             border-color: var(--border-color);
         }
 
-        /* ============================================================
-           BADGES
-           ============================================================ */
         .badge.bg-secondary {
             background: var(--text-muted) !important;
             color: #fff;
@@ -508,9 +476,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
             border: 1px solid rgba(100, 116, 139, 0.3);
         }
 
-        /* ============================================================
-           MODALS
-           ============================================================ */
         .modal-content {
             background: var(--surface-color);
             color: var(--text-color);
@@ -539,15 +504,9 @@ $userInitial = $initial !== '' ? $initial : 'U';
             color: #fff !important;
         }
 
-        /* ============================================================
-           OFFCANVAS
-           ============================================================ */
         .offcanvas { background: var(--surface-color); color: var(--text-color); }
         .offcanvas .offcanvas-header { border-bottom: 1px solid var(--border-color); }
 
-        /* ============================================================
-           DROPDOWNS
-           ============================================================ */
         .dropdown-menu {
             background: var(--surface-color);
             border: 1px solid var(--border-color);
@@ -563,9 +522,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
         }
         .dropdown-divider { border-color: var(--border-color); }
 
-        /* ============================================================
-           UTILITIES
-           ============================================================ */
         .text-muted     { color: var(--text-muted) !important; }
         .text-secondary { color: var(--text-muted) !important; }
         .text-dark      { color: var(--text-color) !important; }
@@ -593,9 +549,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
             color: var(--accent-color) !important;
         }
 
-        /* ============================================================
-           FILE PREVIEW / BRANDING THUMBNAILS
-           ============================================================ */
         .preview-box {
             width: 64px;
             height: 64px;
@@ -717,7 +670,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
                 <?php endif; ?>
                 <span><?= $schoolTitle ?></span>
             </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body p-0">
             <?php include __DIR__ . '/_sidebar_menu.php'; ?>
@@ -731,7 +683,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // Sidebar scroll memory + mobile auto-close
         (function () {
             const sidebar   = document.getElementById('desktopSidebar');
             const scrollKey = 'sidebarScrollTop';
@@ -760,7 +711,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
             }
         })();
 
-        // Theme toggle (System → Light → Dark)
         (function () {
             const STORAGE_KEY = 'theme-mode';
             const ORDER       = ['system', 'light', 'dark'];
