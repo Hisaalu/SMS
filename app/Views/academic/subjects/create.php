@@ -1,3 +1,4 @@
+<!-- File: /app/Views/academic/subjects/create.php -->
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="mb-0">Create Subject</h4>
@@ -7,7 +8,7 @@
     </div>
 
     <?php if ($flash = $this->getFlash('error')): ?>
-        <div class="alert alert-danger mb-2"><?= $flash ?></div>
+        <div class="alert alert-danger mb-2"><?= htmlspecialchars($flash) ?></div>
     <?php endif; ?>
 
     <div class="card p-4">
@@ -15,12 +16,12 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="name" class="form-label fw-bold">Subject Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" id="name" class="form-control" placeholder="e.g., Mathematics, English Language" required>
+                    <input type="text" name="name" id="name" class="form-control" placeholder="e.g., Mathematics, Music" required>
                 </div>
 
                 <div class="col-md-6">
                     <label for="code" class="form-label fw-bold">Subject Code <span class="text-danger">*</span></label>
-                    <input type="text" name="code" id="code" class="form-control" placeholder="e.g., MATH, ENG, PHY" required>
+                    <input type="text" name="code" id="code" class="form-control" placeholder="e.g., MATH, MUS" required>
                 </div>
 
                 <div class="col-md-6">
@@ -28,7 +29,7 @@
                     <select name="department_id" id="department_id" class="form-select">
                         <option value="">-- Optional Department --</option>
                         <?php foreach ($departments as $dept): ?>
-                            <option value="<?= $dept->id ?>"><?= htmlspecialchars($dept->name) ?></option>
+                            <option value="<?= (int)$dept->id ?>"><?= htmlspecialchars($dept->name) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -38,6 +39,8 @@
                     <select name="type" id="type" class="form-select">
                         <option value="core">Core</option>
                         <option value="elective">Elective</option>
+                        <option value="optional">Optional</option>
+                        <option value="other">Other (not graded)</option>
                     </select>
                 </div>
 

@@ -23,24 +23,24 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
                 </div>
 
                 <div class="row g-2 mb-3">
-                    <div class="col-md-6">
+                    <div class="col-6">
                         <label class="form-label small fw-semibold">Report Color</label>
                         <select name="report_color" class="form-select form-select-sm">
                             <option value="color"<?= $sel($opt('report_color', 'bw'), 'color') ?>>Color</option>
                             <option value="bw"<?= $sel($opt('report_color', 'bw'), 'bw') ?>>Black &amp; White</option>
                         </select>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-6">
                         <label class="form-label small fw-semibold">Report Header</label>
                         <select name="report_header" class="form-select form-select-sm">
-                            <option value="default" selected>Default Header</option>
-                            <option value="custom">Custom Header</option>
+                            <option value="default" selected>Default</option>
+                            <option value="custom">Custom</option>
                         </select>
                     </div>
                 </div>
 
                 <div class="row g-2 mb-3">
-                    <div class="col-md-6">
+                    <div class="col-6">
                         <label class="form-label small fw-semibold">Report Format</label>
                         <select name="report_format" class="form-select form-select-sm">
                             <option value="progression" selected>Progression</option>
@@ -48,7 +48,7 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
                             <option value="summary">Summary</option>
                         </select>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-6">
                         <label class="form-label small fw-semibold">Report Schedule</label>
                         <select name="report_schedule" class="form-select form-select-sm">
                             <option value="no" selected>No</option>
@@ -62,27 +62,21 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
                 <h6 class="fw-bold small text-uppercase mb-2" style="color: var(--accent-color);">
                     <i class="fas fa-calculator me-1"></i> Final Grade Source
                 </h6>
-                <div class="alert alert-light small py-2 px-3 mb-3">
-                    Determines which exam set (or combination) produces the final
-                    <strong>Grade</strong>, <strong>Total Score</strong>, <strong>Aggregate</strong>,
-                    <strong>Division</strong>, <strong>Position</strong> and <strong>Comment</strong>.
-                </div>
                 <?php $currentMethod = $opt('final_grade_method', 'average'); ?>
                 <div class="mb-3">
                     <select name="final_grade_method" class="form-select form-select-sm">
                         <option value="average"<?= $sel($currentMethod, 'average') ?>>Average of all selected exams</option>
-                        <option value="best_set"<?= $sel($currentMethod, 'best_set') ?>>Best exam set (highest average)</option>
-                        <option value="worst_set"<?= $sel($currentMethod, 'worst_set') ?>>Worst exam set (lowest average)</option>
+                        <option value="best_set"<?= $sel($currentMethod, 'best_set') ?>>Best exam set</option>
+                        <option value="worst_set"<?= $sel($currentMethod, 'worst_set') ?>>Worst exam set</option>
                         <?php if (!empty($filters['examinations'])): ?>
                             <option disabled>──────────</option>
                             <?php foreach ($filters['examinations'] as $exam): ?>
                                 <option value="exam:<?= (int)$exam['id'] ?>"<?= $sel($currentMethod, 'exam:' . $exam['id']) ?>>
-                                    Use <?= htmlspecialchars($exam['name']) ?> exam only
+                                    <?= htmlspecialchars($exam['name']) ?> only
                                 </option>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </select>
-                    <small class="text-muted">Choose how the final Grade, Total Score, Aggregate, Division and Position are computed.</small>
                 </div>
 
                 <hr class="my-3">
@@ -90,13 +84,10 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
                 <h6 class="fw-bold small text-uppercase mb-2" style="color: var(--accent-color);">
                     <i class="fas fa-sort-numeric-down me-1"></i> Position Ranking
                 </h6>
-                <div class="alert alert-light small py-2 px-3 mb-3">
-                    Determines how student positions are ordered within the class.
-                </div>
                 <?php $currentRanking = $opt('position_ranking', 'aggregate'); ?>
                 <div class="mb-3">
                     <select name="position_ranking" class="form-select form-select-sm">
-                        <option value="aggregate"<?= $sel($currentRanking, 'aggregate') ?>>Highest Aggregate (recommended)</option>
+                        <option value="aggregate"<?= $sel($currentRanking, 'aggregate') ?>>Highest Aggregate</option>
                         <option value="total"<?= $sel($currentRanking, 'total') ?>>Highest Total Marks</option>
                         <option value="average"<?= $sel($currentRanking, 'average') ?>>Highest Average Marks</option>
                     </select>
@@ -104,26 +95,23 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
 
                 <hr class="my-3">
 
-                <div class="mb-0">
-                    <label class="form-label small fw-semibold">Examinations <span class="text-danger">*</span></label>
-                    <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="examinations[]" value="all" id="exam_all">
-                            <label class="form-check-label fw-bold" for="exam_all">All</label>
-                        </div>
-                        <hr class="my-1">
-                        <?php foreach ($filters['examinations'] as $exam): ?>
-                            <div class="form-check">
-                                <input class="form-check-input exam-checkbox" type="checkbox"
-                                       name="examinations[]" value="<?= (int)$exam['id'] ?>"
-                                       id="exam_<?= (int)$exam['id'] ?>">
-                                <label class="form-check-label" for="exam_<?= (int)$exam['id'] ?>">
-                                    <?= htmlspecialchars($exam['name']) ?>
-                                </label>
-                            </div>
-                        <?php endforeach; ?>
+                <label class="form-label small fw-semibold">Examinations <span class="text-danger">*</span></label>
+                <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="examinations[]" value="all" id="exam_all">
+                        <label class="form-check-label fw-bold" for="exam_all">All</label>
                     </div>
-                    <small class="text-muted">Select exams to include on the report card.</small>
+                    <hr class="my-1">
+                    <?php foreach ($filters['examinations'] as $exam): ?>
+                        <div class="form-check">
+                            <input class="form-check-input exam-checkbox" type="checkbox"
+                                   name="examinations[]" value="<?= (int)$exam['id'] ?>"
+                                   id="exam_<?= (int)$exam['id'] ?>">
+                            <label class="form-check-label" for="exam_<?= (int)$exam['id'] ?>">
+                                <?= htmlspecialchars($exam['name']) ?>
+                            </label>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
 
             </div>
@@ -164,7 +152,7 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
                 <h6 class="fw-bold text-muted small text-uppercase mb-2">Marks Display</h6>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <label class="form-label small fw-semibold">Show Grades (Scores)</label>
+                        <label class="form-label small fw-semibold">Show Grades</label>
                         <?php $v = $opt('show_grades', 'yes'); ?>
                         <select name="show_grades" class="form-select form-select-sm">
                             <option value="no"<?= $sel($v, 'no') ?>>No</option>
@@ -199,12 +187,26 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
 
                 <hr class="my-3">
 
-                <h6 class="fw-bold text-muted small text-uppercase mb-2">Comments &amp; Remarks</h6>
+                <h6 class="fw-bold text-muted small text-uppercase mb-2">Other Assessment Areas</h6>
+                <div class="row g-2 mb-3">
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold">Show non-graded subjects</label>
+                        <?php $v = $opt('show_skills', 'no'); ?>
+                        <select name="show_skills" class="form-select form-select-sm">
+                            <option value="no"<?= $sel($v, 'no') ?>>No</option>
+                            <option value="yes"<?= $sel($v, 'yes') ?>>Yes</option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr class="my-3">
+
+                <h6 class="fw-bold text-muted small text-uppercase mb-2">Comments &amp; Signatures</h6>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
                         <label class="form-label small fw-semibold">Class Teacher Comment</label>
                         <select name="ct_comment" class="form-select form-select-sm">
-                            <option value="auto" selected>Auto (based on grade method)</option>
+                            <option value="auto" selected>Auto</option>
                             <option value="custom">Custom</option>
                             <option value="no">None</option>
                         </select>
@@ -238,15 +240,7 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
                 <h6 class="fw-bold text-muted small text-uppercase mb-2">Additional Sections</h6>
                 <div class="row g-2 mb-0">
                     <div class="col-6">
-                        <label class="form-label small fw-semibold">Other Activities (Skills)</label>
-                        <?php $v = $opt('show_skills', 'no'); ?>
-                        <select name="show_skills" class="form-select form-select-sm">
-                            <option value="no"<?= $sel($v, 'no') ?>>No</option>
-                            <option value="yes"<?= $sel($v, 'yes') ?>>Yes</option>
-                        </select>
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label small fw-semibold">School Fees Balance</label>
+                        <label class="form-label small fw-semibold">Fees Balance</label>
                         <select name="show_fees" class="form-select form-select-sm">
                             <option value="no" selected>No</option>
                             <option value="yes">Yes</option>

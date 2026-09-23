@@ -1,3 +1,4 @@
+<!-- File: /app/Views/academic/subjects/index.php -->
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="mb-0">Subjects</h4>
@@ -7,7 +8,7 @@
     </div>
 
     <?php if ($flash = $this->getFlash('success')): ?>
-        <div class="alert alert-success mb-2"><?= $flash ?></div>
+        <div class="alert alert-success mb-2"><?= htmlspecialchars($flash) ?></div>
     <?php endif; ?>
 
     <div class="card p-3">
@@ -24,17 +25,30 @@
                 </thead>
                 <tbody>
                     <?php foreach ($subjects as $subject): ?>
+                        <?php
+                            $type = strtolower((string)($subject->type ?? 'core'));
+                            $badge = match ($type) {
+                                'core'     => 'primary',
+                                'elective' => 'info',
+                                'optional' => 'warning',
+                                'other'    => 'secondary',
+                                default    => 'light',
+                            };
+                        ?>
                         <tr>
                             <td><strong><?= htmlspecialchars($subject->name) ?></strong></td>
                             <td><code><?= htmlspecialchars($subject->code) ?></code></td>
                             <td><?= htmlspecialchars($deptList[$subject->department_id] ?? 'None') ?></td>
                             <td>
-                                <span class="badge bg-<?= $subject->type === 'core' ? 'primary' : 'info' ?>">
-                                    <?= ucfirst(htmlspecialchars($subject->type)) ?>
+                                <span class="badge bg-<?= $badge ?>">
+                                    <?= htmlspecialchars(ucfirst($type)) ?>
+                                    <?php if ($type === 'other'): ?>
+                                        <span title="Not graded">&middot; N/G</span>
+                                    <?php endif; ?>
                                 </span>
                             </td>
                             <td>
-                                <a href="<?= BASE_URL ?>/academic/subjects/<?= $subject->id ?>/edit" class="btn btn-sm btn-outline-primary">
+                                <a href="<?= BASE_URL ?>/academic/subjects/<?= (int)$subject->id ?>/edit" class="btn btn-sm btn-outline-primary">
                                     <i class="fas fa-edit"></i>
                                 </a>
                             </td>

@@ -15,4 +15,16 @@ class Subject extends Model
     ];
     protected $guarded = ['id'];
     protected $timestamps = true;
+
+    public const NON_GRADED_TYPES = ['other'];
+
+    public static function isGradedType(?string $type): bool
+    {
+        return !in_array(strtolower((string)$type), self::NON_GRADED_TYPES, true);
+    }
+
+    public function isGraded(): bool
+    {
+        return self::isGradedType($this->type);
+    }
 }

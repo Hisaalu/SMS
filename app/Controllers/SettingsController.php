@@ -10,7 +10,7 @@ class SettingsController extends Controller
     private const SCHOOL_FIELDS = [
         'name', 'short_name', 'motto', 'slogan', 'description',
         'type', 'registration_number', 'physical_address',
-        'postal_address', 'telephone', 'email', 'website',
+        'postal_address', 'po_box', 'telephone', 'email', 'website',
     ];
 
     private const ALLOWED_ACCENTS = [
@@ -79,6 +79,17 @@ class SettingsController extends Controller
 
         foreach (self::SCHOOL_FIELDS as $field) {
             $this->settings->set('school.' . $field, trim($_POST[$field] ?? ''), 'string');
+        }
+
+        // Keep `po_box` and `postal_address` in sync so report views
+        // reading either key always resolve to the same value.
+        $postalAddress = trim($_POST['postal_address'] ?? '');
+        $poBox         = trim($_POST['po_box']         ?? '');
+
+        if ($poBox === '' && $postalAddress !== '') {
+            $this->settings->set('school.po_box', $postalAddress, 'string');
+        } elseif ($postalAddress === '' && $poBox !== '') {
+            $this->settings->set('school.postal_address', $poBox, 'string');
         }
 
         $this->audit('School Profile Updated', 'settings', 'School profile details updated');

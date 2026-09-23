@@ -1,3 +1,4 @@
+<!-- File: /app/Views/academic/subjects/edit.php -->
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="mb-0">Edit Subject</h4>
@@ -7,11 +8,13 @@
     </div>
 
     <?php if ($flash = $this->getFlash('error')): ?>
-        <div class="alert alert-danger mb-2"><?= $flash ?></div>
+        <div class="alert alert-danger mb-2"><?= htmlspecialchars($flash) ?></div>
     <?php endif; ?>
 
+    <?php $currentType = strtolower((string)($subject->type ?? 'core')); ?>
+
     <div class="card p-4">
-        <form method="POST" action="<?= BASE_URL ?>/academic/subjects/<?= $subject->id ?>">
+        <form method="POST" action="<?= BASE_URL ?>/academic/subjects/<?= (int)$subject->id ?>">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="name" class="form-label fw-bold">Subject Name <span class="text-danger">*</span></label>
@@ -28,7 +31,7 @@
                     <select name="department_id" id="department_id" class="form-select">
                         <option value="">-- Optional Department --</option>
                         <?php foreach ($departments as $dept): ?>
-                            <option value="<?= $dept->id ?>" <?= ($subject->department_id == $dept->id) ? 'selected' : '' ?>>
+                            <option value="<?= (int)$dept->id ?>" <?= ((int)$subject->department_id === (int)$dept->id) ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($dept->name) ?>
                             </option>
                         <?php endforeach; ?>
@@ -38,8 +41,10 @@
                 <div class="col-md-6">
                     <label for="type" class="form-label fw-bold">Subject Type</label>
                     <select name="type" id="type" class="form-select">
-                        <option value="core" <?= $subject->type === 'core' ? 'selected' : '' ?>>Core</option>
-                        <option value="elective" <?= $subject->type === 'elective' ? 'selected' : '' ?>>Elective</option>
+                        <option value="core"     <?= $currentType === 'core'     ? 'selected' : '' ?>>Core</option>
+                        <option value="elective" <?= $currentType === 'elective' ? 'selected' : '' ?>>Elective</option>
+                        <option value="optional" <?= $currentType === 'optional' ? 'selected' : '' ?>>Optional</option>
+                        <option value="other"    <?= $currentType === 'other'    ? 'selected' : '' ?>>Other (not graded)</option>
                     </select>
                 </div>
 

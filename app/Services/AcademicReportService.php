@@ -4,6 +4,7 @@
 namespace NexaT\Services;
 
 use NexaT\Core\Database;
+use NexaT\Models\Subject;
 use Throwable;
 
 class AcademicReportService
@@ -40,7 +41,7 @@ class AcademicReportService
                 ['s' => $schoolId]
             ),
             'subjects' => $this->safeFetchAll(
-                "SELECT id, name, code FROM subjects WHERE school_id = :s ORDER BY name ASC",
+                "SELECT id, name, code, type FROM subjects WHERE school_id = :s ORDER BY name ASC",
                 ['s' => $schoolId]
             ),
             'examinations' => $this->safeFetchAll(
@@ -275,7 +276,7 @@ class AcademicReportService
 
         if ($markSubjectColumn === 'subject_id') {
             $subjects = $this->safeFetchAll(
-                "SELECT DISTINCT s.id, s.name, s.code
+                "SELECT DISTINCT s.id, s.name, s.code, s.type
                  FROM subjects s
                  INNER JOIN marks m ON s.id = m.subject_id
                  WHERE m.student_id IN ({$sPlaceholders}) AND s.school_id = ?
@@ -284,7 +285,7 @@ class AcademicReportService
             );
         } else {
             $subjects = $this->safeFetchAll(
-                "SELECT DISTINCT s.id, s.name, s.code
+                "SELECT DISTINCT s.id, s.name, s.code, s.type
                  FROM subjects s
                  INNER JOIN examination_subjects es ON s.id = es.subject_id
                  INNER JOIN marks m ON es.id = m.examination_subject_id
@@ -371,6 +372,12 @@ class AcademicReportService
             ? $this->gradingService->getSystemForClass((int)$student['class_id'], $schoolId, $academicYearId)
             : $this->gradingService->getDefaultSystem($schoolId);
 
+        if ($gradingSystem && empty($gradingSystem['rules'])) {
+            try {
+                $gradingSystem['rules'] = $this->gradingService->getRules((int)$gradingSystem['id']);
+            } catch (Throwable $e) {}
+        }
+
         $exams = [];
         if (!empty($examinationIds)) {
             $ph = implode(',', array_fill(0, count($examinationIds), '?'));
@@ -382,7 +389,7 @@ class AcademicReportService
 
         [$marksByExam, $subjectsSeen] = $this->loadMarksByExam($studentId, $academicYearId, $termId, $exams, $gradingSystem);
 
-        $examTotals = $this->computeExamTotals($exams, $marksByExam, $gradingSystem);
+        $examTotals      = $this->computeExamTotals($exams, $marksByExam, $gradingSystem);
         $teacherInitials = $this->loadTeacherInitials($schoolId, $student, $subjectsSeen);
 
         [$subjectAverages, $sourceExamIds, $sourceLabel] = $this->computeSubjectAverages(
@@ -395,12 +402,51 @@ class AcademicReportService
             }
         }
 
+        $bestSubjectsCount = (int)($options['best_subjects_count'] ?? 0);
+
+        $contributingIds = [];
+        $otherIds        = [];
+
+        foreach ($subjectAverages as $sid => $sa) {
+            if (empty($sa['contributes'])) {
+                $otherIds[] = (int)$sid;
+            } else {
+                $contributingIds[(int)$sid] = (float)$sa['score'];
+            }
+        }
+
+        if ($bestSubjectsCount > 0 && count($contributingIds) > $bestSubjectsCount) {
+            arsort($contributingIds);
+            $bestSubjects = array_slice(array_keys($contributingIds), 0, $bestSubjectsCount);
+
+            $contributingIds = array_fill_keys($bestSubjects, true);
+            foreach ($subjectAverages as $sid => $sa) {
+                if (!empty($sa['contributes']) && !isset($contributingIds[$sid])) {
+                    $subjectAverages[$sid]['contributes'] = false;
+                    $otherIds[] = (int)$sid;
+                }
+            }
+            $contributingIds = array_keys($contributingIds);
+        } else {
+            $contributingIds = array_keys($contributingIds);
+        }
+
         $totalScore     = 0;
         $totalAggregate = 0;
-        foreach ($subjectAverages as $sa) {
-            $totalScore     += (float)$sa['mark'];
-            $totalAggregate += (float)$sa['score'];
+        foreach ($contributingIds as $sid) {
+            if (isset($subjectAverages[$sid])) {
+                $totalScore     += (float)$subjectAverages[$sid]['mark'];
+                $totalAggregate += (float)$subjectAverages[$sid]['score'];
+            }
         }
+        $gradedCount = count($contributingIds);
+
+        $positionRanking = $options['position_ranking'] ?? 'aggregate';
+        [$position, $classSize] = $this->computePosition(
+            $studentId, $student, $schoolId, $academicYearId, $termId,
+            array_column($exams, 'id'), $gradingSystem, $positionRanking,
+            $otherIds
+        );
 
         $divisionCode = null;
         try {
@@ -410,19 +456,9 @@ class AcademicReportService
             }
         } catch (Throwable $e) {}
 
-        $positionRanking = $options['position_ranking'] ?? 'aggregate';
-        [$position, $classSize] = $this->computePosition(
-            $studentId, $student, $schoolId, $academicYearId, $termId,
-            array_column($exams, 'id'), $gradingSystem, $positionRanking
-        );
-
         $ctRemark = '';
-        if (($options['ct_comment'] ?? 'auto') !== 'no' && !empty($subjectAverages)) {
-            $sum = 0;
-            foreach ($subjectAverages as $sa) {
-                $sum += (float)$sa['mark'];
-            }
-            $ctRemark = $this->remarkFromAverage($sum / count($subjectAverages));
+        if (($options['ct_comment'] ?? 'auto') !== 'no' && $gradedCount > 0) {
+            $ctRemark = $this->remarkFromAverage($totalScore / $gradedCount);
         }
 
         $nextTerm = $this->safeFetch(
@@ -433,25 +469,30 @@ class AcademicReportService
         );
 
         return [
-            'student'            => $student,
-            'exams'              => $exams,
-            'subjects'           => $subjectsSeen,
-            'marks_by_exam'      => $marksByExam,
-            'exam_totals'        => $examTotals,
-            'subject_averages'   => $subjectAverages,
-            'grading_system'     => $gradingSystem,
-            'options'            => $options,
-            'total_score'        => $totalScore,
-            'total_aggregate'    => $totalAggregate,
-            'division_code'      => $divisionCode,
-            'position'           => $position,
-            'class_size'         => $classSize,
-            'ct_remark'          => $ctRemark,
-            'next_term'          => $nextTerm,
-            'final_grade_method' => $options['final_grade_method'] ?? 'average',
-            'final_source_label' => $sourceLabel,
-            'source_exam_ids'    => $sourceExamIds,
-            'position_ranking'   => $positionRanking,
+            'student'             => $student,
+            'exams'               => $exams,
+            'subjects'            => $subjectsSeen,
+            'marks_by_exam'       => $marksByExam,
+            'exam_totals'         => $examTotals,
+            'subject_averages'    => $subjectAverages,
+            'grading_system'      => $gradingSystem,
+            'options'             => $options,
+            'total_score'         => $totalScore,
+            'total_aggregate'     => $totalAggregate,
+            'graded_subjects'     => $gradedCount,
+            'non_graded_count'    => count($otherIds),
+            'best_subjects'       => $contributingIds,
+            'best_subjects_count' => $gradedCount,
+            'other_subjects'      => $otherIds,
+            'division_code'       => $divisionCode,
+            'position'            => $position,
+            'class_size'          => $classSize,
+            'ct_remark'           => $ctRemark,
+            'next_term'           => $nextTerm,
+            'final_grade_method'  => $options['final_grade_method'] ?? 'average',
+            'final_source_label'  => $sourceLabel,
+            'source_exam_ids'     => $sourceExamIds,
+            'position_ranking'    => $positionRanking,
         ];
     }
 
@@ -465,7 +506,7 @@ class AcademicReportService
         $ph = implode(',', array_fill(0, count($examIds), '?'));
 
         $rows = $this->safeFetchAll(
-            "SELECT m.*, sub.name AS subject_name, sub.code AS subject_code
+            "SELECT m.*, sub.name AS subject_name, sub.code AS subject_code, sub.type AS subject_type
              FROM marks m
              LEFT JOIN subjects sub ON m.subject_id = sub.id
              WHERE m.student_id = ? AND m.academic_year_id = ? AND m.term_id = ?
@@ -474,11 +515,14 @@ class AcademicReportService
             array_merge([$studentId, $yearId, $termId], $examIds)
         );
 
-        $marksByExam = [];
+        $marksByExam  = [];
         $subjectsSeen = [];
 
         foreach ($rows as $row) {
-            $markVal = (float)($row['marks_obtained'] ?? 0);
+            $markVal  = (float)($row['marks_obtained'] ?? 0);
+            $rawType  = $row['subject_type'] ?? null;
+            $type     = $rawType !== null && $rawType !== '' ? strtolower((string)$rawType) : 'core';
+            $isOther  = in_array($type, Subject::NON_GRADED_TYPES, true);
 
             if ($gradingSystem && !empty($gradingSystem['id'])) {
                 $grade = $this->gradingService->getGradeFromSystem($markVal, (int)$gradingSystem['id']);
@@ -491,11 +535,15 @@ class AcademicReportService
                 $row['remark'] = '-';
             }
 
+            $row['is_other'] = $isOther;
+
             $marksByExam[$row['examination_id']][$row['subject_id']] = $row;
             $subjectsSeen[$row['subject_id']] = [
-                'id'   => $row['subject_id'],
-                'name' => $row['subject_name'],
-                'code' => $row['subject_code'],
+                'id'       => (int)$row['subject_id'],
+                'name'     => $row['subject_name'],
+                'code'     => $row['subject_code'],
+                'type'     => $type,
+                'is_other' => $isOther,
             ];
         }
 
@@ -513,6 +561,9 @@ class AcademicReportService
             $totalScore = 0;
 
             foreach ($marksByExam[$examId] ?? [] as $mark) {
+                if (!empty($mark['is_other'])) {
+                    continue;
+                }
                 $total += (float)$mark['marks_obtained'];
                 $totalScore += (float)($mark['score'] ?? 0);
                 $count++;
@@ -586,6 +637,24 @@ class AcademicReportService
                 );
             }
 
+            if (!$teacher) {
+                $teacher = $this->safeFetch(
+                    "SELECT st.first_name, st.last_name
+                     FROM teacher_assignments ta
+                     INNER JOIN staff st ON ta.staff_id = st.id
+                     WHERE ta.school_id = :school_id
+                       AND ta.subject_id = :subject_id
+                       AND ta.class_id = :class_id
+                       AND ta.status = 'active'
+                     ORDER BY ta.stream_id DESC LIMIT 1",
+                    [
+                        'school_id'  => $schoolId,
+                        'subject_id' => $sid,
+                        'class_id'   => $student['class_id'],
+                    ]
+                );
+            }
+
             if ($teacher) {
                 $f = strtoupper(substr(trim($teacher['first_name']), 0, 1));
                 $l = strtoupper(substr(trim($teacher['last_name']),  0, 1));
@@ -612,6 +681,9 @@ class AcademicReportService
             $sum = 0;
             $count = 0;
             foreach ($subjectMarks as $m) {
+                if (!empty($m['is_other'])) {
+                    continue;
+                }
                 $sum += (float)$m['marks_obtained'];
                 $count++;
             }
@@ -639,9 +711,11 @@ class AcademicReportService
         $subjectAverages = [];
 
         foreach ($subjectsSeen as $subj) {
-            $sid  = $subj['id'];
-            $vals = [];
+            $sid  = (int)$subj['id'];
+            $type = strtolower((string)($subj['type'] ?? 'core'));
+            $isOther = in_array($type, Subject::NON_GRADED_TYPES, true);
 
+            $vals = [];
             foreach ($sourceExamIds as $srcId) {
                 $row = $marksByExam[$srcId][$sid] ?? null;
                 if ($row) {
@@ -651,9 +725,9 @@ class AcademicReportService
 
             $finalMark = !empty($vals) ? round(array_sum($vals) / count($vals), 0) : 0;
 
-            $finalScore = 0;
+            $finalScore  = 0;
             $finalRemark = '';
-            $finalGrade = '-';
+            $finalGrade  = '-';
 
             if ($finalMark > 0 && $gradingSystem && !empty($gradingSystem['id'])) {
                 $g = $this->gradingService->getGradeFromSystem($finalMark, (int)$gradingSystem['id']);
@@ -665,10 +739,13 @@ class AcademicReportService
             }
 
             $subjectAverages[$sid] = [
-                'mark'   => $finalMark,
-                'grade'  => $finalGrade,
-                'score'  => $finalScore,
-                'remark' => $finalRemark,
+                'mark'       => $finalMark,
+                'grade'      => $finalGrade,
+                'score'      => $finalScore,
+                'remark'     => $finalRemark,
+                'type'       => $type,
+                'is_other'   => $isOther,
+                'contributes'=> !$isOther,
             ];
         }
 
@@ -685,7 +762,8 @@ class AcademicReportService
         int $termId,
         array $allExamIds,
         ?array $gradingSystem,
-        string $positionRanking
+        string $positionRanking,
+        array $excludedSubjectIds = []
     ): array {
         if (empty($allExamIds) || empty($student['class_id'])) {
             return [null, 0];
@@ -713,14 +791,23 @@ class AcademicReportService
         $ids = array_column($classMates, 'id');
         $ph = implode(',', array_fill(0, count($allExamIds), '?'));
 
+        $excludeClause = '';
+        $excludeParams = [];
+        if (!empty($excludedSubjectIds)) {
+            $ep = implode(',', array_fill(0, count($excludedSubjectIds), '?'));
+            $excludeClause = " AND m.subject_id NOT IN ({$ep})";
+            $excludeParams = array_values($excludedSubjectIds);
+        }
+
         $rankings = [];
 
         foreach ($ids as $cid) {
             $cmMarks = $this->safeFetchAll(
                 "SELECT m.marks_obtained FROM marks m
                  WHERE m.student_id = ? AND m.academic_year_id = ? AND m.term_id = ?
-                   AND m.examination_id IN ({$ph})",
-                array_merge([$cid, $academicYearId, $termId], $allExamIds)
+                   AND m.examination_id IN ({$ph})
+                   {$excludeClause}",
+                array_merge([$cid, $academicYearId, $termId], $allExamIds, $excludeParams)
             );
 
             $sumMarks = 0;
@@ -793,24 +880,6 @@ class AcademicReportService
         if ($average >= 50) return 'Fair performance. Improve.';
         if ($average >= 40) return 'Below average. Needs attention.';
         return 'Needs serious improvement.';
-    }
-
-    private function remarkFromAggregate(float $aggregate, int $schoolId): string
-    {
-        try {
-            $div = (new DivisionService())->getDivisionForAggregate($aggregate, $schoolId);
-            if ($div) {
-                $map = [
-                    'D1' => 'Excellent performance. Keep it up!',
-                    'D2' => 'Very good work. Aim higher.',
-                    'D3' => 'Good effort. Put in more work.',
-                    'D4' => 'Fair performance. Improve.',
-                    'D0' => 'Needs serious improvement.',
-                ];
-                return $map[strtoupper($div['code'])] ?? 'Keep working hard.';
-            }
-        } catch (Throwable $e) {}
-        return 'Keep working hard.';
     }
 
     private function examinationTable(): string

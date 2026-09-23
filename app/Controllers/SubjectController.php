@@ -9,6 +9,8 @@ use NexaT\Models\Department;
 
 class SubjectController extends Controller
 {
+    private const ALLOWED_TYPES = ['core', 'elective', 'optional', 'other'];
+
     public function index(): void
     {
         $this->requireAuth();
@@ -128,12 +130,17 @@ class SubjectController extends Controller
         }
 
         $departmentId = (int)($_POST['department_id'] ?? 0);
+        $type = strtolower(trim($_POST['type'] ?? 'core'));
+
+        if (!in_array($type, self::ALLOWED_TYPES, true)) {
+            $type = 'core';
+        }
 
         return [
             'department_id' => $departmentId ?: null,
             'name'          => $name,
             'code'          => $code,
-            'type'          => $_POST['type'] ?? 'core',
+            'type'          => $type,
         ];
     }
 }
