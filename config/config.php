@@ -3,17 +3,17 @@
 
 return [
     'app' => [
-        'name' => getenv('APP_NAME') ?: '',
-        'env' => getenv('APP_ENV') ?: '',
-        'debug' => getenv('APP_DEBUG') === '',
-        'url' => getenv('APP_URL') ?: '',
-        'timezone' => getenv('APP_TIMEZONE') ?: '',
+        'name' => getenv('APP_NAME') ?: 'NexaT',
+        'env' => getenv('APP_ENV') ?: 'production',
+        'debug' => filter_var(getenv('APP_DEBUG'), FILTER_VALIDATE_BOOLEAN),
+        'url' => getenv('APP_URL') ?: 'http://localhost/NexaT',
+        'timezone' => getenv('APP_TIMEZONE') ?: 'Africa/Kampala',
         'key' => getenv('APP_KEY'),
     ],
     'session' => [
-        'name' => getenv('SESSION_NAME') ?: '',
-        'lifetime' => (int)(getenv('SESSION_LIFETIME') ?:''),
-        'secure' => getenv('SESSION_SECURE') === '',
+        'name' => getenv('SESSION_NAME') ?: 'nexat_session',
+        'lifetime' => (int)(getenv('SESSION_LIFETIME') ?: 120),
+        'secure' => filter_var(getenv('SESSION_SECURE'), FILTER_VALIDATE_BOOLEAN),
     ],
     'upload' => [
         'max_size' => 5242880,
