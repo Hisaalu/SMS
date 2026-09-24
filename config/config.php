@@ -3,17 +3,17 @@
 
 return [
     'app' => [
-        'name' => getenv('APP_NAME') ?: 'NexaT School Management System',
-        'env' => getenv('APP_ENV') ?: 'development',
-        'debug' => getenv('APP_DEBUG') === 'true',
-        'url' => getenv('APP_URL') ?: 'http://localhost/NexaT',
-        'timezone' => getenv('APP_TIMEZONE') ?: 'Africa/Kampala',
+        'name' => getenv('APP_NAME') ?: '',
+        'env' => getenv('APP_ENV') ?: '',
+        'debug' => getenv('APP_DEBUG') === '',
+        'url' => getenv('APP_URL') ?: '',
+        'timezone' => getenv('APP_TIMEZONE') ?: '',
         'key' => getenv('APP_KEY'),
     ],
     'session' => [
-        'name' => getenv('SESSION_NAME') ?: 'nexat_session',
-        'lifetime' => (int)(getenv('SESSION_LIFETIME') ?: 120),
-        'secure' => getenv('SESSION_SECURE') === 'true',
+        'name' => getenv('SESSION_NAME') ?: '',
+        'lifetime' => (int)(getenv('SESSION_LIFETIME') ?:''),
+        'secure' => getenv('SESSION_SECURE') === '',
     ],
     'upload' => [
         'max_size' => 5242880,
