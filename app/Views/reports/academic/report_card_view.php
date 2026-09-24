@@ -398,15 +398,25 @@ $tdStyle = "border:1px solid {$borderColor};padding:4px 4px;text-align:center;fo
             <thead>
                 <tr>
                     <th rowspan="2" style="<?= $thStyle ?>text-align:left;padding-left:6px;width:20%;">OTHER ASSESSMENT AREAS</th>
-                    <th colspan="<?= $totalExamCount ?>" style="<?= $thStyle ?>">MARKS</th>
+                    <th colspan="<?= $totalExamCount * 2 ?>" style="<?= $thStyle ?>">MARKS</th>
                     <?php if ($showGrades): ?><th rowspan="2" style="<?= $thStyle ?>width:7%;">GRADE</th><?php endif; ?>
                     <th rowspan="2" style="<?= $thStyle ?><?= $showInitials ? 'width:20%;' : 'width:27%;' ?>">COMMENTS</th>
-                    <?php if ($showInitials): ?><th rowspan="2" style="<?= $thStyle ?>width:8%;">INITIALS</th><?php endif; ?>
+                    <?php if ($showInitials): ?><th rowspan="2" style="<?= $thStyle ?>width:8%;line-height:1.1;">TR'S<br>INITIALS</th><?php endif; ?>
                 </tr>
                 <tr>
                     <?php foreach ($displayExams as $exam): ?>
-                        <th style="<?= $thStyle ?>"><?= htmlspecialchars(strtoupper($exam['name'])) ?> <span style="font-weight:400;text-transform:none;">(100%)</span></th>
+                        <th colspan="2" style="<?= $thStyle ?>"><?= htmlspecialchars(strtoupper($exam['name'])) ?> <span style="font-weight:400;text-transform:none;">(100%)</span></th>
                     <?php endforeach; ?>
+                </tr>
+                <tr>
+                    <th style="<?= $thStyle ?>">&nbsp;</th>
+                    <?php foreach ($displayExams as $exam): ?>
+                        <th style="<?= $thStyle ?>">MARK</th>
+                        <th style="<?= $thStyle ?>">SCORE</th>
+                    <?php endforeach; ?>
+                    <?php if ($showGrades): ?><th style="<?= $thStyle ?>">&nbsp;</th><?php endif; ?>
+                    <th style="<?= $thStyle ?>">&nbsp;</th>
+                    <?php if ($showInitials): ?><th style="<?= $thStyle ?>">&nbsp;</th><?php endif; ?>
                 </tr>
             </thead>
             <tbody>
@@ -418,10 +428,12 @@ $tdStyle = "border:1px solid {$borderColor};padding:4px 4px;text-align:center;fo
                         </td>
                         <?php foreach ($displayExams as $exam): ?>
                             <?php
-                                $row     = $marksByExam[$exam['id']][$subject['id']] ?? null;
-                                $markVal = $row !== null ? (int)round((float)$row['marks_obtained']) : null;
+                                $row      = $marksByExam[$exam['id']][$subject['id']] ?? null;
+                                $markVal  = $row !== null ? (int)round((float)$row['marks_obtained']) : null;
+                                $scoreVal = $row !== null ? (int)round((float)($row['score'] ?? 0)) : null;
                             ?>
                             <td style="<?= $tdStyle ?>"><?= $markVal !== null ? $markVal : '-' ?></td>
+                            <td style="<?= $tdStyle ?>font-weight:700;color:<?= htmlspecialchars($primaryColor) ?>;"><?= $scoreVal !== null ? $scoreVal : '-' ?></td>
                         <?php endforeach; ?>
                         <?php if ($showGrades): ?>
                             <td style="<?= $tdStyle ?>font-weight:700;color:<?= htmlspecialchars($primaryColor) ?>;"><?= htmlspecialchars($sa['grade'] ?? '-') ?></td>

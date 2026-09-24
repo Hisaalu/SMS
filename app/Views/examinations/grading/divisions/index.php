@@ -78,11 +78,6 @@
                     </form>
                 </div>
             </div>
-
-            <div class="alert alert-info mt-3 small">
-                <i class="fas fa-info-circle me-1"></i>
-                <strong>Tip:</strong> Aggregate ranges must not overlap. Use 4–12 for D1, 13–23 for D2, etc.
-            </div>
         </div>
 
         <!-- Divisions List -->

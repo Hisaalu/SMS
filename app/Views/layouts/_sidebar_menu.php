@@ -47,7 +47,7 @@ $menuSections = [
                     ['title' => 'Marks Entry',       'icon' => 'fas fa-edit',       'url' => '/marks/entry'],
                     ['title' => 'Class Results',     'icon' => 'fas fa-chart-line', 'url' => '/results/class'],
                     ['title' => 'Exam Schedules',    'icon' => 'fas fa-list-alt',   'url' => '/examinations'],
-                    ['title' => 'Grading Systems',   'icon' => 'fas fa-percent',    'url' => '/grading/systems'],
+                    ['title' => 'Grading & Divisions',   'icon' => 'fas fa-percent',    'url' => '/grading/systems'],
                     ['title' => 'Assessment Types',  'icon' => 'fas fa-tasks',      'url' => '/assessment/types'],
                     ['title' => 'Promotion Rules',   'icon' => 'fas fa-arrow-up',   'url' => '/promotion/rules'],
                 ],

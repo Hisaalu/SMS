@@ -226,25 +226,15 @@ $tdStyle = "border:1px solid {$borderColor};padding:4px 4px;text-align:center;fo
         ?>
         <div class="report-card">
 
-            <!-- ============================================================
-                 SCHOOL HEADER
-                 Row 1 (full width) : SCHOOL NAME
-                 Row 2 (3 columns)  : LOGO | CONTACTS + MOTTO | STUDENT PHOTO
-                 All three cells are top-aligned so the contact block sits
-                 right under the school name with no white gap.
-                 ============================================================ -->
             <table style="width:100%;border-collapse:collapse;margin-bottom:2px;">
 
-                <!-- Row 1 : School name spans the entire page width -->
                 <tr>
                     <td colspan="3" style="padding:0 0 4px 0;text-align:center;">
                         <h1 class="school-name"><?= htmlspecialchars($schoolName) ?></h1>
                     </td>
                 </tr>
 
-                <!-- Row 2 : Logo | Contacts + Motto | Student photo (top-aligned) -->
                 <tr>
-                    <!-- Left column: school logo -->
                     <td style="width:110px;vertical-align:top;padding:4px 0 0 0;text-align:left;">
                         <?php if ($logoUrl): ?>
                             <img src="<?= htmlspecialchars($logoUrl) ?>" alt="School Logo"
@@ -252,7 +242,6 @@ $tdStyle = "border:1px solid {$borderColor};padding:4px 4px;text-align:center;fo
                         <?php endif; ?>
                     </td>
 
-                    <!-- Middle column: contacts + motto, top-aligned -->
                     <td style="vertical-align:top;padding:4px 10px 0 10px;text-align:center;">
                         <?php if ($schoolPoBox): ?>
                             <div class="school-contact"><?= htmlspecialchars($schoolPoBox) ?></div>
@@ -271,7 +260,6 @@ $tdStyle = "border:1px solid {$borderColor};padding:4px 4px;text-align:center;fo
                         <?php endif; ?>
                     </td>
 
-                    <!-- Right column: student photo -->
                     <td style="width:110px;vertical-align:top;padding:4px 0 0 0;text-align:right;">
                         <?php if ($studentPhoto): ?>
                             <img src="<?= htmlspecialchars($studentPhoto) ?>" alt="Student Photo"
@@ -421,15 +409,25 @@ $tdStyle = "border:1px solid {$borderColor};padding:4px 4px;text-align:center;fo
                     <thead>
                         <tr>
                             <th rowspan="2" style="<?= $thStyle ?>text-align:left;padding-left:6px;width:20%;">OTHER ASSESSMENT AREAS</th>
-                            <th colspan="<?= $totalExamCount ?>" style="<?= $thStyle ?>">MARKS</th>
+                            <th colspan="<?= $totalExamCount * 2 ?>" style="<?= $thStyle ?>">MARKS</th>
                             <?php if ($showGrades): ?><th rowspan="2" style="<?= $thStyle ?>width:7%;">GRADE</th><?php endif; ?>
                             <th rowspan="2" style="<?= $thStyle ?><?= $showInitials ? 'width:20%;' : 'width:27%;' ?>">COMMENTS</th>
-                            <?php if ($showInitials): ?><th rowspan="2" style="<?= $thStyle ?>width:8%;">INITIALS</th><?php endif; ?>
+                            <?php if ($showInitials): ?><th rowspan="2" style="<?= $thStyle ?>width:8%;line-height:1.1;">TR'S<br>INITIALS</th><?php endif; ?>
                         </tr>
                         <tr>
                             <?php foreach ($displayExams as $exam): ?>
-                                <th style="<?= $thStyle ?>"><?= htmlspecialchars(strtoupper($exam['name'])) ?> <span style="font-weight:400;text-transform:none;">(100%)</span></th>
+                                <th colspan="2" style="<?= $thStyle ?>"><?= htmlspecialchars(strtoupper($exam['name'])) ?> <span style="font-weight:400;text-transform:none;">(100%)</span></th>
                             <?php endforeach; ?>
+                        </tr>
+                        <tr>
+                            <th style="<?= $thStyle ?>">&nbsp;</th>
+                            <?php foreach ($displayExams as $exam): ?>
+                                <th style="<?= $thStyle ?>">MARK</th>
+                                <th style="<?= $thStyle ?>">SCORE</th>
+                            <?php endforeach; ?>
+                            <?php if ($showGrades): ?><th style="<?= $thStyle ?>">&nbsp;</th><?php endif; ?>
+                            <th style="<?= $thStyle ?>">&nbsp;</th>
+                            <?php if ($showInitials): ?><th style="<?= $thStyle ?>">&nbsp;</th><?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
@@ -439,10 +437,12 @@ $tdStyle = "border:1px solid {$borderColor};padding:4px 4px;text-align:center;fo
                                 <td style="border:1px solid <?= htmlspecialchars($borderColor) ?>;padding:4px 6px;text-align:left;font-weight:700;color:<?= htmlspecialchars($primaryColor) ?>;text-transform:uppercase;letter-spacing:.2px;"><?= htmlspecialchars($subject['name']) ?></td>
                                 <?php foreach ($displayExams as $exam): ?>
                                     <?php
-                                        $row     = $marksByExam[$exam['id']][$subject['id']] ?? null;
-                                        $markVal = $row !== null ? (int)round((float)$row['marks_obtained']) : null;
+                                        $row      = $marksByExam[$exam['id']][$subject['id']] ?? null;
+                                        $markVal  = $row !== null ? (int)round((float)$row['marks_obtained']) : null;
+                                        $scoreVal = $row !== null ? (int)round((float)($row['score'] ?? 0)) : null;
                                     ?>
                                     <td style="<?= $tdStyle ?>"><?= $markVal !== null ? $markVal : '-' ?></td>
+                                    <td style="<?= $tdStyle ?>font-weight:700;color:<?= htmlspecialchars($primaryColor) ?>;"><?= $scoreVal !== null ? $scoreVal : '-' ?></td>
                                 <?php endforeach; ?>
                                 <?php if ($showGrades): ?><td style="<?= $tdStyle ?>font-weight:700;color:<?= htmlspecialchars($primaryColor) ?>;"><?= htmlspecialchars($sa['grade'] ?? '-') ?></td><?php endif; ?>
                                 <td style="border:1px solid <?= htmlspecialchars($borderColor) ?>;padding:4px 6px;text-align:left;font-size:11px;text-transform:uppercase;color:<?= htmlspecialchars($mottoColor) ?>;font-weight:700;"><?= htmlspecialchars($sa['remark'] ?? '') ?></td>

@@ -56,7 +56,6 @@
                     <div class="col-md-2">
                         <label class="form-label small fw-semibold">Score</label>
                         <input type="number" class="form-control form-control-sm" name="score" step="0.01" value="0" placeholder="e.g. 1">
-                        <small class="text-muted">Numeric weight</small>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small fw-semibold">Description</label>
@@ -84,7 +83,6 @@
             <h6 class="mb-0 fw-bold text-primary">
                 <i class="fas fa-list-ol me-2"></i>Grade Boundaries (<?= count($rules) ?>)
             </h6>
-            <small class="text-muted">Rules are sorted by min mark (highest first)</small>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">

@@ -34,7 +34,6 @@
                                 <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
-                        <small class="text-muted">Leave blank to apply to all classes unless a class-specific system exists</small>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Academic Year (Optional)</label>
@@ -44,14 +43,6 @@
                                 <option value="<?= $y['id'] ?>"><?= htmlspecialchars($y['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
-                    </div>
-                    <div class="col-12">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="is_default" id="isDefault" value="1">
-                            <label class="form-check-label" for="isDefault">
-                                Set as school-wide default (fallback if no class-specific system exists)
-                            </label>
-                        </div>
                     </div>
                 </div>
 
