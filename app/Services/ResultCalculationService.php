@@ -10,12 +10,16 @@ class ResultCalculationService
 {
     private Database $db;
     private GradingService $gradingService;
+    private DivisionSchemeService $schemeService;
+    private DivisionService $divisionService;
     private array $config = [];
 
     public function __construct()
     {
         $this->db = Database::getInstance();
         $this->gradingService = new GradingService();
+        $this->schemeService  = new DivisionSchemeService();
+        $this->divisionService = new DivisionService();
     }
 
     public function calculateResults(int $examinationSetId, int $schoolId): array
@@ -39,7 +43,7 @@ class ResultCalculationService
 
         foreach ($students as $student) {
             $studentMarks = $this->getStudentMarks($student['id'], $marks);
-            $result = $this->calculateStudentResult($student, $studentMarks, $subjects);
+            $result = $this->calculateStudentResult($student, $studentMarks, $subjects, $schoolId, $examinationSetId);
             $results[] = $result;
 
             $this->saveStudentResult($examSet, $student, $result);
@@ -121,14 +125,32 @@ class ResultCalculationService
         ));
     }
 
-    private function calculateStudentResult(array $student, array $marks, array $subjects): array
-    {
+    private function calculateStudentResult(
+        array $student,
+        array $marks,
+        array $subjects,
+        int $schoolId,
+        int $examinationSetId
+    ): array {
         $subjectResults = [];
         $totalMarks = 0.0;
         $totalScore = 0.0;
         $subjectCount = 0;
         $passed = 0;
         $failed = 0;
+
+        $academicYearId = $this->lookupExaminationYear($examinationSetId);
+        $gradingSystem = !empty($student['class_id'])
+            ? $this->gradingService->getSystemForClass((int)$student['class_id'], $schoolId, $academicYearId)
+            : $this->gradingService->getDefaultSystem($schoolId);
+
+        if ($gradingSystem && empty($gradingSystem['rules'])) {
+            try {
+                $gradingSystem['rules'] = $this->gradingService->getRules((int)$gradingSystem['id']);
+            } catch (\Throwable $e) {}
+        }
+
+        $gradingSystemId = !empty($gradingSystem['id']) ? (int)$gradingSystem['id'] : null;
 
         foreach ($subjects as $subject) {
             $mark = null;
@@ -151,14 +173,18 @@ class ResultCalculationService
             ];
 
             if ($mark !== null) {
-                $grade = $this->gradingService->getGrade((float)$mark['marks_obtained']);
+                if ($gradingSystemId) {
+                    $grade = $this->gradingService->getGradeFromSystem((float)$mark['marks_obtained'], $gradingSystemId);
+                } else {
+                    $grade = null;
+                }
 
                 if ($grade) {
                     $result['grade'] = $grade['grade'];
                     $result['score'] = $grade['score'];
-                    $result['pass']  = (bool)$grade['pass'];
+                    $result['pass']  = (bool)($grade['pass'] ?? false);
 
-                    if ($grade['pass']) {
+                    if ($result['pass']) {
                         $passed++;
                     } else {
                         $failed++;
@@ -176,9 +202,31 @@ class ResultCalculationService
 
         $average = $subjectCount > 0 ? round($totalMarks / $subjectCount, 2) : 0;
         $overallPass = $failed === 0 && $subjectCount > 0;
-        $overallGrade = $this->gradingService->getGrade($average);
 
-        $division = (new DivisionService())->getDivisionForAggregate($totalScore, (int)$this->config['school_id']);
+        $overallGrade = $gradingSystemId
+            ? $this->gradingService->getGradeFromSystem($average, $gradingSystemId)
+            : null;
+
+        $division = null;
+        $schemeId = null;
+
+        if ($gradingSystemId) {
+            $schemes = $this->schemeService->getForSystem($gradingSystemId, $schoolId, true);
+            if (!empty($schemes)) {
+                $schemeId = (int)$schemes[0]['id'];
+            }
+        }
+
+        if ($schemeId === null) {
+            $allSchemes = $this->schemeService->getAll($schoolId, true);
+            if (!empty($allSchemes)) {
+                $schemeId = (int)$allSchemes[0]['id'];
+            }
+        }
+
+        if ($schemeId !== null) {
+            $division = $this->divisionService->getDivisionForAggregate($totalScore, $schemeId);
+        }
 
         return [
             'student'         => $student,
@@ -194,6 +242,16 @@ class ResultCalculationService
             'division'        => $division,
             'position'        => null,
         ];
+    }
+
+    private function lookupExaminationYear(int $examinationId): ?int
+    {
+        $row = $this->db->fetch(
+            "SELECT academic_year_id FROM examinations WHERE id = :id LIMIT 1",
+            ['id' => $examinationId]
+        );
+
+        return !empty($row['academic_year_id']) ? (int)$row['academic_year_id'] : null;
     }
 
     private function saveStudentResult(array $examSet, array $student, array $result): void

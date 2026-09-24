@@ -4,7 +4,6 @@
 namespace NexaT\Services;
 
 use NexaT\Core\Database;
-use NexaT\Models\Subject;
 use Throwable;
 
 class AcademicReportService
@@ -13,6 +12,7 @@ class AcademicReportService
     private GradingService $gradingService;
     private ResultCalculationService $resultService;
     private array $marksColumnsCache = [];
+    private array $subjectTypeCache = [];
 
     public function __construct()
     {
@@ -33,7 +33,7 @@ class AcademicReportService
                 ['s' => $schoolId]
             ),
             'classes' => $this->safeFetchAll(
-                "SELECT id, name FROM classes WHERE school_id = :s ORDER BY name ASC",
+                "SELECT id, name FROM classes WHERE school_id = :s ORDER BY id DESC",
                 ['s' => $schoolId]
             ),
             'streams' => $this->safeFetchAll(
@@ -41,7 +41,7 @@ class AcademicReportService
                 ['s' => $schoolId]
             ),
             'subjects' => $this->safeFetchAll(
-                "SELECT id, name, code, type FROM subjects WHERE school_id = :s ORDER BY name ASC",
+                "SELECT id, name, code, grading_subject_type_id FROM subjects WHERE school_id = :s ORDER BY name ASC",
                 ['s' => $schoolId]
             ),
             'examinations' => $this->safeFetchAll(
@@ -276,7 +276,7 @@ class AcademicReportService
 
         if ($markSubjectColumn === 'subject_id') {
             $subjects = $this->safeFetchAll(
-                "SELECT DISTINCT s.id, s.name, s.code, s.type
+                "SELECT DISTINCT s.id, s.name, s.code, s.grading_subject_type_id
                  FROM subjects s
                  INNER JOIN marks m ON s.id = m.subject_id
                  WHERE m.student_id IN ({$sPlaceholders}) AND s.school_id = ?
@@ -285,7 +285,7 @@ class AcademicReportService
             );
         } else {
             $subjects = $this->safeFetchAll(
-                "SELECT DISTINCT s.id, s.name, s.code, s.type
+                "SELECT DISTINCT s.id, s.name, s.code, s.grading_subject_type_id
                  FROM subjects s
                  INNER JOIN examination_subjects es ON s.id = es.subject_id
                  INNER JOIN marks m ON es.id = m.examination_subject_id
@@ -367,6 +367,7 @@ class AcademicReportService
         $student['stream_id'] = $enrollment['stream_id'] ?? null;
         $student['class_name']  = $this->lookupName('classes', $student['class_id']);
         $student['stream_name'] = $this->lookupName('streams', $student['stream_id']);
+        $student['school_id']   = $schoolId;
 
         $gradingSystem = !empty($student['class_id'])
             ? $this->gradingService->getSystemForClass((int)$student['class_id'], $schoolId, $academicYearId)
@@ -377,6 +378,8 @@ class AcademicReportService
                 $gradingSystem['rules'] = $this->gradingService->getRules((int)$gradingSystem['id']);
             } catch (Throwable $e) {}
         }
+
+        $gradingSystemId = !empty($gradingSystem['id']) ? (int)$gradingSystem['id'] : null;
 
         $exams = [];
         if (!empty($examinationIds)) {
@@ -448,13 +451,41 @@ class AcademicReportService
             $otherIds
         );
 
-        $divisionCode = null;
+        $schemeService  = new DivisionSchemeService();
+        $divisionRanges = [];
+        $activeSchemeId = null;
+
         try {
-            $division = (new DivisionService())->getDivisionForAggregate($totalAggregate, $schoolId);
-            if ($division) {
-                $divisionCode = preg_replace('/^D/i', '', $division['code']);
+            if ($gradingSystemId) {
+                $schemes = $schemeService->getForSystem($gradingSystemId, $schoolId, true);
+                if (!empty($schemes)) {
+                    $activeSchemeId = (int)$schemes[0]['id'];
+                }
             }
-        } catch (Throwable $e) {}
+
+            if ($activeSchemeId === null) {
+                $allSchemes = $schemeService->getAll($schoolId, true);
+                if (!empty($allSchemes)) {
+                    $activeSchemeId = (int)$allSchemes[0]['id'];
+                }
+            }
+
+            if ($activeSchemeId !== null) {
+                $divisionRanges = (new DivisionService())->getForScheme($activeSchemeId, true);
+            }
+        } catch (Throwable $e) {
+            $divisionRanges = [];
+        }
+
+        $divisionCode = null;
+        if ($activeSchemeId !== null) {
+            try {
+                $division = (new DivisionService())->getDivisionForAggregate($totalAggregate, $activeSchemeId);
+                if ($division) {
+                    $divisionCode = preg_replace('/^D/i', '', $division['code']);
+                }
+            } catch (Throwable $e) {}
+        }
 
         $ctRemark = '';
         if (($options['ct_comment'] ?? 'auto') !== 'no' && $gradedCount > 0) {
@@ -469,6 +500,7 @@ class AcademicReportService
         );
 
         return [
+            'school_id'           => $schoolId,
             'student'             => $student,
             'exams'               => $exams,
             'subjects'            => $subjectsSeen,
@@ -476,6 +508,10 @@ class AcademicReportService
             'exam_totals'         => $examTotals,
             'subject_averages'    => $subjectAverages,
             'grading_system'      => $gradingSystem,
+            'grading_system_id'   => $gradingSystemId,
+            'grading_rules'       => is_array($gradingSystem['rules'] ?? null) ? $gradingSystem['rules'] : [],
+            'division_scheme_id'  => $activeSchemeId,
+            'divisions'           => $divisionRanges,
             'options'             => $options,
             'total_score'         => $totalScore,
             'total_aggregate'     => $totalAggregate,
@@ -506,7 +542,8 @@ class AcademicReportService
         $ph = implode(',', array_fill(0, count($examIds), '?'));
 
         $rows = $this->safeFetchAll(
-            "SELECT m.*, sub.name AS subject_name, sub.code AS subject_code, sub.type AS subject_type
+            "SELECT m.*, sub.name AS subject_name, sub.code AS subject_code,
+                    sub.grading_subject_type_id AS subject_type_id
              FROM marks m
              LEFT JOIN subjects sub ON m.subject_id = sub.id
              WHERE m.student_id = ? AND m.academic_year_id = ? AND m.term_id = ?
@@ -519,10 +556,14 @@ class AcademicReportService
         $subjectsSeen = [];
 
         foreach ($rows as $row) {
-            $markVal  = (float)($row['marks_obtained'] ?? 0);
-            $rawType  = $row['subject_type'] ?? null;
-            $type     = $rawType !== null && $rawType !== '' ? strtolower((string)$rawType) : 'core';
-            $isOther  = in_array($type, Subject::NON_GRADED_TYPES, true);
+            $markVal = (float)($row['marks_obtained'] ?? 0);
+            $typeId  = !empty($row['subject_type_id']) ? (int)$row['subject_type_id'] : null;
+
+            $typeRow      = $this->subjectTypeRow($typeId);
+            $isGraded     = $typeRow ? (bool)$typeRow['is_graded']     : true;
+            $isSubsidiary = $typeRow ? (bool)$typeRow['is_subsidiary'] : false;
+
+            $isOther = (!$isGraded && !$isSubsidiary);
 
             if ($gradingSystem && !empty($gradingSystem['id'])) {
                 $grade = $this->gradingService->getGradeFromSystem($markVal, (int)$gradingSystem['id']);
@@ -539,11 +580,12 @@ class AcademicReportService
 
             $marksByExam[$row['examination_id']][$row['subject_id']] = $row;
             $subjectsSeen[$row['subject_id']] = [
-                'id'       => (int)$row['subject_id'],
-                'name'     => $row['subject_name'],
-                'code'     => $row['subject_code'],
-                'type'     => $type,
-                'is_other' => $isOther,
+                'id'                      => (int)$row['subject_id'],
+                'name'                    => $row['subject_name'],
+                'code'                    => $row['subject_code'],
+                'grading_subject_type_id' => $typeId,
+                'is_other'                => $isOther,
+                'is_subsidiary'           => $isSubsidiary,
             ];
         }
 
@@ -711,9 +753,14 @@ class AcademicReportService
         $subjectAverages = [];
 
         foreach ($subjectsSeen as $subj) {
-            $sid  = (int)$subj['id'];
-            $type = strtolower((string)($subj['type'] ?? 'core'));
-            $isOther = in_array($type, Subject::NON_GRADED_TYPES, true);
+            $sid    = (int)$subj['id'];
+            $typeId = !empty($subj['grading_subject_type_id']) ? (int)$subj['grading_subject_type_id'] : null;
+
+            $typeRow      = $this->subjectTypeRow($typeId);
+            $isGraded     = $typeRow ? (bool)$typeRow['is_graded']     : true;
+            $isSubsidiary = $typeRow ? (bool)$typeRow['is_subsidiary'] : false;
+
+            $isOther = (!$isGraded && !$isSubsidiary);
 
             $vals = [];
             foreach ($sourceExamIds as $srcId) {
@@ -738,14 +785,20 @@ class AcademicReportService
                 }
             }
 
+            if ($isSubsidiary && $typeRow) {
+                $passMark   = (int)($typeRow['subsidiary_pass_mark'] ?? 40);
+                $fixed      = (int)($typeRow['subsidiary_score']     ?? 1);
+                $finalScore = ($finalMark >= $passMark) ? $fixed : 0;
+            }
+
             $subjectAverages[$sid] = [
-                'mark'       => $finalMark,
-                'grade'      => $finalGrade,
-                'score'      => $finalScore,
-                'remark'     => $finalRemark,
-                'type'       => $type,
-                'is_other'   => $isOther,
-                'contributes'=> !$isOther,
+                'mark'          => $finalMark,
+                'grade'         => $finalGrade,
+                'score'         => $finalScore,
+                'remark'        => $finalRemark,
+                'is_other'      => $isOther,
+                'is_subsidiary' => $isSubsidiary,
+                'contributes'   => !$isOther,
             ];
         }
 
@@ -803,7 +856,9 @@ class AcademicReportService
 
         foreach ($ids as $cid) {
             $cmMarks = $this->safeFetchAll(
-                "SELECT m.marks_obtained FROM marks m
+                "SELECT m.marks_obtained, m.subject_id, sub.grading_subject_type_id AS subject_type_id
+                 FROM marks m
+                 LEFT JOIN subjects sub ON m.subject_id = sub.id
                  WHERE m.student_id = ? AND m.academic_year_id = ? AND m.term_id = ?
                    AND m.examination_id IN ({$ph})
                    {$excludeClause}",
@@ -815,11 +870,19 @@ class AcademicReportService
             $sumScores = 0;
 
             foreach ($cmMarks as $m) {
-                $sumMarks += (float)$m['marks_obtained'];
+                $mark     = (float)$m['marks_obtained'];
+                $sumMarks += $mark;
                 $countMark++;
 
-                if ($gradingSystem && !empty($gradingSystem['id'])) {
-                    $g = $this->gradingService->getGradeFromSystem((float)$m['marks_obtained'], (int)$gradingSystem['id']);
+                $typeId  = !empty($m['subject_type_id']) ? (int)$m['subject_type_id'] : null;
+                $typeRow = $this->subjectTypeRow($typeId);
+
+                if ($typeRow && !empty($typeRow['is_subsidiary'])) {
+                    $passMark   = (int)($typeRow['subsidiary_pass_mark'] ?? 40);
+                    $fixed      = (int)($typeRow['subsidiary_score']     ?? 1);
+                    $sumScores += ($mark >= $passMark) ? $fixed : 0;
+                } elseif ($gradingSystem && !empty($gradingSystem['id'])) {
+                    $g = $this->gradingService->getGradeFromSystem($mark, (int)$gradingSystem['id']);
                     $sumScores += (float)($g['score'] ?? 0);
                 }
             }
@@ -924,6 +987,26 @@ class AcademicReportService
         }
 
         return null;
+    }
+
+    private function subjectTypeRow(?int $typeId): ?array
+    {
+        if ($typeId === null) {
+            return null;
+        }
+
+        if (array_key_exists($typeId, $this->subjectTypeCache)) {
+            return $this->subjectTypeCache[$typeId];
+        }
+
+        $row = $this->safeFetch(
+            "SELECT id, is_graded, is_subsidiary, subsidiary_pass_mark, subsidiary_score
+             FROM grading_subject_types
+             WHERE id = :id",
+            ['id' => $typeId]
+        );
+
+        return $this->subjectTypeCache[$typeId] = $row ?: null;
     }
 
     private function lookupName(string $table, ?int $id): ?string

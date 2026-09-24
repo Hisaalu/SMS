@@ -13,49 +13,51 @@
 
     <div class="card p-3">
         <?php if (!empty($subjects)): ?>
-            <table class="table table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>Subject Name</th>
-                        <th>Code</th>
-                        <th>Department</th>
-                        <th>Type</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($subjects as $subject): ?>
-                        <?php
-                            $type = strtolower((string)($subject->type ?? 'core'));
-                            $badge = match ($type) {
-                                'core'     => 'primary',
-                                'elective' => 'info',
-                                'optional' => 'warning',
-                                'other'    => 'secondary',
-                                default    => 'light',
-                            };
-                        ?>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
                         <tr>
-                            <td><strong><?= htmlspecialchars($subject->name) ?></strong></td>
-                            <td><code><?= htmlspecialchars($subject->code) ?></code></td>
-                            <td><?= htmlspecialchars($deptList[$subject->department_id] ?? 'None') ?></td>
-                            <td>
-                                <span class="badge bg-<?= $badge ?>">
-                                    <?= htmlspecialchars(ucfirst($type)) ?>
-                                    <?php if ($type === 'other'): ?>
-                                        <span title="Not graded">&middot; N/G</span>
-                                    <?php endif; ?>
-                                </span>
-                            </td>
-                            <td>
-                                <a href="<?= BASE_URL ?>/academic/subjects/<?= (int)$subject->id ?>/edit" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                            </td>
+                            <th>Subject</th>
+                            <th>Code</th>
+                            <th>Grading System</th>
+                            <th>Type</th>
+                            <th>Department</th>
+                            <th class="text-end">Actions</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($subjects as $subject): ?>
+                            <?php
+                                $typeRow    = $typeList[$subject->grading_subject_type_id] ?? null;
+                                $typeName   = $typeRow['name'] ?? '—';
+                                $isGraded   = $typeRow ? (bool)$typeRow['is_graded'] : true;
+                                $typeBadge  = $isGraded ? 'primary' : 'secondary';
+                                $systemName = $systemList[$subject->grading_system_id] ?? '—';
+                            ?>
+                            <tr>
+                                <td><strong><?= htmlspecialchars($subject->name) ?></strong></td>
+                                <td><code><?= htmlspecialchars($subject->code) ?></code></td>
+                                <td><?= htmlspecialchars($systemName) ?></td>
+                                <td>
+                                    <span class="badge bg-<?= $typeBadge ?>">
+                                        <?= htmlspecialchars($typeName) ?>
+                                        <?php if (!$isGraded): ?>
+                                            &middot; N/G
+                                        <?php endif; ?>
+                                    </span>
+                                </td>
+                                <td><?= htmlspecialchars($deptList[$subject->department_id] ?? 'None') ?></td>
+                                <td class="text-end">
+                                    <a href="<?= BASE_URL ?>/academic/subjects/<?= (int)$subject->id ?>/edit"
+                                       class="btn btn-sm btn-secondary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         <?php else: ?>
             <p class="text-muted text-center py-3">No subjects found.</p>
         <?php endif; ?>

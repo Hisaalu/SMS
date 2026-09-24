@@ -17,7 +17,8 @@ class GradingSystemController extends Controller
             "SELECT gs.*,
                     c.name  AS class_name,
                     ay.name AS academic_year_name,
-                    (SELECT COUNT(*) FROM grading_rules WHERE system_id = gs.id) AS rule_count
+                    (SELECT COUNT(*) FROM grading_rules         WHERE system_id = gs.id)        AS rule_count,
+                    (SELECT COUNT(*) FROM grading_subject_types WHERE grading_system_id = gs.id) AS type_count
              FROM grading_systems gs
              LEFT JOIN classes c         ON gs.class_id = c.id
              LEFT JOIN academic_years ay ON gs.academic_year_id = ay.id
@@ -68,8 +69,8 @@ class GradingSystemController extends Controller
 
         if ($systemId) {
             $this->audit('Grading System Created', 'examinations', "Created grading system: {$data['name']}");
-            $this->flashSuccess('Grading system created successfully. Now add its grade rules.');
-            $this->redirect('/grading/systems/' . $systemId . '/rules');
+            $this->flashSuccess('Grading system created. Now configure its subject types and grade rules.');
+            $this->redirect('/grading/systems/' . $systemId . '/subject-types');
             return;
         }
 

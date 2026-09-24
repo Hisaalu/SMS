@@ -4,6 +4,7 @@
 namespace NexaT\Controllers;
 
 use NexaT\Core\Controller;
+use NexaT\Services\DivisionSchemeService;
 use NexaT\Services\DivisionService;
 use NexaT\Services\GradingService;
 
@@ -145,12 +146,12 @@ class ResultController extends Controller
         $schoolId = $this->schoolId();
 
         echo $this->view->renderWithLayout('examinations/results/selector', 'default', [
-            'title'        => 'Class Results',
-            'academicYears'=> $this->db->fetchAll("SELECT * FROM academic_years WHERE school_id = :s ORDER BY id DESC", ['s' => $schoolId]),
-            'terms'        => $this->db->fetchAll("SELECT * FROM terms WHERE school_id = :s ORDER BY term_number ASC", ['s' => $schoolId]),
-            'classes'      => $this->db->fetchAll("SELECT * FROM classes WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
-            'streams'      => $this->db->fetchAll("SELECT * FROM streams WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
-            'examinations' => $this->db->fetchAll("SELECT * FROM examinations WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
+            'title'         => 'Class Results',
+            'academicYears' => $this->db->fetchAll("SELECT * FROM academic_years WHERE school_id = :s ORDER BY id DESC", ['s' => $schoolId]),
+            'terms'         => $this->db->fetchAll("SELECT * FROM terms WHERE school_id = :s ORDER BY term_number ASC", ['s' => $schoolId]),
+            'classes'       => $this->db->fetchAll("SELECT * FROM classes WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
+            'streams'       => $this->db->fetchAll("SELECT * FROM streams WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
+            'examinations'  => $this->db->fetchAll("SELECT * FROM examinations WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
         ]);
     }
 
@@ -173,6 +174,7 @@ class ResultController extends Controller
         $scoreMatrix   = [];
         $studentTotals = [];
         $divisions     = [];
+        $divisionSchemeId = null;
 
         $gradingSystem = null;
 
@@ -184,7 +186,28 @@ class ResultController extends Controller
 
             if ($examination) {
                 $gradingSystem = (new GradingService())->getSystemForClass($classId, $schoolId, $academicYearId ?: null);
-                $divisions     = (new DivisionService())->getAll($schoolId, true);
+                $gradingSystemId = !empty($gradingSystem['id']) ? (int)$gradingSystem['id'] : null;
+
+                $schemeService = new DivisionSchemeService();
+                $divisionService = new DivisionService();
+
+                if ($gradingSystemId) {
+                    $schemes = $schemeService->getForSystem($gradingSystemId, $schoolId, true);
+                    if (!empty($schemes)) {
+                        $divisionSchemeId = (int)$schemes[0]['id'];
+                    }
+                }
+
+                if ($divisionSchemeId === null) {
+                    $allSchemes = $schemeService->getAll($schoolId, true);
+                    if (!empty($allSchemes)) {
+                        $divisionSchemeId = (int)$allSchemes[0]['id'];
+                    }
+                }
+
+                if ($divisionSchemeId !== null) {
+                    $divisions = $divisionService->getForScheme($divisionSchemeId, true);
+                }
 
                 $examSubjects = $this->db->fetchAll(
                     "SELECT s.id, s.name, s.code FROM examination_subjects es
@@ -280,20 +303,21 @@ class ResultController extends Controller
         }
 
         echo $this->view->renderWithLayout('examinations/results/selector', 'default', [
-            'title'         => 'Class Results',
-            'academicYears' => $this->db->fetchAll("SELECT * FROM academic_years WHERE school_id = :s ORDER BY id DESC", ['s' => $schoolId]),
-            'terms'         => $this->db->fetchAll("SELECT * FROM terms WHERE school_id = :s ORDER BY term_number ASC", ['s' => $schoolId]),
-            'classes'       => $this->db->fetchAll("SELECT * FROM classes WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
-            'streams'       => $this->db->fetchAll("SELECT * FROM streams WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
-            'examinations'  => $this->db->fetchAll("SELECT * FROM examinations WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
-            'subjects'      => $subjects,
-            'examination'   => $examination,
-            'students'      => $students,
-            'resultsMatrix' => $resultsMatrix,
-            'scoreMatrix'   => $scoreMatrix,
-            'studentTotals' => $studentTotals,
-            'divisions'     => $divisions,
-            'gradingSystem' => $gradingSystem,
+            'title'            => 'Class Results',
+            'academicYears'    => $this->db->fetchAll("SELECT * FROM academic_years WHERE school_id = :s ORDER BY id DESC", ['s' => $schoolId]),
+            'terms'            => $this->db->fetchAll("SELECT * FROM terms WHERE school_id = :s ORDER BY term_number ASC", ['s' => $schoolId]),
+            'classes'          => $this->db->fetchAll("SELECT * FROM classes WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
+            'streams'          => $this->db->fetchAll("SELECT * FROM streams WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
+            'examinations'     => $this->db->fetchAll("SELECT * FROM examinations WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
+            'subjects'         => $subjects,
+            'examination'      => $examination,
+            'students'         => $students,
+            'resultsMatrix'    => $resultsMatrix,
+            'scoreMatrix'      => $scoreMatrix,
+            'studentTotals'    => $studentTotals,
+            'divisions'        => $divisions,
+            'divisionSchemeId' => $divisionSchemeId,
+            'gradingSystem'    => $gradingSystem,
         ]);
     }
 

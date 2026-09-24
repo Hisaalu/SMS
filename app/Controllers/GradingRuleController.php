@@ -73,10 +73,7 @@ class GradingRuleController extends Controller
         $this->requirePermission('grading.manage');
 
         $ruleId = (int)($params['id'] ?? 0);
-        $rule = $this->db->fetch(
-            "SELECT * FROM grading_rules WHERE id = :id",
-            ['id' => $ruleId]
-        );
+        $rule = $this->findRuleOrFail($ruleId);
 
         if (!$rule) {
             $this->flashError('Grading rule not found.');
@@ -109,10 +106,7 @@ class GradingRuleController extends Controller
         $this->requirePermission('grading.manage');
 
         $ruleId = (int)($params['id'] ?? 0);
-        $rule = $this->db->fetch(
-            "SELECT * FROM grading_rules WHERE id = :id",
-            ['id' => $ruleId]
-        );
+        $rule = $this->findRuleOrFail($ruleId);
 
         if (!$rule) {
             $this->json(['error' => 'Grading rule not found'], 404);
@@ -128,9 +122,12 @@ class GradingRuleController extends Controller
 
     private function findSystemOrRedirect(int $systemId): ?array
     {
+        $schoolId = $this->schoolId();
+
         $system = $this->db->fetch(
-            "SELECT * FROM grading_systems WHERE id = :id",
-            ['id' => $systemId]
+            "SELECT * FROM grading_systems
+             WHERE id = :id AND school_id = :school_id",
+            ['id' => $systemId, 'school_id' => $schoolId]
         );
 
         if (!$system) {
@@ -140,6 +137,20 @@ class GradingRuleController extends Controller
         }
 
         return $system;
+    }
+
+    private function findRuleOrFail(int $ruleId): ?array
+    {
+        $schoolId = $this->schoolId();
+
+        $rule = $this->db->fetch(
+            "SELECT gr.* FROM grading_rules gr
+             INNER JOIN grading_systems gs ON gr.system_id = gs.id
+             WHERE gr.id = :id AND gs.school_id = :school_id",
+            ['id' => $ruleId, 'school_id' => $schoolId]
+        );
+
+        return $rule ?: null;
     }
 
     private function validateRuleInput(): ?array

@@ -51,6 +51,9 @@ $subjectAverages = is_array($card['subject_averages'] ?? null) ? $card['subject_
 $options         = is_array($card['options'] ?? null)          ? $card['options']          : [];
 $gradingSystem   = is_array($card['grading_system'] ?? null)   ? $card['grading_system']   : null;
 
+$divisions    = is_array($card['divisions']     ?? null) ? $card['divisions']     : [];
+$gradingRules = is_array($card['grading_rules'] ?? null) ? $card['grading_rules'] : [];
+
 $totalScore        = (float)($card['total_score']         ?? 0);
 $totalAggregate    = (float)($card['total_aggregate']     ?? 0);
 $gradedSubjects    = (int)  ($card['graded_subjects']     ?? 0);
@@ -64,13 +67,6 @@ $ctRemark          = $card['ct_remark'] ?? '';
 $nextTerm          = is_array($card['next_term'] ?? null) ? $card['next_term'] : null;
 
 $studentPhoto = $assetUrl($student['photo_path'] ?? null);
-
-try {
-    $divisions = (new \NexaT\Services\DivisionService())->getAll((int)($student['school_id'] ?? 0), true);
-} catch (\Throwable $e) {
-    $divisions = [];
-}
-$gradingRules = is_array($gradingSystem['rules'] ?? null) ? $gradingSystem['rules'] : [];
 
 $truthy = static fn($v) => $v === true || $v === 'yes' || $v === 1 || $v === '1';
 
@@ -200,13 +196,11 @@ $tdStyle = "border:1px solid {$borderColor};padding:4px 4px;text-align:center;fo
 <div class="report-card">
 
     <table style="width:100%;border-collapse:collapse;margin-bottom:2px;">
-
         <tr>
             <td colspan="3" style="padding:0 0 4px 0;text-align:center;">
                 <h1 class="school-name"><?= htmlspecialchars($schoolName) ?></h1>
             </td>
         </tr>
-
         <tr>
             <td style="width:110px;vertical-align:top;padding:4px 0 0 0;text-align:left;">
                 <?php if ($logoUrl): ?>
@@ -214,25 +208,20 @@ $tdStyle = "border:1px solid {$borderColor};padding:4px 4px;text-align:center;fo
                          style="width:100px;height:100px;object-fit:contain;display:block;">
                 <?php endif; ?>
             </td>
-
             <td style="vertical-align:top;padding:4px 10px 0 10px;text-align:center;">
                 <?php if ($schoolPoBox): ?>
                     <div class="school-contact"><?= htmlspecialchars($schoolPoBox) ?></div>
                 <?php endif; ?>
-
                 <?php if ($schoolPhone): ?>
                     <div class="school-contact">Tel: <?= htmlspecialchars($schoolPhone) ?></div>
                 <?php endif; ?>
-
                 <?php if ($schoolEmail): ?>
                     <div class="school-contact">Email: <?= htmlspecialchars($schoolEmail) ?></div>
                 <?php endif; ?>
-
                 <?php if ($schoolMotto): ?>
                     <div class="school-motto"><?= htmlspecialchars($schoolMotto) ?></div>
                 <?php endif; ?>
             </td>
-
             <td style="width:110px;vertical-align:top;padding:4px 0 0 0;text-align:right;">
                 <?php if ($studentPhoto): ?>
                     <img src="<?= htmlspecialchars($studentPhoto) ?>" alt="Student Photo"
@@ -313,28 +302,22 @@ $tdStyle = "border:1px solid {$borderColor};padding:4px 4px;text-align:center;fo
                         <td style="border:1px solid <?= htmlspecialchars($borderColor) ?>;padding:4px 6px;text-align:left;font-weight:700;color:<?= htmlspecialchars($primaryColor) ?>;text-transform:uppercase;letter-spacing:.2px;">
                             <?= htmlspecialchars($subject['name']) ?>
                         </td>
-
                         <?php foreach ($displayExams as $exam): ?>
                             <?php
                                 $row      = $marksByExam[$exam['id']][$subject['id']] ?? null;
                                 $markVal  = $row !== null ? (int)round((float)$row['marks_obtained']) : null;
                                 $scoreVal = $row !== null ? (int)round((float)($row['score'] ?? 0)) : null;
-                                if ($markVal !== null) {
-                                    $totalMarksPerExam[$exam['id']] += $markVal;
-                                }
+                                if ($markVal !== null) $totalMarksPerExam[$exam['id']] += $markVal;
                             ?>
                             <td style="<?= $tdStyle ?>"><?= $markVal !== null ? $markVal : '-' ?></td>
                             <td style="<?= $tdStyle ?>font-weight:700;color:<?= htmlspecialchars($primaryColor) ?>;"><?= $scoreVal !== null ? $scoreVal : '-' ?></td>
                         <?php endforeach; ?>
-
                         <?php if ($showGrades): ?>
                             <td style="<?= $tdStyle ?>font-weight:700;color:<?= htmlspecialchars($primaryColor) ?>;"><?= htmlspecialchars($sa['grade'] ?? '-') ?></td>
                         <?php endif; ?>
-
                         <td style="border:1px solid <?= htmlspecialchars($borderColor) ?>;padding:4px 6px;text-align:left;font-size:11px;text-transform:uppercase;color:<?= htmlspecialchars($mottoColor) ?>;font-weight:700;">
                             <?= htmlspecialchars($sa['remark'] ?? '') ?>
                         </td>
-
                         <?php if ($showInitials): ?>
                             <td style="<?= $tdStyle ?>color:<?= htmlspecialchars($primaryColor) ?>;font-weight:700;letter-spacing:.5px;"><?= htmlspecialchars($sa['initials'] ?? '') ?></td>
                         <?php endif; ?>

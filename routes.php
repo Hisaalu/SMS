@@ -1,4 +1,5 @@
 <?php
+// File: /app/routes.php
 
 use NexaT\Core\Router;
 
@@ -18,7 +19,7 @@ $router->get('/test-route', function() {
 
 $router->group(['middleware' => ['auth']], function ($router) {
     $router->get('/dashboard', ['DashboardController', 'index']);
-    
+
     $router->group(['middleware' => ['permission:users.view']], function ($router) {
         $router->get('/users', ['UserController', 'index']);
         $router->get('/users/create', ['UserController', 'create']);
@@ -27,7 +28,7 @@ $router->group(['middleware' => ['auth']], function ($router) {
         $router->put('/users/{id}', ['UserController', 'update']);
         $router->delete('/users/{id}', ['UserController', 'delete']);
     });
-    
+
     $router->group(['middleware' => ['permission:roles.view']], function ($router) {
         $router->get('/roles', ['RoleController', 'index']);
         $router->get('/roles/create', ['RoleController', 'create']);
@@ -37,7 +38,7 @@ $router->group(['middleware' => ['auth']], function ($router) {
         $router->post('/users/{id}', ['UserController', 'update']);
         $router->delete('/roles/{id}', ['RoleController', 'delete']);
     });
-    
+
     $router->group(['middleware' => ['permission:settings.view']], function ($router) {
         $router->get('/settings', ['SettingsController', 'index']);
         $router->get('/settings/school', ['SettingsController', 'school']);
@@ -64,8 +65,8 @@ $router->group(['middleware' => ['auth']], function ($router) {
 
     $router->get('/academic/classes', ['ClassController', 'index']);
     $router->get('/academic/classes/create', ['ClassController', 'create']);
-    $router->post('/academic/classes', ['ClassController', 'store']); 
-    $router->get('/academic/classes/{id}/edit', ['ClassController', 'edit']); 
+    $router->post('/academic/classes', ['ClassController', 'store']);
+    $router->get('/academic/classes/{id}/edit', ['ClassController', 'edit']);
     $router->post('/academic/classes/{id}', ['ClassController', 'update']);
 
     $router->get('/academic/streams', ['StreamController', 'index']);
@@ -103,16 +104,16 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->get('/students', ['StudentController', 'index']);
     $router->get('/student/create', ['StudentController', 'create']);
     $router->post('/students/store', ['StudentController', 'store']);
-    $router->get('/students/show', ['StudentController', 'show']); 
-    $router->get('/students/edit', ['StudentController', 'edit']); 
-    $router->post('/students/update', ['StudentController', 'update']); 
+    $router->get('/students/show', ['StudentController', 'show']);
+    $router->get('/students/edit', ['StudentController', 'edit']);
+    $router->post('/students/update', ['StudentController', 'update']);
     $router->get('/students/delete', ['StudentController', 'delete']);
     $router->get('/students/enrollments', ['StudentController', 'enrollments']);
     $router->post('/students/enrollments/store', ['StudentController', 'storeEnrollment']);
 
-    $router->get('/student/show', ['StudentController', 'show']); 
-    $router->get('/student/edit', ['StudentController', 'edit']); 
-    $router->post('/student/update', ['StudentController', 'update']); 
+    $router->get('/student/show', ['StudentController', 'show']);
+    $router->get('/student/edit', ['StudentController', 'edit']);
+    $router->post('/student/update', ['StudentController', 'update']);
     $router->get('/student/enrollments', ['StudentController', 'enrollments']);
     $router->post('/student/enrollments/store', ['StudentController', 'storeEnrollment']);
 
@@ -137,11 +138,11 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->post('/teacher-assignments/store', ['TeacherAssignmentController', 'store']);
     $router->post('/teacher-assignments/{id}/terminate', ['TeacherAssignmentController', 'terminate']);
 
-    $router->get('/attendance', [AttendanceController::class, 'index']);
-    $router->get('/attendance/take', [AttendanceController::class, 'take']);
-    $router->post('/attendance/save', [AttendanceController::class, 'save']);
-    $router->get('/attendance/view/{id}', [AttendanceController::class, 'view']);
-    $router->get('/attendance/edit/{id}', [AttendanceController::class, 'edit']);
+    $router->get('/attendance', ['AttendanceController', 'index']);
+    $router->get('/attendance/take', ['AttendanceController', 'take']);
+    $router->post('/attendance/save', ['AttendanceController', 'save']);
+    $router->get('/attendance/view/{id}', ['AttendanceController', 'view']);
+    $router->get('/attendance/edit/{id}', ['AttendanceController', 'edit']);
 
     $router->get('/attendance/statuses', ['AttendanceStatusController', 'index']);
     $router->get('/attendance/statuses/create', ['AttendanceStatusController', 'create']);
@@ -168,6 +169,28 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->post('/grading/systems/{id}/rules', ['GradingRuleController', 'store']);
     $router->post('/grading/systems/rules/{id}', ['GradingRuleController', 'update']);
     $router->delete('/grading/systems/rules/{id}', ['GradingRuleController', 'delete']);
+
+    $router->post('/grading/systems/subject-types/{id}/update', ['SubjectTypeController', 'update']);
+    $router->delete('/grading/systems/subject-types/{id}',      ['SubjectTypeController', 'delete']);
+
+    $router->get('/grading/systems/{id}/subject-types',         ['SubjectTypeController', 'index']);
+    $router->post('/grading/systems/{id}/subject-types',        ['SubjectTypeController', 'store']);
+
+    $router->get('/grading/divisions/ranges/{id}/edit',    ['DivisionSchemeController', 'ranges']);
+    $router->post('/grading/divisions/ranges/{id}/update', ['DivisionSchemeController', 'updateRange']);
+    $router->put('/grading/divisions/ranges/{id}',         ['DivisionSchemeController', 'updateRange']);
+    $router->delete('/grading/divisions/ranges/{id}',      ['DivisionSchemeController', 'deleteRange']);
+
+    $router->get('/grading/divisions',                     ['DivisionSchemeController', 'index']);
+    $router->get('/grading/divisions/create',              ['DivisionSchemeController', 'create']);
+    $router->post('/grading/divisions',                    ['DivisionSchemeController', 'store']);
+    $router->get('/grading/divisions/{id}/edit',           ['DivisionSchemeController', 'edit']);
+    $router->post('/grading/divisions/{id}/update',        ['DivisionSchemeController', 'update']);
+    $router->put('/grading/divisions/{id}',                ['DivisionSchemeController', 'update']);
+    $router->delete('/grading/divisions/{id}',             ['DivisionSchemeController', 'delete']);
+
+    $router->get('/grading/divisions/{id}/ranges',         ['DivisionSchemeController', 'ranges']);
+    $router->post('/grading/divisions/{id}/ranges',        ['DivisionSchemeController', 'storeRange']);
 
     $router->get('/assessment/types', ['AssessmentTypeController', 'index']);
     $router->get('/assessment/types/create', ['AssessmentTypeController', 'create']);
@@ -202,12 +225,15 @@ $router->group(['middleware' => ['auth']], function ($router) {
 
     $router->get('/promotion/students', ['PromotionController', 'index']);
     $router->post('/promotion/students', ['PromotionController', 'promote']);
-});
 
-$router->group(['prefix' => '/api', 'middleware' => ['auth']], function ($router) {
-    $router->get('/school-profile', ['ApiController', 'schoolProfile']);
-    $router->get('/theme-settings', ['ApiController', 'themeSettings']);
-    $router->post('/settings', ['ApiController', 'updateSetting']);
+    $router->get('/reports/academic', ['AcademicReportController', 'index']);
+    $router->get('/reports/academic/report-cards', ['AcademicReportController', 'reportCards']);
+    $router->get('/reports/academic/report-card/view', ['AcademicReportController', 'generateReportCard']);
+    $router->get('/reports/academic/subject-analysis', ['AcademicReportController', 'subjectAnalysis']);
+    $router->get('/reports/academic/class-analysis', ['AcademicReportController', 'classAnalysis']);
+
+    $router->get('/reports/academic/batch-report-cards', ['AcademicReportController', 'batchReportCards']);
+    $router->get('/reports/academic/batch-report-cards/view', ['AcademicReportController', 'generateBatchReportCards']);
 });
 
 $router->group(['prefix' => '/api', 'middleware' => ['auth']], function ($router) {
@@ -215,18 +241,5 @@ $router->group(['prefix' => '/api', 'middleware' => ['auth']], function ($router
     $router->get('/theme-settings', ['ApiController', 'themeSettings']);
     $router->post('/settings', ['ApiController', 'updateSetting']);
     $router->get('/streams-by-class', ['ResultController', 'getStreamsByClass']);
+    $router->get('/grading/systems/{id}/subject-types', ['SubjectTypeController', 'options']);
 });
-
-$router->get('/reports/academic', ['AcademicReportController', 'index']);
-$router->get('/reports/academic/report-cards', ['AcademicReportController', 'reportCards']);
-$router->get('/reports/academic/report-card/view', ['AcademicReportController', 'generateReportCard']);
-$router->get('/reports/academic/subject-analysis', ['AcademicReportController', 'subjectAnalysis']);
-$router->get('/reports/academic/class-analysis', ['AcademicReportController', 'classAnalysis']);
-
-$router->get('/reports/academic/batch-report-cards', ['AcademicReportController', 'batchReportCards']);
-$router->get('/reports/academic/batch-report-cards/view', ['AcademicReportController', 'generateBatchReportCards']);
-// Divisions (Grading)
-$router->get('/grading/divisions', ['DivisionController', 'index']);
-$router->post('/grading/divisions', ['DivisionController', 'store']);
-$router->post('/grading/divisions/{id}', ['DivisionController', 'update']);
-$router->delete('/grading/divisions/{id}', ['DivisionController', 'delete']);
