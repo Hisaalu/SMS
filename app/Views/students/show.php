@@ -25,6 +25,11 @@ $isActive = strtolower($student['status_name'] ?? '') === 'active';
             <small class="text-muted">View and manage student details</small>
         </div>
         <div class="d-flex gap-2 flex-wrap">
+            <a href="<?= BASE_URL ?>/students/admission-letter?id=<?= (int)$student['id'] ?>"
+               target="_blank"
+               class="btn btn-sm btn-secondary">
+                <i class="fas fa-file-lines me-1"></i> Admission Letter
+            </a>
             <a href="<?= BASE_URL ?>/student/edit?id=<?= (int)$student['id'] ?>" class="btn btn-sm btn-primary">
                 <i class="fas fa-edit me-1"></i> Edit Profile
             </a>
@@ -168,7 +173,6 @@ $isActive = strtolower($student['status_name'] ?? '') === 'active';
                 </div>
             </div>
 
-            <!-- Guardians -->
             <div class="card">
                 <div class="card-header">
                     <h6 class="mb-0 fw-bold">

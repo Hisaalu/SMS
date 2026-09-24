@@ -116,6 +116,7 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->post('/student/update', ['StudentController', 'update']);
     $router->get('/student/enrollments', ['StudentController', 'enrollments']);
     $router->post('/student/enrollments/store', ['StudentController', 'storeEnrollment']);
+    $router->get('/students/admission-letter', ['StudentController', 'admissionLetter']);
 
     $router->get('/staff', ['StaffController', 'index']);
     $router->get('/staff/create', ['StaffController', 'create']);

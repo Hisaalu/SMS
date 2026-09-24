@@ -171,9 +171,11 @@ class StudentController extends Controller
         ];
 
         try {
-            (new StudentAdmissionService())->admitStudent($studentData, $guardianData, $enrollmentData);
-            $this->flashSuccess('Student admitted successfully.');
-            $this->redirect('/students');
+            $studentId = (new StudentAdmissionService())->admitStudent($studentData, $guardianData, $enrollmentData);
+            $this->flashSuccess('Student admitted successfully. You can now print the admission letter.');
+
+            // Send the admin straight to the letter so they can print right away
+            $this->redirect('/students/admission-letter?id=' . $studentId);
 
         } catch (Throwable $e) {
             $this->flashError('Admission Failed: ' . $e->getMessage());
@@ -227,6 +229,95 @@ class StudentController extends Controller
             'student'     => $student,
             'enrollments' => $enrollments,
             'guardians'   => $guardians,
+        ]);
+    }
+
+    /**
+     * Render a printable admission letter for a student.
+     * Output is standalone — no app layout — so the browser can print cleanly.
+     */
+    public function admissionLetter(): void
+    {
+        $this->requirePermission('students.view');
+
+        $schoolId  = $this->schoolId();
+        $studentId = (int)($_GET['id'] ?? 0);
+
+        if ($studentId <= 0) {
+            $this->flashError('Student not specified.');
+            $this->redirect('/students');
+        }
+
+        $student = $this->db->fetch(
+            "SELECT s.*, sc.name AS category_name, ss.name AS status_name
+             FROM students s
+             LEFT JOIN student_categories sc ON s.current_category_id = sc.id
+             LEFT JOIN student_statuses ss   ON s.current_status_id = ss.id
+             WHERE s.id = :id AND s.school_id = :school_id",
+            ['id' => $studentId, 'school_id' => $schoolId]
+        );
+
+        if (!$student) {
+            $this->flashError('Student record not found.');
+            $this->redirect('/students');
+        }
+
+        // Primary guardian — falls back to any linked guardian
+        $guardian = $this->db->fetch(
+            "SELECT g.*, sg.relationship, sg.is_primary
+             FROM guardians g
+             INNER JOIN student_guardians sg ON g.id = sg.guardian_id
+             WHERE sg.student_id = :student_id
+             ORDER BY sg.is_primary DESC, sg.id ASC
+             LIMIT 1",
+            ['student_id' => $studentId]
+        );
+
+        // Current active enrollment
+        $enrollment = $this->db->fetch(
+            "SELECT se.*,
+                    ay.name AS academic_year_name,
+                    cl.name AS class_name,
+                    st.name AS stream_name
+             FROM student_enrollments se
+             LEFT JOIN academic_years ay ON se.academic_year_id = ay.id
+             LEFT JOIN classes cl        ON se.class_id = cl.id
+             LEFT JOIN streams st        ON se.stream_id = st.id
+             WHERE se.student_id = :student_id AND se.status = 'active'
+             ORDER BY se.id DESC LIMIT 1",
+            ['student_id' => $studentId]
+        );
+
+        // Next term (used for the reporting date block)
+        $nextTerm = $this->db->fetch(
+            "SELECT name, start_date, end_date FROM terms
+             WHERE school_id = :s AND start_date > CURDATE()
+             ORDER BY start_date ASC LIMIT 1",
+            ['s' => $schoolId]
+        );
+
+        // Initials for signature block (current user)
+        $user = $this->auth->getUser();
+        $headInitials = '';
+        if ($user) {
+            $f = strtoupper(substr(trim($user->first_name ?? ''), 0, 1));
+            $l = strtoupper(substr(trim($user->last_name  ?? ''), 0, 1));
+            $headInitials = trim($f . '.' . $l, '.');
+        }
+
+        $this->audit(
+            'Admission Letter Printed',
+            'students',
+            "Printed admission letter for student #{$studentId} ({$student['admission_number']})"
+        );
+
+        echo $this->view->render('students/admission_letter', [
+            'student'        => $student,
+            'guardian'       => $guardian,
+            'enrollment'     => $enrollment,
+            'nextTerm'       => $nextTerm,
+            'headInitials'   => $headInitials,
+            'generatedAt'    => date('d M Y'),
         ]);
     }
 
