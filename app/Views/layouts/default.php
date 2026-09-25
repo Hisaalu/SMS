@@ -461,7 +461,7 @@ $userInitial = $initial !== '' ? $initial : 'U';
             cursor: pointer;
         }
         .notif-item:last-child { border-bottom: none; }
-        .notif-item:hover { background: rgba(37, 99, 235, 0.05); }
+        .notif-item:hover { background: var(--border-color); }
         .notif-item.unread { background: rgba(37, 99, 235, 0.04); }
 
         .notif-icon {
@@ -548,9 +548,9 @@ $userInitial = $initial !== '' ? $initial : 'U';
                     aria-label="Notifications"
                     style="color: var(--navbar-text);">
                         <i class="fas fa-bell fs-6"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill d-none"
                             id="notifBadge"
-                            style="font-size: 0.55rem;">0</span>
+                            style="font-size: 0.55rem; background-color: var(--accent-color); color: #fff;">0</span>
                     </a>
 
                     <div class="dropdown-menu dropdown-menu-end shadow-sm notif-menu"

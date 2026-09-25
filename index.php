@@ -9,7 +9,6 @@ $rootDir = __DIR__;
 if (basename($rootDir) === 'public') {
     $rootDir = dirname($rootDir);
 }
-
 if (!defined('ROOT_PATH')) {
     define('ROOT_PATH', $rootDir);
 }
@@ -23,8 +22,10 @@ $dotenv->load(ROOT_PATH . '/.env');
 
 define('ENVIRONMENT', getenv('APP_ENV') ?: 'development');
 define('DEBUG_MODE', getenv('APP_DEBUG') === 'true');
-
 date_default_timezone_set(getenv('APP_TIMEZONE') ?: 'Africa/Kampala');
+
+require_once APP_PATH . '/Core/Config.php';
+\NexaT\Core\Config::get('database');
 
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
@@ -37,7 +38,6 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require_once APP_PATH . '/Core/Config.php';
 require_once APP_PATH . '/Core/Database.php';
 require_once APP_PATH . '/Core/Session.php';
 require_once APP_PATH . '/Core/Router.php';

@@ -1,6 +1,5 @@
 <?php
 // File: /app/Core/Config.php
-// Not File: /app/Core/config.php
 
 namespace NexaT\Core;
 
@@ -35,13 +34,26 @@ class Config
             return;
         }
 
-        self::$loaded = true;
+        $config = [];
 
         foreach (['app' => 'config.php', 'database' => 'database.php'] as $key => $file) {
             $path = CONFIG_PATH . '/' . $file;
             if (is_file($path)) {
-                self::$config[$key] = require $path;
+                $result = require $path;
+                if (is_array($result)) {
+                    $config[$key] = $result;
+                }
             }
         }
+
+        if (empty($config['database'])) {
+            throw new \RuntimeException(
+                'Database configuration missing. Checked: ' . CONFIG_PATH . '/database.php. ' .
+                'Make sure .env is loaded before Config::get() is called.'
+            );
+        }
+
+        self::$config = $config;
+        self::$loaded = true;
     }
 }

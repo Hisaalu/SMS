@@ -157,12 +157,28 @@ class Database
 
     private function connect(): void
     {
+        $username = $this->config['username'] ?? '';
+        $password = $this->config['password'] ?? '';
+        $database = $this->config['database'] ?? '';
+        $host     = $this->config['host']     ?? '127.0.0.1';
+        $port     = $this->config['port']     ?? 3306;
+        $charset  = $this->config['charset']  ?? 'utf8mb4';
+
+        if ($username === '' || $database === '') {
+            throw new RuntimeException(
+                "Database credentials missing. " .
+                "user='{$username}' db='{$database}' host='{$host}'. " .
+                "Check that /config/database.php exists and .env is loaded. " .
+                "Raw config: " . json_encode($this->config)
+            );
+        }
+
         $dsn = sprintf(
             'mysql:host=%s;port=%s;dbname=%s;charset=%s',
-            $this->config['host']     ?? '127.0.0.1',
-            $this->config['port']     ?? 3306,
-            $this->config['database'] ?? '',
-            $this->config['charset']  ?? 'utf8mb4'
+            $host,
+            $port,
+            $database,
+            $charset
         );
 
         $options = [
@@ -177,12 +193,7 @@ class Database
         }
 
         try {
-            $this->connection = new PDO(
-                $dsn,
-                $this->config['username'] ?? '',
-                $this->config['password'] ?? '',
-                $options
-            );
+            $this->connection = new PDO($dsn, $username, $password, $options);
         } catch (PDOException $e) {
             throw new RuntimeException('Database connection failed: ' . $e->getMessage(), 0, $e);
         }
