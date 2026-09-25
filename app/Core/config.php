@@ -1,5 +1,6 @@
 <?php
 // File: /app/Core/Config.php
+// Not File: /app/Core/config.php
 
 namespace NexaT\Core;
 
