@@ -42,15 +42,38 @@ class ThemeService
         return self::FONT_STACKS[$key] ?? self::FONT_STACKS['system'];
     }
 
+    public function hexToRgb(string $hex, string $fallback = '37,99,235'): string
+    {
+        $hex = ltrim(trim($hex), '#');
+
+        if (strlen($hex) === 3) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+
+        if (strlen($hex) !== 6 || !ctype_xdigit($hex)) {
+            return $fallback;
+        }
+
+        return sprintf(
+            '%d,%d,%d',
+            hexdec(substr($hex, 0, 2)),
+            hexdec(substr($hex, 2, 2)),
+            hexdec(substr($hex, 4, 2))
+        );
+    }
+
     public function cssVariables(): string
     {
         $t = $this->settings->getTheme();
         $fontStack = $this->resolveFontStack((string) $t['font_family']);
 
+        $accentRgb = $this->hexToRgb((string) $t['accent']);
+
         $vars = [
             '--primary-color'     => $t['primary'],
             '--secondary-color'   => $t['secondary'],
             '--accent-color'      => $t['accent'],
+            '--accent-rgb'        => $accentRgb,
             '--background-color'  => $t['background'],
             '--surface-color'     => $t['surface'],
             '--text-color'        => $t['text'],
@@ -98,7 +121,7 @@ class ThemeService
         $light = [
             '--input-bg'           => '#FFFFFF',
             '--input-border'       => '#CBD5E1',
-            '--input-border-focus' => '#2563EB',
+            '--input-border-focus' => $t['accent'],
             '--input-shadow'       => 'inset 0 1px 2px rgba(15, 23, 42, 0.04)',
         ];
 
@@ -116,7 +139,7 @@ class ThemeService
             '--navbar-text'        => '#F8FAFC',
             '--input-bg'           => '#0F1115',
             '--input-border'       => '#3F4756',
-            '--input-border-focus' => '#60A5FA',
+            '--input-border-focus' => $t['accent'],
             '--input-shadow'       => 'inset 0 1px 2px rgba(0, 0, 0, 0.35)',
         ];
 

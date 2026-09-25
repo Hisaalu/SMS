@@ -1,6 +1,8 @@
 <?php
 // File: /app/Views/layouts/default.php
 
+use NexaT\Core\Toast;
+
 $settingsService = new \NexaT\Core\SettingsService();
 $themeService    = new \NexaT\Core\ThemeService($settingsService);
 $googleFonts     = $themeService->googleFontsLink();
@@ -43,6 +45,8 @@ $schoolFull = htmlspecialchars($rawSchoolName, ENT_QUOTES, 'UTF-8');
 
 $initial     = strtoupper(substr($user->first_name ?? '', 0, 1));
 $userInitial = $initial !== '' ? $initial : 'U';
+
+$pendingToasts = Toast::pull();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -195,7 +199,7 @@ $userInitial = $initial !== '' ? $initial : 'U';
         }
 
         .sidebar-menu-wrapper .nav-link:hover {
-            background: rgba(37, 99, 235, 0.08);
+            background: rgba(var(--accent-rgb), 0.08);
             color: var(--accent-color);
         }
 
@@ -212,11 +216,11 @@ $userInitial = $initial !== '' ? $initial : 'U';
 
         .sidebar-menu-wrapper .sub-link:hover {
             color: var(--accent-color);
-            background: rgba(37, 99, 235, 0.04);
+            background: rgba(var(--accent-rgb), 0.04);
         }
 
         .sidebar-menu-wrapper .sub-link.active {
-            background: rgba(37, 99, 235, 0.1);
+            background: rgba(var(--accent-rgb), 0.1);
             color: var(--accent-color) !important;
             font-weight: var(--font-weight-bold);
         }
@@ -283,7 +287,7 @@ $userInitial = $initial !== '' ? $initial : 'U';
             margin-bottom: 1.25rem;
             transition: box-shadow 0.2s ease, transform 0.2s ease;
         }
-        
+
         .card:hover {
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06);
         }
@@ -351,7 +355,7 @@ $userInitial = $initial !== '' ? $initial : 'U';
             background-color: var(--input-bg);
             color: var(--text-color);
             border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+            box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
             outline: none;
         }
 
@@ -384,7 +388,7 @@ $userInitial = $initial !== '' ? $initial : 'U';
         }
 
         .table-hover > tbody > tr:hover > * {
-            background-color: rgba(37, 99, 235, 0.04);
+            background-color: rgba(var(--accent-rgb), 0.04);
             color: var(--text-color);
         }
 
@@ -462,7 +466,7 @@ $userInitial = $initial !== '' ? $initial : 'U';
         }
         .notif-item:last-child { border-bottom: none; }
         .notif-item:hover { background: var(--border-color); }
-        .notif-item.unread { background: rgba(37, 99, 235, 0.04); }
+        .notif-item.unread { background: rgba(var(--accent-rgb), 0.04); }
 
         .notif-icon {
             width: 34px;
@@ -500,6 +504,17 @@ $userInitial = $initial !== '' ? $initial : 'U';
     </style>
 </head>
 <body>
+
+    <?php
+        $flashBag = ['success' => [], 'error' => [], 'warning' => [], 'info' => []];
+        foreach ($pendingToasts as $t) {
+            $type = $t['type'] ?? 'info';
+            if (isset($flashBag[$type])) {
+                $flashBag[$type][] = $t['message'] ?? '';
+            }
+        }
+        include __DIR__ . '/../partials/toasts.php';
+    ?>
 
     <nav class="navbar navbar-custom">
         <div class="container-fluid px-2 d-flex align-items-center justify-content-between">
@@ -723,7 +738,6 @@ $userInitial = $initial !== '' ? $initial : 'U';
             });
         })();
 
-                // ---------- Notifications bell ----------
         (function () {
             const bell   = document.getElementById('notifBell');
             const badge  = document.getElementById('notifBadge');
@@ -828,7 +842,7 @@ $userInitial = $initial !== '' ? $initial : 'U';
             }
 
             bell.addEventListener('show.bs.dropdown', refresh);
-            refresh(); 
+            refresh();
             setInterval(refresh, 45000);
         })();
     </script>

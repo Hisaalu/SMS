@@ -103,8 +103,27 @@ abstract class Controller
         $this->json($data, $statusCode);
     }
 
+    protected function flashSuccess(string $message): void
+    {
+        if (class_exists('\\NexaT\\Core\\Toast')) {
+            Toast::success($message);
+            return;
+        }
+
+        if (method_exists($this->view, 'flash')) {
+            $this->view->flash('success', $message);
+        } else {
+            $_SESSION['flash_success'] = $message;
+        }
+    }
+
     protected function flashError(string $message): void
     {
+        if (class_exists('\\NexaT\\Core\\Toast')) {
+            Toast::error($message);
+            return;
+        }
+
         if (method_exists($this->view, 'flash')) {
             $this->view->flash('error', $message);
         } else {
@@ -112,12 +131,31 @@ abstract class Controller
         }
     }
 
-    protected function flashSuccess(string $message): void
+    protected function flashWarning(string $message): void
     {
+        if (class_exists('\\NexaT\\Core\\Toast')) {
+            Toast::warning($message);
+            return;
+        }
+
         if (method_exists($this->view, 'flash')) {
-            $this->view->flash('success', $message);
+            $this->view->flash('warning', $message);
         } else {
-            $_SESSION['flash_success'] = $message;
+            $_SESSION['flash_warning'] = $message;
+        }
+    }
+
+    protected function flashInfo(string $message): void
+    {
+        if (class_exists('\\NexaT\\Core\\Toast')) {
+            Toast::info($message);
+            return;
+        }
+
+        if (method_exists($this->view, 'flash')) {
+            $this->view->flash('info', $message);
+        } else {
+            $_SESSION['flash_info'] = $message;
         }
     }
 
