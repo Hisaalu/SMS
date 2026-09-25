@@ -27,18 +27,31 @@ date_default_timezone_set(getenv('APP_TIMEZONE') ?: 'Africa/Kampala');
 require_once APP_PATH . '/Core/Config.php';
 \NexaT\Core\Config::get('database');
 
+require_once APP_PATH . '/Core/Database.php';
+require_once APP_PATH . '/Core/DatabaseSessionHandler.php';
+
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
-        'lifetime' => 86400,
-        'path' => '/',
+        'lifetime' => 86400 * 7,
+        'path'     => '/',
         'httponly' => true,
-        'samesite' => 'Lax'
+        'samesite' => 'Lax',
     ]);
     session_name(getenv('SESSION_NAME') ?: 'nexat_session');
+
+    try {
+        $handler = new \NexaT\Core\DatabaseSessionHandler(
+            \NexaT\Core\Database::getInstance(),
+            86400 * 7
+        );
+        session_set_save_handler($handler, true);
+    } catch (\Throwable $e) {
+        error_log('[SessionHandler] DB handler unavailable, falling back to files: ' . $e->getMessage());
+    }
+
     session_start();
 }
 
-require_once APP_PATH . '/Core/Database.php';
 require_once APP_PATH . '/Core/Session.php';
 require_once APP_PATH . '/Core/Router.php';
 require_once APP_PATH . '/Core/MiddlewareManager.php';
