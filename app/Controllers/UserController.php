@@ -6,15 +6,18 @@ namespace NexaT\Controllers;
 use NexaT\Core\Controller;
 use NexaT\Models\User;
 use NexaT\Services\StaffService;
+use NexaT\Services\NotificationService;
 
 class UserController extends Controller
 {
     private StaffService $staffService;
+    private NotificationService $notifications;
 
     public function __construct()
     {
         parent::__construct();
         $this->staffService = new StaffService();
+        $this->notifications = new NotificationService();
     }
 
     public function index(): void
@@ -96,6 +99,27 @@ class UserController extends Controller
             $this->db->commit();
 
             $this->audit('User Created', 'users', "Created user: {$username} ({$email})");
+
+            $this->notifications->notify(
+                (int) $this->auth->id(),
+                $schoolId,
+                'New User Account Created',
+                "A new user account has been created for {$firstName} {$lastName} ({$email}).",
+                'success',
+                BASE_URL . '/users',
+                'fas fa-user-plus'
+            );
+
+            $this->notifications->notify(
+                (int) $userId,
+                $schoolId,
+                'Welcome to NexaT!',
+                "Your account has been created. You can now log in with your username '{$username}'.",
+                'info',
+                BASE_URL . '/login',
+                'fas fa-sign-in-alt'
+            );
+
             $this->flashSuccess('User created successfully.');
             $this->redirect('/users');
 
@@ -181,6 +205,29 @@ class UserController extends Controller
             $this->db->commit();
 
             $this->audit('User Updated', 'users', "Updated user: {$username} ({$email})");
+
+            $this->notifications->notify(
+                (int) $this->auth->id(),
+                $user->school_id,
+                'User Account Updated',
+                "User account for {$firstName} {$lastName} ({$email}) has been updated.",
+                'info',
+                BASE_URL . '/users',
+                'fas fa-user-edit'
+            );
+
+            if ($password !== '') {
+                $this->notifications->notify(
+                    (int) $userId,
+                    $user->school_id,
+                    'Password Changed',
+                    "Your password has been changed by an administrator. If you did not request this, please contact support.",
+                    'warning',
+                    BASE_URL . '/login',
+                    'fas fa-key'
+                );
+            }
+
             $this->flashSuccess('User updated successfully.');
             $this->redirect('/users');
 
@@ -209,9 +256,23 @@ class UserController extends Controller
         }
 
         $username = $user->username;
+        $userSchoolId = $user->school_id;
+        $userFirstName = $user->first_name;
+        $userLastName = $user->last_name;
 
         if ($user->delete(['id' => $userId])) {
             $this->audit('User Deleted', 'users', "Deleted user: {$username}");
+
+            $this->notifications->notify(
+                (int) $this->auth->id(),
+                (int) $userSchoolId,
+                'User Account Deleted',
+                "User account for {$userFirstName} {$userLastName} ({$username}) has been deleted from the system.",
+                'danger',
+                BASE_URL . '/users',
+                'fas fa-user-slash'
+            );
+
             $this->json(['success' => true]);
         }
 

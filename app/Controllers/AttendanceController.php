@@ -5,16 +5,19 @@ namespace NexaT\Controllers;
 
 use NexaT\Core\Controller;
 use NexaT\Services\AttendanceService;
+use NexaT\Services\NotificationService;
 use Throwable;
 
 class AttendanceController extends Controller
 {
     private AttendanceService $attendanceService;
+    private NotificationService $notifications;
 
     public function __construct()
     {
         parent::__construct();
         $this->attendanceService = new AttendanceService();
+        $this->notifications = new NotificationService();
     }
 
     public function index(): void
@@ -290,6 +293,50 @@ class AttendanceController extends Controller
             ], ['id' => $register['id']]);
 
             $this->audit('Attendance Saved', 'attendance', "Recorded register ID {$register['id']}");
+
+            $classInfo = $this->db->fetch(
+                "SELECT name FROM classes WHERE id = :id",
+                ['id' => $classId]
+            );
+            $className = $classInfo['name'] ?? 'Unknown Class';
+
+            $studentCount = count($records);
+            $presentCount = 0;
+            foreach ($records as $data) {
+                $statusId = (int)($data['status_id'] ?? 0);
+                if ($statusId) {
+                    $status = $this->db->fetch(
+                        "SELECT counts_as_present FROM attendance_statuses WHERE id = :id",
+                        ['id' => $statusId]
+                    );
+                    if (!empty($status['counts_as_present'])) {
+                        $presentCount++;
+                    }
+                }
+            }
+
+            $this->notifications->notify(
+                (int) $userId,
+                $schoolId,
+                'Attendance Recorded',
+                "Attendance for {$className} ({$studentCount} students, {$presentCount} present) has been submitted for {$date}.",
+                'success',
+                BASE_URL . '/attendance/view/' . $register['id'],
+                'fas fa-clipboard-check'
+            );
+
+            if ($studentCount > 0 && ($presentCount / $studentCount) < 0.5) {
+                $this->notifications->notify(
+                    (int) $userId,
+                    $schoolId,
+                    'Low Attendance Alert',
+                    "Warning: {$className} has low attendance ({$presentCount}/{$studentCount} present) on {$date}.",
+                    'warning',
+                    BASE_URL . '/attendance/view/' . $register['id'],
+                    'fas fa-exclamation-triangle'
+                );
+            }
+
             $this->flashSuccess('Attendance register recorded successfully.');
             $this->redirect('/attendance');
 

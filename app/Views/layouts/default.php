@@ -441,6 +441,62 @@ $userInitial = $initial !== '' ? $initial : 'U';
             background-color: var(--accent-color);
             color: #ffffff;
         }
+
+        .dropdown-toggle-no-caret::after { display: none !important; }
+
+        .notif-menu {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-base);
+        }
+
+        .notif-item {
+            display: flex;
+            gap: 0.65rem;
+            padding: 0.7rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            text-decoration: none;
+            color: var(--text-color);
+            transition: background-color 0.12s ease;
+            cursor: pointer;
+        }
+        .notif-item:last-child { border-bottom: none; }
+        .notif-item:hover { background: rgba(37, 99, 235, 0.05); }
+        .notif-item.unread { background: rgba(37, 99, 235, 0.04); }
+
+        .notif-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            flex-shrink: 0;
+            font-size: 0.8rem;
+        }
+
+        .notif-title {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-color);
+            line-height: 1.25;
+        }
+        .notif-msg {
+            font-size: 0.74rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        .notif-time {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
     </style>
 </head>
 <body>
@@ -482,10 +538,53 @@ $userInitial = $initial !== '' ? $initial : 'U';
                     <i class="fas fa-circle-half-stroke" id="themeToggleIcon"></i>
                 </button>
 
-                <a class="position-relative text-decoration-none" href="#" aria-label="Notifications">
-                    <i class="fas fa-bell fs-6"></i>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.55rem;">3</span>
-                </a>
+                <div class="dropdown">
+                    <a class="position-relative text-decoration-none dropdown-toggle-no-caret"
+                    href="#" role="button"
+                    id="notifBell"
+                    data-bs-toggle="dropdown"
+                    data-bs-auto-close="outside"
+                    aria-expanded="false"
+                    aria-label="Notifications"
+                    style="color: var(--navbar-text);">
+                        <i class="fas fa-bell fs-6"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"
+                            id="notifBadge"
+                            style="font-size: 0.55rem;">0</span>
+                    </a>
+
+                    <div class="dropdown-menu dropdown-menu-end shadow-sm notif-menu"
+                        aria-labelledby="notifBell"
+                        id="notifMenu"
+                        style="width: 360px; padding: 0;">
+
+                        <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom"
+                            style="border-color: var(--border-color) !important;">
+                            <span class="fw-bold small" style="color: var(--text-color);">Notifications</span>
+                            <button type="button"
+                                    class="btn btn-link btn-sm p-0 text-decoration-none"
+                                    id="notifMarkAll"
+                                    style="color: var(--accent-color); font-size: 0.75rem;">
+                                Mark all as read
+                            </button>
+                        </div>
+
+                        <div id="notifList" style="max-height: 380px; overflow-y: auto;">
+                            <div class="text-center py-4 small" style="color: var(--text-muted);">
+                                <i class="fas fa-spinner fa-spin me-2"></i>Loading…
+                            </div>
+                        </div>
+
+                        <div class="border-top text-center py-2"
+                            style="border-color: var(--border-color) !important;">
+                            <a href="<?= BASE_URL . '/notifications' ?>"
+                            class="small text-decoration-none fw-semibold"
+                            style="color: var(--accent-color);">
+                                View All Notifications
+                            </a>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="dropdown">
                     <a class="d-flex align-items-center gap-2 text-decoration-none dropdown-toggle"
@@ -622,6 +721,115 @@ $userInitial = $initial !== '' ? $initial : 'U';
                     applyMode('system');
                 }
             });
+        })();
+
+                // ---------- Notifications bell ----------
+        (function () {
+            const bell   = document.getElementById('notifBell');
+            const badge  = document.getElementById('notifBadge');
+            const list   = document.getElementById('notifList');
+            const markAll= document.getElementById('notifMarkAll');
+            if (!bell || !badge || !list) return;
+
+            const FEED_URL  = '<?= BASE_URL ?>/api/notifications/feed';
+            const READ_URL  = '<?= BASE_URL ?>/notifications/mark-read';
+            const ALL_URL   = '<?= BASE_URL ?>/notifications/mark-all-read';
+
+            const typeColor = (type) => ({
+                'success': 'var(--success-color)',
+                'warning': 'var(--warning-color)',
+                'danger':  'var(--danger-color)',
+                'message': 'var(--accent-color)',
+                'system':  'var(--secondary-color, #6f42c1)',
+            }[type] || 'var(--accent-color)');
+
+            const typeIcon = (item) => item.icon || ({
+                'success': 'fas fa-check-circle',
+                'warning': 'fas fa-exclamation-triangle',
+                'danger':  'fas fa-times-circle',
+                'message': 'fas fa-comment-dots',
+                'system':  'fas fa-cog',
+            }[item.type] || 'fas fa-info-circle');
+
+            const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+            }[c]));
+
+            function render(items) {
+                if (!Array.isArray(items) || items.length === 0) {
+                    list.innerHTML = '<div class="text-center py-4 small" style="color: var(--text-muted);">'
+                                   + '<i class="fas fa-bell-slash fa-lg mb-2 d-block opacity-50"></i>'
+                                   + 'You\'re all caught up.</div>';
+                    return;
+                }
+
+                list.innerHTML = items.map(item => {
+                    const wrap = item.action_url ? 'a' : 'div';
+                    const href = item.action_url ? ` href="${escapeHtml(item.action_url)}"` : '';
+                    const dataOpen = item.action_url ? ` data-notif-open="${item.id}"` : '';
+                    const cls = 'notif-item' + (item.is_unread ? ' unread' : '');
+
+                    return `<${wrap} class="${cls}"${href}${dataOpen}>
+                        <span class="notif-icon" style="background: ${typeColor(item.type)};">
+                            <i class="${escapeHtml(typeIcon(item))}"></i>
+                        </span>
+                        <span class="flex-grow-1 min-width-0">
+                            <span class="notif-title d-block">${escapeHtml(item.title)}</span>
+                            ${item.message ? `<span class="notif-msg d-block">${escapeHtml(item.message)}</span>` : ''}
+                            <span class="notif-time d-block">${escapeHtml(item.time_ago)}</span>
+                        </span>
+                    </${wrap}>`;
+                }).join('');
+
+                list.querySelectorAll('[data-notif-open]').forEach(el => {
+                    el.addEventListener('click', function () {
+                        const id = this.dataset.notifOpen;
+                        fetch(READ_URL, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: 'id=' + encodeURIComponent(id),
+                            keepalive: true,
+                        });
+                    });
+                });
+            }
+
+            function refresh() {
+                fetch(FEED_URL, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(r => r.json())
+                    .then(data => {
+                        const count = parseInt(data.unread || 0, 10);
+                        if (count > 0) {
+                            badge.textContent = count > 99 ? '99+' : count;
+                            badge.classList.remove('d-none');
+                        } else {
+                            badge.classList.add('d-none');
+                        }
+                        render(data.items || []);
+                    })
+                    .catch(() => {
+                        list.innerHTML = '<div class="text-center py-4 small" style="color: var(--text-muted);">'
+                                       + 'Failed to load notifications.</div>';
+                    });
+            }
+
+            if (markAll) {
+                markAll.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    fetch(ALL_URL, {
+                        method: 'POST',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    }).then(() => refresh());
+                });
+            }
+
+            bell.addEventListener('show.bs.dropdown', refresh);
+            refresh(); 
+            setInterval(refresh, 45000);
         })();
     </script>
 </body>

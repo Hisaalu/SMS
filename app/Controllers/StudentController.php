@@ -4,12 +4,21 @@
 namespace NexaT\Controllers;
 
 use NexaT\Core\Controller;
+use NexaT\Services\NotificationService;
 use NexaT\Services\StudentAdmissionService;
 use NexaT\Services\StudentNumberGenerator;
 use Throwable;
 
 class StudentController extends Controller
 {
+    private NotificationService $notifications;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->notifications = new NotificationService();
+    }
+
     public function index(): void
     {
         $this->requirePermission('students.view');
@@ -172,9 +181,18 @@ class StudentController extends Controller
 
         try {
             $studentId = (new StudentAdmissionService())->admitStudent($studentData, $guardianData, $enrollmentData);
-            $this->flashSuccess('Student admitted successfully. You can now print the admission letter.');
 
-            // Send the admin straight to the letter so they can print right away
+            $this->notifications->notify(
+                (int) $this->auth->id(),
+                $schoolId,
+                'New Student Admitted',
+                "{$studentData['first_name']} {$studentData['last_name']} has been admitted ({$admNumber}).",
+                'success',
+                BASE_URL . '/students/show?id=' . $studentId,
+                'fas fa-user-plus'
+            );
+
+            $this->flashSuccess('Student admitted successfully. You can now print the admission letter.');
             $this->redirect('/students/admission-letter?id=' . $studentId);
 
         } catch (Throwable $e) {
@@ -232,10 +250,6 @@ class StudentController extends Controller
         ]);
     }
 
-    /**
-     * Render a printable admission letter for a student.
-     * Output is standalone — no app layout — so the browser can print cleanly.
-     */
     public function admissionLetter(): void
     {
         $this->requirePermission('students.view');
@@ -262,7 +276,6 @@ class StudentController extends Controller
             $this->redirect('/students');
         }
 
-        // Primary guardian — falls back to any linked guardian
         $guardian = $this->db->fetch(
             "SELECT g.*, sg.relationship, sg.is_primary
              FROM guardians g
@@ -273,7 +286,6 @@ class StudentController extends Controller
             ['student_id' => $studentId]
         );
 
-        // Current active enrollment
         $enrollment = $this->db->fetch(
             "SELECT se.*,
                     ay.name AS academic_year_name,
@@ -288,7 +300,6 @@ class StudentController extends Controller
             ['student_id' => $studentId]
         );
 
-        // Next term (used for the reporting date block)
         $nextTerm = $this->db->fetch(
             "SELECT name, start_date, end_date FROM terms
              WHERE school_id = :s AND start_date > CURDATE()
@@ -296,7 +307,6 @@ class StudentController extends Controller
             ['s' => $schoolId]
         );
 
-        // Initials for signature block (current user)
         $user = $this->auth->getUser();
         $headInitials = '';
         if ($user) {
@@ -312,12 +322,12 @@ class StudentController extends Controller
         );
 
         echo $this->view->render('students/admission_letter', [
-            'student'        => $student,
-            'guardian'       => $guardian,
-            'enrollment'     => $enrollment,
-            'nextTerm'       => $nextTerm,
-            'headInitials'   => $headInitials,
-            'generatedAt'    => date('d M Y'),
+            'student'      => $student,
+            'guardian'     => $guardian,
+            'enrollment'   => $enrollment,
+            'nextTerm'     => $nextTerm,
+            'headInitials' => $headInitials,
+            'generatedAt'  => date('d M Y'),
         ]);
     }
 

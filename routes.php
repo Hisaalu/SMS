@@ -235,6 +235,12 @@ $router->group(['middleware' => ['auth']], function ($router) {
 
     $router->get('/reports/academic/batch-report-cards', ['AcademicReportController', 'batchReportCards']);
     $router->get('/reports/academic/batch-report-cards/view', ['AcademicReportController', 'generateBatchReportCards']);
+
+    $router->get('/notifications',                ['NotificationController', 'index']);
+    $router->post('/notifications/mark-read',     ['NotificationController', 'markRead']);
+    $router->post('/notifications/mark-all-read', ['NotificationController', 'markAllRead']);
+    $router->post('/notifications/delete',        ['NotificationController', 'delete']);
+    $router->post('/notifications/clear',         ['NotificationController', 'clearAll']);
 });
 
 $router->group(['prefix' => '/api', 'middleware' => ['auth']], function ($router) {
@@ -243,4 +249,6 @@ $router->group(['prefix' => '/api', 'middleware' => ['auth']], function ($router
     $router->post('/settings', ['ApiController', 'updateSetting']);
     $router->get('/streams-by-class', ['ResultController', 'getStreamsByClass']);
     $router->get('/grading/systems/{id}/subject-types', ['SubjectTypeController', 'options']);
+
+    $router->get('/notifications/feed', ['NotificationController', 'feed']);
 });

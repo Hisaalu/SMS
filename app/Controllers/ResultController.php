@@ -7,9 +7,19 @@ use NexaT\Core\Controller;
 use NexaT\Services\DivisionSchemeService;
 use NexaT\Services\DivisionService;
 use NexaT\Services\GradingService;
+use NexaT\Services\NotificationService;
+use Throwable;
 
 class ResultController extends Controller
 {
+    private NotificationService $notifications;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->notifications = new NotificationService();
+    }
+
     public function examination($params): void
     {
         $this->requirePermission('results.view');
@@ -133,6 +143,34 @@ class ResultController extends Controller
 
         if ($ok !== false) {
             $this->audit('Results Published', 'examinations', "Published results for examination: {$exam['name']}");
+
+            $this->notifications->notify(
+                (int) $this->auth->id(),
+                $schoolId,
+                'Results Published',
+                "Results for examination '{$exam['name']}' have been published and are now visible to students and parents.",
+                'success',
+                BASE_URL . '/results/examination/' . $examinationId,
+                'fas fa-check-circle'
+            );
+
+            $staffUsers = $this->db->fetchAll(
+                "SELECT id FROM users WHERE school_id = :school_id AND status = 'active' AND id != :current_user_id",
+                ['school_id' => $schoolId, 'current_user_id' => $this->auth->id()]
+            );
+
+            foreach ($staffUsers as $user) {
+                $this->notifications->notify(
+                    (int) $user['id'],
+                    $schoolId,
+                    'Examination Results Published',
+                    "Results for '{$exam['name']}' have been published. Review the performance report.",
+                    'info',
+                    BASE_URL . '/results/examination/' . $examinationId,
+                    'fas fa-chart-bar'
+                );
+            }
+
             $this->json(['success' => true]);
         }
 

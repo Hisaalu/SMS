@@ -6,9 +6,18 @@ namespace NexaT\Controllers;
 use NexaT\Core\Controller;
 use NexaT\Core\Database;
 use NexaT\Services\SettingsService;
+use NexaT\Services\NotificationService;
 
 class InstallController extends Controller
 {
+    private NotificationService $notifications;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->notifications = new NotificationService();
+    }
+
     public function index(): void
     {
         if (file_exists(STORAGE_PATH . '/installed')) {
@@ -54,6 +63,27 @@ class InstallController extends Controller
             $_SESSION[SESSION_USER_KEY] = (int)$admin['id'];
             session_write_close();
 
+            $schoolName = $_POST['school_name'] ?? 'Your School';
+            $this->notifications->notify(
+                (int) $adminId,
+                $schoolId,
+                'Welcome to NexaT!',
+                "Your school management system for {$schoolName} has been successfully installed. Start by configuring your school settings and adding staff members.",
+                'success',
+                BASE_URL . '/dashboard',
+                'fas fa-rocket'
+            );
+
+            $this->notifications->notify(
+                (int) $adminId,
+                $schoolId,
+                'Installation Complete',
+                'The system has been installed with default academic year, terms, and grading system. You can customize these in Settings.',
+                'info',
+                BASE_URL . '/settings',
+                'fas fa-cog'
+            );
+
             $this->showSuccessPage();
             exit;
 
@@ -66,10 +96,6 @@ class InstallController extends Controller
             exit;
         }
     }
-
-    // ---------------------------------------------------------
-    // Steps
-    // ---------------------------------------------------------
 
     private function ensureTablesExist(): void
     {
