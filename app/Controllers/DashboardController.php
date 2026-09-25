@@ -1,6 +1,5 @@
 <?php
 // File: /app/Controllers/DashboardController.php
-
 namespace NexaT\Controllers;
 
 use NexaT\Core\Controller;
@@ -33,21 +32,26 @@ class DashboardController extends Controller
 
         $attendanceTrend = $this->buildAttendanceTrend($schoolId);
         $todayAttendance = end($attendanceTrend['data']) ?: 0;
-        $term = $this->currentTerm($schoolId);
+        
+        $selectedTerm = $_GET['term'] ?? null;
+        $selectedYear = $_GET['year'] ?? null;
+        $term = $this->resolvedTerm($schoolId, $selectedTerm, $selectedYear);
 
         $data = [
-            'totalStudents'     => $totalStudents,
-            'totalTeachers'     => $totalTeachers,
-            'totalClasses'      => $totalClasses,
-            'todayAttendance'   => $todayAttendance,
-            'genderData'        => $this->buildGenderDistribution($schoolId),
-            'attendanceTrend'   => $attendanceTrend,
-            'classDistribution' => $this->buildClassDistribution($schoolId),
-            'staffCategories'   => $this->buildStaffDistribution($schoolId),
-            'currentTerm'       => $term['term'],
-            'currentYear'       => $term['year'],
-            'recentActivities'  => $this->recentActivities($schoolId),
-            'user'              => $this->auth->getUser(),
+            'totalStudents'         => $totalStudents,
+            'totalTeachers'         => $totalTeachers,
+            'totalClasses'          => $totalClasses,
+            'todayAttendance'       => $todayAttendance,
+            'genderData'            => $this->buildGenderDistribution($schoolId),
+            'attendanceTrend'       => $attendanceTrend,
+            'classDistribution'     => $this->buildClassDistribution($schoolId),
+            'staffCategories'       => $this->buildStaffDistribution($schoolId),
+            'currentTerm'           => $term['term'],
+            'currentYear'           => $term['year'],
+            'academicTermsList'     => $this->getAcademicTermsList($schoolId),
+            'recentActivities'      => $this->recentActivities($schoolId),
+            'recentlyAddedStudents' => $this->recentlyAddedStudents($schoolId),
+            'user'                  => $this->auth->getUser(),
         ];
 
         echo $this->view->renderWithLayout('dashboard/index', 'default', $data);
@@ -124,14 +128,16 @@ class DashboardController extends Controller
 
     private function buildClassDistribution(int $schoolId): array
     {
-        $distribution = ['labels' => [], 'data' => []];
+        $distribution = ['labels' => [], 'male' => [], 'female' => []];
 
         try {
             $rows = $this->db->fetchAll(
-                "SELECT c.name, COUNT(se.id) AS total
+                "SELECT c.name, 
+                        SUM(CASE WHEN LOWER(s.gender) = 'male' THEN 1 ELSE 0 END) AS male_total,
+                        SUM(CASE WHEN LOWER(s.gender) = 'female' THEN 1 ELSE 0 END) AS female_total
                  FROM classes c
-                 LEFT JOIN student_enrollments se
-                        ON se.class_id = c.id AND se.status = 'active'
+                 LEFT JOIN student_enrollments se ON se.class_id = c.id AND se.status = 'active'
+                 LEFT JOIN students s ON se.student_id = s.id
                  WHERE c.school_id = :school_id
                  GROUP BY c.id, c.name
                  ORDER BY c.name ASC
@@ -141,7 +147,8 @@ class DashboardController extends Controller
 
             foreach ($rows as $row) {
                 $distribution['labels'][] = $row['name'];
-                $distribution['data'][]   = (int)$row['total'];
+                $distribution['male'][]   = (int)$row['male_total'];
+                $distribution['female'][] = (int)$row['female_total'];
             }
         } catch (\Throwable $e) {}
 
@@ -171,8 +178,12 @@ class DashboardController extends Controller
         return $distribution;
     }
 
-    private function currentTerm(int $schoolId): array
+    private function resolvedTerm(int $schoolId, ?string $term, ?string $year): array
     {
+        if ($term && $year) {
+            return ['term' => $term, 'year' => $year];
+        }
+
         try {
             $row = $this->db->fetch(
                 "SELECT t.name AS term_name, ay.name AS year_name
@@ -202,6 +213,22 @@ class DashboardController extends Controller
         return ['term' => 'Term 1', 'year' => date('Y')];
     }
 
+    private function getAcademicTermsList(int $schoolId): array
+    {
+        try {
+            return $this->db->fetchAll(
+                "SELECT t.name AS term_name, ay.name AS year_name, t.is_current
+                 FROM terms t
+                 JOIN academic_years ay ON t.academic_year_id = ay.id
+                 WHERE t.school_id = :school_id
+                 ORDER BY ay.name DESC, t.id DESC",
+                ['school_id' => $schoolId]
+            );
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
     private function recentActivities(int $schoolId): array
     {
         try {
@@ -211,6 +238,25 @@ class DashboardController extends Controller
                  LEFT JOIN users u ON al.user_id = u.id
                  WHERE al.school_id = :school_id
                  ORDER BY al.created_at DESC
+                 LIMIT 5",
+                ['school_id' => $schoolId]
+            );
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    private function recentlyAddedStudents(int $schoolId): array
+    {
+        try {
+            return $this->db->fetchAll(
+                "SELECT s.first_name, s.last_name, s.admission_number, cl.name AS class_name, sc.name AS category_name
+                 FROM students s
+                 LEFT JOIN student_enrollments se ON se.student_id = s.id AND se.status = 'active'
+                 LEFT JOIN classes cl ON se.class_id = cl.id
+                 LEFT JOIN student_categories sc ON s.current_category_id = sc.id
+                 WHERE s.school_id = :school_id
+                 ORDER BY s.id DESC
                  LIMIT 5",
                 ['school_id' => $schoolId]
             );
