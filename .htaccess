@@ -1,7 +1,12 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /NexaT/
     
+    # Automatically set the rewrite base depending on whether /NexaT/ is part of the request path
+    RewriteCond %{REQUEST_URI} ^/NexaT/
+    RewriteRule ^ - [E=BASE_DIR:/NexaT/]
+    RewriteCond %{REQUEST_URI} !^/NexaT/
+    RewriteRule ^ - [E=BASE_DIR/]
+
     # If the request is not for a valid file or directory
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
