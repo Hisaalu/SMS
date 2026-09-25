@@ -165,17 +165,23 @@ class Database
             $this->config['charset']  ?? 'utf8mb4'
         );
 
+        $options = [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+            PDO::ATTR_STRINGIFY_FETCHES  => false,
+        ];
+
+        if (!empty($this->config['ssl_ca']) && file_exists($this->config['ssl_ca'])) {
+            $options[PDO::MYSQL_ATTR_SSL_CA] = $this->config['ssl_ca'];
+        }
+
         try {
             $this->connection = new PDO(
                 $dsn,
                 $this->config['username'] ?? '',
                 $this->config['password'] ?? '',
-                [
-                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES   => false,
-                    PDO::ATTR_STRINGIFY_FETCHES  => false,
-                ]
+                $options
             );
         } catch (PDOException $e) {
             throw new RuntimeException('Database connection failed: ' . $e->getMessage(), 0, $e);
