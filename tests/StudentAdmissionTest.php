@@ -1,4 +1,5 @@
 <?php
+//File: tests/Stdu
 
 namespace NexaT\Tests;
 
@@ -36,7 +37,6 @@ class StudentAdmissionTest extends TestCase
             'phone'     => '0700000000'
         ];
 
-        // Intentionally missing required class_id to force an exception
         $invalidEnrollment = [
             'academic_year_id' => 1
         ];
@@ -46,7 +46,6 @@ class StudentAdmissionTest extends TestCase
         try {
             $service->admitStudent($invalidStudent, $guardianData, $invalidEnrollment);
         } finally {
-            // Verify database state remains unpolluted
             $check = $this->db->fetch("SELECT * FROM students WHERE registration_number = 'REG/TEST/001'");
             $this->assertFalse($check, "Database rollback failed! Student record exists.");
         }

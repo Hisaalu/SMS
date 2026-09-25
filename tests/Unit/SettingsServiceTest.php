@@ -15,14 +15,12 @@ class SettingsServiceTest extends TestCase
         parent::setUp();
         $this->settings = new SettingsService();
         
-        // Clean up test data
         $db = Database::getInstance();
         $db->execute("DELETE FROM settings WHERE setting_key LIKE 'test_%'");
     }
     
     protected function tearDown(): void
     {
-        // Clean up test data
         $db = Database::getInstance();
         $db->execute("DELETE FROM settings WHERE setting_key LIKE 'test_%'");
         parent::tearDown();

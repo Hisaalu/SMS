@@ -37,22 +37,18 @@ class DatabaseTest extends TestCase
     
     public function testCanInsertAndRetrieveData()
     {
-        // Create a test table
         $this->db->execute("CREATE TABLE IF NOT EXISTS test_table (
             id INT AUTO_INCREMENT PRIMARY KEY,
             name VARCHAR(100)
         )");
         
-        // Insert
         $id = $this->db->insert('test_table', ['name' => 'Test Name']);
         $this->assertIsInt($id);
         $this->assertGreaterThan(0, $id);
         
-        // Retrieve
         $result = $this->db->fetch("SELECT * FROM test_table WHERE id = ?", [$id]);
         $this->assertEquals('Test Name', $result['name']);
         
-        // Clean up
         $this->db->execute("DROP TABLE test_table");
     }
     
@@ -68,7 +64,6 @@ class DatabaseTest extends TestCase
         $this->db->insert('test_transaction', ['value' => 'test']);
         $this->db->rollback();
         
-        // Verify rollback worked
         $result = $this->db->fetch("SELECT COUNT(*) as count FROM test_transaction");
         $this->assertEquals(0, $result['count']);
         
