@@ -37,10 +37,6 @@ $logoUrl        = $resolveDiskPath($customLogo)    ? $resolveUrl($customLogo)   
 $rawSchoolName  = $schoolName ?? 'NexaT School';
 $userName       = htmlspecialchars($user->first_name ?? 'User', ENT_QUOTES, 'UTF-8');
 
-$words   = explode(' ', trim($rawSchoolName));
-$mid     = ceil(count($words) / 2);
-$partOne = htmlspecialchars(implode(' ', array_slice($words, 0, $mid)), ENT_QUOTES, 'UTF-8');
-$partTwo = htmlspecialchars(implode(' ', array_slice($words, $mid)), ENT_QUOTES, 'UTF-8');
 $schoolFull = htmlspecialchars($rawSchoolName, ENT_QUOTES, 'UTF-8');
 
 $initial     = strtoupper(substr($user->first_name ?? '', 0, 1));
@@ -83,7 +79,10 @@ $pendingToasts = Toast::pull();
     <style>
         <?= $cssVariables ?>
 
-        :root { color-scheme: light; }
+        :root {
+            color-scheme: light;
+            --navbar-height: 65px;
+        }
         [data-theme="dark"] { color-scheme: dark; }
 
         *, *::before, *::after { box-sizing: border-box; }
@@ -111,12 +110,30 @@ $pendingToasts = Toast::pull();
 
         .navbar-custom {
             background: var(--navbar-bg);
-            min-height: 65px;
-            padding: 0.5rem 1rem;
+            padding: 0.55rem 1rem;
             border-bottom: 1px solid var(--border-color);
             position: sticky;
             top: 0;
             z-index: 1030;
+        }
+
+        .navbar-custom .container-fluid {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.6rem;
+            padding-left: 0;
+            padding-right: 0;
+            flex-wrap: nowrap;
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 0;              
+            flex: 1 1 0;               
+            align-self: center;
         }
 
         .navbar-brand {
@@ -125,6 +142,44 @@ $pendingToasts = Toast::pull();
             font-size: 0.95rem;
             letter-spacing: -0.2px;
             line-height: 1.15;
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            min-width: 0;
+            flex: 1 1 auto;
+            text-decoration: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar-brand .brand-text {
+            min-width: 0;
+            max-width: 100%;
+            flex: 1 1 auto;
+        }
+
+        .navbar-brand .brand-text span {
+            display: block;
+            white-space: normal;
+            overflow-wrap: break-word;
+            word-break: normal;
+            hyphens: none;
+            line-height: 1.15;
+        }
+
+        .navbar-brand .brand-logo {
+            height: 36px;
+            width: auto;
+            max-width: 60px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+
+        .navbar-brand .brand-icon {
+            flex-shrink: 0;
+            font-size: 1.35rem;
+            color: var(--accent-color);
+            line-height: 1;
         }
 
         .navbar-custom a,
@@ -132,6 +187,32 @@ $pendingToasts = Toast::pull();
         .navbar-custom .text-secondary,
         .navbar-custom .text-dark {
             color: var(--navbar-text) !important;
+        }
+
+        .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 0 0 auto;
+            flex-shrink: 0;
+            flex-wrap: nowrap;
+            align-self: center;
+        }
+
+        .nav-toggle-btn {
+            background: transparent;
+            border: none;
+            padding: 0.25rem;
+            color: var(--navbar-text);
+            font-size: 1.25rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+        .nav-toggle-btn:hover {
+            background: var(--border-color);
         }
 
         .theme-toggle {
@@ -147,6 +228,7 @@ $pendingToasts = Toast::pull();
             cursor: pointer;
             transition: all 0.15s ease;
             padding: 0;
+            flex-shrink: 0;
         }
         .theme-toggle:hover {
             background: var(--border-color);
@@ -158,10 +240,40 @@ $pendingToasts = Toast::pull();
             outline-offset: 2px;
         }
 
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            text-decoration: none;
+            color: var(--navbar-text) !important;
+            min-width: 0;
+        }
+        .user-chip .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.8rem;
+            background: var(--accent-color);
+            flex-shrink: 0;
+        }
+        .user-chip .user-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         .desktop-sidebar {
             width: var(--sidebar-width);
             position: fixed;
-            top: 65px;
+            top: var(--navbar-height);
             bottom: 0;
             left: 0;
             background: var(--sidebar-bg);
@@ -261,7 +373,7 @@ $pendingToasts = Toast::pull();
         .main-wrapper {
             margin-left: var(--sidebar-width);
             padding: 1.5rem 2rem;
-            min-height: calc(100vh - 65px);
+            min-height: calc(100vh - var(--navbar-height));
             transition: margin-left 0.3s ease;
         }
 
@@ -501,6 +613,25 @@ $pendingToasts = Toast::pull();
             color: var(--text-muted);
             margin-top: 0.2rem;
         }
+
+        @media (max-width: 767.98px) {
+            .navbar-custom { padding: 0.5rem 0.75rem; }
+            .navbar-brand { font-size: 0.85rem; }
+            .navbar-brand .brand-logo { height: 30px; max-width: 50px; }
+            .navbar-brand .brand-icon { font-size: 1.15rem; }
+            .navbar-actions { gap: 0.55rem; }
+            .theme-toggle { width: 32px; height: 32px; }
+            .user-chip .avatar { width: 28px; height: 28px; font-size: 0.72rem; }
+        }
+
+        @media (max-width: 575.98px) {
+            .navbar-custom { padding: 0.45rem 0.6rem; }
+            .navbar-brand { font-size: 0.8rem; gap: 0.45rem; }
+            .navbar-brand .brand-logo { height: 26px; max-width: 42px; }
+            .user-chip .user-name { display: none; }
+            .navbar-actions { gap: 0.45rem; }
+            .notif-menu { width: 92vw !important; max-width: 92vw !important; }
+        }
     </style>
 </head>
 <body>
@@ -516,35 +647,32 @@ $pendingToasts = Toast::pull();
         include __DIR__ . '/../partials/toasts.php';
     ?>
 
-    <nav class="navbar navbar-custom">
-        <div class="container-fluid px-2 d-flex align-items-center justify-content-between">
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-link p-1 d-lg-none border-0 shadow-none"
+    <nav class="navbar navbar-custom" id="mainNavbar">
+        <div class="container-fluid">
+
+            <div class="navbar-left">
+                <button class="nav-toggle-btn d-lg-none"
                         type="button"
                         data-bs-toggle="offcanvas"
                         data-bs-target="#mobileSidebar"
                         aria-controls="mobileSidebar"
-                        aria-label="Toggle navigation"
-                        style="color: var(--navbar-text);">
-                    <i class="fas fa-bars fs-5"></i>
+                        aria-label="Toggle navigation">
+                    <i class="fas fa-bars"></i>
                 </button>
 
-                <a class="navbar-brand d-flex align-items-center gap-2" href="<?= BASE_URL . '/dashboard' ?>">
+                <a class="navbar-brand" href="<?= BASE_URL . '/dashboard' ?>">
                     <?php if ($logoUrl): ?>
-                        <img src="<?= $logoUrl ?>" alt="Logo" style="height: 36px; width: auto; object-fit: contain;">
+                        <img class="brand-logo" src="<?= $logoUrl ?>" alt="Logo">
                     <?php else: ?>
-                        <i class="fas fa-graduation-cap fs-5" style="color: var(--accent-color);"></i>
+                        <i class="fas fa-graduation-cap brand-icon"></i>
                     <?php endif; ?>
-                    <span>
-                        <?= $partOne ?>
-                        <?php if (!empty($partTwo)): ?>
-                            <span class="d-block d-sm-inline"><?= $partTwo ?></span>
-                        <?php endif; ?>
+                    <span class="brand-text">
+                        <span><?= $schoolFull ?></span>
                     </span>
                 </a>
             </div>
 
-            <div class="d-flex align-items-center gap-3">
+            <div class="navbar-actions">
                 <button type="button"
                         class="theme-toggle"
                         id="themeToggle"
@@ -602,13 +730,9 @@ $pendingToasts = Toast::pull();
                 </div>
 
                 <div class="dropdown">
-                    <a class="d-flex align-items-center gap-2 text-decoration-none dropdown-toggle"
-                       href="#" data-bs-toggle="dropdown" aria-expanded="false">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
-                             style="width: 32px; height: 32px; font-size: 0.8rem; background: var(--accent-color);">
-                            <?= $userInitial ?>
-                        </div>
-                        <span class="d-none d-sm-inline fw-medium" style="font-size: 0.85rem;"><?= $userName ?></span>
+                    <a class="user-chip dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="avatar"><?= $userInitial ?></div>
+                        <span class="user-name d-none d-sm-inline"><?= $userName ?></span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                         <li><a class="dropdown-item" href="#"><i class="fas fa-user-circle me-2 text-muted"></i>My Profile</a></li>
@@ -649,6 +773,20 @@ $pendingToasts = Toast::pull();
 
     <script>
         (function () {
+            const navbar = document.getElementById('mainNavbar');
+            if (navbar) {
+                const syncHeight = () => {
+                    const h = navbar.getBoundingClientRect().height;
+                    document.documentElement.style.setProperty('--navbar-height', h + 'px');
+                };
+                syncHeight();
+                window.addEventListener('resize', syncHeight);
+                window.addEventListener('orientationchange', syncHeight);
+                if ('ResizeObserver' in window) {
+                    new ResizeObserver(syncHeight).observe(navbar);
+                }
+            }
+
             const sidebar   = document.getElementById('desktopSidebar');
             const scrollKey = 'sidebarScrollTop';
 
