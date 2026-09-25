@@ -6,6 +6,8 @@ node_modules/
 .DS_Store
 tests/
 Dockerfile*
-composer.lock
 README.md
 LICENSE
+
+!composer.json
+!composer.lock
