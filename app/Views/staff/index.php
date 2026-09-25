@@ -3,12 +3,12 @@
 $hasFilters = !empty($filters);
 ?>
 <div class="container-fluid px-0">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
             <h4 class="mb-0">Staff Directory</h4>
             <small class="text-muted">Manage school staff members</small>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
             <a href="<?= BASE_URL ?>/staff/categories" class="btn btn-sm btn-secondary">
                 <i class="fas fa-tags me-1"></i> Categories
             </a>
@@ -20,20 +20,6 @@ $hasFilters = !empty($filters);
             </a>
         </div>
     </div>
-
-    <?php if ($flash = $this->getFlash('success')): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <?= htmlspecialchars($flash) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
-    <?php if ($flash = $this->getFlash('error')): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <?= htmlspecialchars($flash) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
 
     <div class="card mb-3">
         <div class="card-body">

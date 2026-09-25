@@ -13,12 +13,12 @@ $initials = strtoupper(substr($staff['first_name'] ?? '', 0, 1) . substr($staff[
 $isActive = !empty($staff['is_active_status']);
 ?>
 <div class="container-fluid px-0">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
             <h4 class="mb-0">Staff Profile</h4>
             <small class="text-muted">View and manage staff member details</small>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
             <a href="<?= BASE_URL ?>/staff/edit?id=<?= (int)$staff['id'] ?>" class="btn btn-sm btn-secondary">
                 <i class="fas fa-edit me-1"></i> Edit Profile
             </a>
@@ -27,20 +27,6 @@ $isActive = !empty($staff['is_active_status']);
             </a>
         </div>
     </div>
-
-    <?php if ($flash = $this->getFlash('success')): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <?= htmlspecialchars($flash) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
-    <?php if ($flash = $this->getFlash('error')): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <?= htmlspecialchars($flash) ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
 
     <div class="row g-3">
 

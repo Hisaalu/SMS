@@ -32,15 +32,37 @@ $resolveUrl = static function (string $relativePath) use ($resolveDiskPath): str
     return rtrim(BASE_URL, '/') . '/' . $clean;
 };
 
-$faviconUrl     = $resolveDiskPath($customFavicon) ? $resolveUrl($customFavicon) : null;
-$logoUrl        = $resolveDiskPath($customLogo)    ? $resolveUrl($customLogo)    : null;
-$rawSchoolName  = $schoolName ?? 'NexaT School';
-$userName       = htmlspecialchars($user->first_name ?? 'User', ENT_QUOTES, 'UTF-8');
+$faviconUrl = $resolveDiskPath($customFavicon) ? $resolveUrl($customFavicon) : null;
+$logoUrl    = $resolveDiskPath($customLogo)    ? $resolveUrl($customLogo)    : null;
 
-$schoolFull = htmlspecialchars($rawSchoolName, ENT_QUOTES, 'UTF-8');
+$faviconUrl = $faviconUrl ? htmlspecialchars($faviconUrl, ENT_QUOTES, 'UTF-8') : null;
+$logoUrl    = $logoUrl    ? htmlspecialchars($logoUrl,    ENT_QUOTES, 'UTF-8') : null;
+
+$rawSchoolName = $schoolName ?? 'NexaT School';
+$schoolFull    = htmlspecialchars($rawSchoolName, ENT_QUOTES, 'UTF-8');
+$userName      = htmlspecialchars($user->first_name ?? 'User', ENT_QUOTES, 'UTF-8');
 
 $initial     = strtoupper(substr($user->first_name ?? '', 0, 1));
 $userInitial = $initial !== '' ? $initial : 'U';
+
+$pageTitle = isset($pageTitle) && $pageTitle !== ''
+    ? htmlspecialchars((string) $pageTitle, ENT_QUOTES, 'UTF-8')
+    : 'Dashboard';
+
+$csrfToken = '';
+if (function_exists('csrf_token')) {
+    $csrfToken = (string) csrf_token();
+} elseif (!empty($_SESSION['csrf_token'])) {
+    $csrfToken = (string) $_SESSION['csrf_token'];
+} else {
+    try {
+        $csrfToken = bin2hex(random_bytes(32));
+        $_SESSION['csrf_token'] = $csrfToken;
+    } catch (\Throwable $e) {
+        $csrfToken = '';
+    }
+}
+$csrfToken = htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8');
 
 $pendingToasts = Toast::pull();
 ?>
@@ -49,7 +71,8 @@ $pendingToasts = Toast::pull();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $schoolFull ?> - Dashboard</title>
+    <meta name="csrf-token" content="<?= $csrfToken ?>">
+    <title><?= $schoolFull ?> - <?= $pageTitle ?></title>
 
     <script>
         (function () {
@@ -64,12 +87,12 @@ $pendingToasts = Toast::pull();
     </script>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
 
     <?php if ($googleFonts): ?>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="<?= htmlspecialchars($googleFonts) ?>" rel="stylesheet">
+        <link href="<?= htmlspecialchars($googleFonts, ENT_QUOTES, 'UTF-8') ?>" rel="stylesheet">
     <?php endif; ?>
 
     <?php if ($faviconUrl): ?>
@@ -131,8 +154,8 @@ $pendingToasts = Toast::pull();
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            min-width: 0;              
-            flex: 1 1 0;               
+            min-width: 0;
+            flex: 1 1 0;
             align-self: center;
         }
 
@@ -211,8 +234,10 @@ $pendingToasts = Toast::pull();
             border-radius: 8px;
             flex-shrink: 0;
         }
-        .nav-toggle-btn:hover {
-            background: var(--border-color);
+        .nav-toggle-btn:hover { background: var(--border-color); }
+        .nav-toggle-btn:focus-visible {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
         }
 
         .theme-toggle {
@@ -325,12 +350,10 @@ $pendingToasts = Toast::pull();
             font-size: 0.85rem;
             color: var(--text-muted);
         }
-
         .sidebar-menu-wrapper .sub-link:hover {
             color: var(--accent-color);
             background: rgba(var(--accent-rgb), 0.04);
         }
-
         .sidebar-menu-wrapper .sub-link.active {
             background: rgba(var(--accent-rgb), 0.1);
             color: var(--accent-color) !important;
@@ -364,7 +387,6 @@ $pendingToasts = Toast::pull();
         [aria-expanded="true"] .chevron-icon { transform: rotate(90deg); }
 
         .sidebar-dropdown-toggle { color: var(--sidebar-text); }
-
         .sidebar-dropdown-toggle.active-group {
             font-weight: var(--font-weight-bold);
             color: var(--accent-color);
@@ -399,7 +421,6 @@ $pendingToasts = Toast::pull();
             margin-bottom: 1.25rem;
             transition: box-shadow 0.2s ease, transform 0.2s ease;
         }
-
         .card:hover {
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06);
         }
@@ -411,10 +432,7 @@ $pendingToasts = Toast::pull();
             padding: 1rem 1.25rem;
             font-weight: 600;
         }
-
-        .card-body {
-            padding: 1.25rem;
-        }
+        .card-body { padding: 1.25rem; }
 
         .bg-white,
         .bg-light,
@@ -444,9 +462,7 @@ $pendingToasts = Toast::pull();
 
         .form-label,
         .form-check-label,
-        label {
-            color: var(--text-color);
-        }
+        label { color: var(--text-color); }
 
         .form-control,
         .form-select,
@@ -540,18 +556,15 @@ $pendingToasts = Toast::pull();
             background-color: var(--surface-color);
             border-color: var(--border-color);
         }
-
         .dropdown-item {
             color: var(--text-color);
             transition: background-color 0.15s ease, color 0.15s ease;
         }
-
         .dropdown-item:hover,
         .dropdown-item:focus {
             background-color: var(--border-color);
             color: var(--text-color);
         }
-
         .dropdown-item.active,
         .dropdown-item:active {
             background-color: var(--accent-color);
@@ -632,6 +645,209 @@ $pendingToasts = Toast::pull();
             .navbar-actions { gap: 0.45rem; }
             .notif-menu { width: 92vw !important; max-width: 92vw !important; }
         }
+
+        .badge.bg-primary-subtle {
+            background: #DBEAFE !important;
+            color: #1E40AF !important;
+        }
+        .badge.bg-success-subtle {
+            background: #D1FAE5 !important;
+            color: #065F46 !important;
+        }
+        .badge.bg-warning-subtle {
+            background: #FEF3C7 !important;
+            color: #92400E !important;
+        }
+        .badge.bg-danger-subtle {
+            background: #FEE2E2 !important;
+            color: #991B1B !important;
+        }
+        .badge.bg-info-subtle {
+            background: #CFFAFE !important;
+            color: #075985 !important;
+        }
+        .badge.bg-secondary-subtle {
+            background: #E2E8F0 !important;
+            color: #334155 !important;
+        }
+        .badge.bg-light {
+            background: #F1F5F9 !important;
+            color: #334155 !important;
+        }
+
+        .badge.bg-success {
+            background: #16A34A !important;
+            color: #FFFFFF !important;
+        }
+        .badge.bg-warning {
+            background: #F59E0B !important;
+            color: #422006 !important;
+        }
+        .badge.bg-danger {
+            background: #DC2626 !important;
+            color: #FFFFFF !important;
+        }
+        .badge.bg-info {
+            background: #0EA5E9 !important;
+            color: #FFFFFF !important;
+        }
+        .badge.bg-secondary {
+            background: #64748B !important;
+            color: #FFFFFF !important;
+        }
+        .badge.bg-primary {
+            background: var(--accent-color) !important;
+            color: #FFFFFF !important;
+        }
+
+        .alert-success {
+            background: #ECFDF5 !important;
+            border-color: #A7F3D0 !important;
+            color: #065F46 !important;
+        }
+        .alert-danger {
+            background: #FEF2F2 !important;
+            border-color: #FECACA !important;
+            color: #991B1B !important;
+        }
+        .alert-warning {
+            background: #FFFBEB !important;
+            border-color: #FDE68A !important;
+            color: #92400E !important;
+        }
+        .alert-info {
+            background: #EFF6FF !important;
+            border-color: #BFDBFE !important;
+            color: #1E40AF !important;
+        }
+        .alert-light {
+            background: #F8FAFC !important;
+            border-color: #E2E8F0 !important;
+            color: #334155 !important;
+        }
+
+        [data-theme="dark"] .alert {
+            border-width: 1px;
+            border-style: solid;
+        }
+        [data-theme="dark"] .alert-light {
+            background: rgba(148, 163, 184, 0.10) !important;
+            border-color: rgba(148, 163, 184, 0.22) !important;
+            color: #E2E8F0 !important;
+        }
+        [data-theme="dark"] .alert-success {
+            background: rgba(16, 185, 129, 0.12) !important;
+            border-color: rgba(16, 185, 129, 0.32) !important;
+            color: #6EE7B7 !important;
+        }
+        [data-theme="dark"] .alert-danger {
+            background: rgba(239, 68, 68, 0.12) !important;
+            border-color: rgba(239, 68, 68, 0.32) !important;
+            color: #FCA5A5 !important;
+        }
+        [data-theme="dark"] .alert-warning {
+            background: rgba(245, 158, 11, 0.14) !important;
+            border-color: rgba(245, 158, 11, 0.34) !important;
+            color: #FCD34D !important;
+        }
+        [data-theme="dark"] .alert-info {
+            background: rgba(59, 130, 246, 0.14) !important;
+            border-color: rgba(59, 130, 246, 0.34) !important;
+            color: #93C5FD !important;
+        }
+
+        [data-theme="dark"] .badge.bg-primary-subtle {
+            background: rgba(59, 130, 246, 0.20) !important;
+            color: #BFDBFE !important;
+        }
+        [data-theme="dark"] .badge.bg-success-subtle {
+            background: rgba(16, 185, 129, 0.20) !important;
+            color: #A7F3D0 !important;
+        }
+        [data-theme="dark"] .badge.bg-warning-subtle {
+            background: rgba(245, 158, 11, 0.22) !important;
+            color: #FDE68A !important;
+        }
+        [data-theme="dark"] .badge.bg-danger-subtle {
+            background: rgba(239, 68, 68, 0.20) !important;
+            color: #FECACA !important;
+        }
+        [data-theme="dark"] .badge.bg-info-subtle {
+            background: rgba(56, 189, 248, 0.22) !important;
+            color: #BAE6FD !important;
+        }
+        [data-theme="dark"] .badge.bg-secondary-subtle {
+            background: rgba(148, 163, 184, 0.16) !important;
+            color: #CBD5E1 !important;
+        }
+        [data-theme="dark"] .badge.bg-light {
+            background: rgba(148, 163, 184, 0.16) !important;
+            color: #E2E8F0 !important;
+        }
+
+        [data-theme="dark"] .badge.bg-success {
+            background: #059669 !important;
+            color: #ECFDF5 !important;
+        }
+        [data-theme="dark"] .badge.bg-warning {
+            background: #D97706 !important;
+            color: #FFF7ED !important;
+        }
+        [data-theme="dark"] .badge.bg-danger {
+            background: #DC2626 !important;
+            color: #FEF2F2 !important;
+        }
+        [data-theme="dark"] .badge.bg-info {
+            background: #0284C7 !important;
+            color: #F0F9FF !important;
+        }
+        [data-theme="dark"] .badge.bg-primary {
+            background: var(--accent-color) !important;
+            color: #FFFFFF !important;
+        }
+        [data-theme="dark"] .badge.bg-secondary {
+            background: #475569 !important;
+            color: #F1F5F9 !important;
+        }
+
+        [data-theme="dark"] .table-borderless > :not(caption) > * > * {
+            border-color: transparent;
+        }
+        [data-theme="dark"] .table > :not(caption) > * > * {
+            background-color: transparent;
+            border-color: var(--border-color);
+        }
+        [data-theme="dark"] .table-hover > tbody > tr:hover > * {
+            background-color: rgba(var(--accent-rgb), 0.08);
+            color: var(--text-color);
+        }
+
+        [data-theme="dark"] .text-success { color: #6EE7B7 !important; }
+        [data-theme="dark"] .text-danger  { color: #FCA5A5 !important; }
+        [data-theme="dark"] .text-warning { color: #FCD34D !important; }
+        [data-theme="dark"] .text-info    { color: #93C5FD !important; }
+
+        [data-theme="dark"] .table-sm > :not(caption) > * > * {
+            padding: 0.4rem 0.5rem;
+        }
+
+        [data-theme="dark"] code {
+            background: rgba(148, 163, 184, 0.12);
+            color: #FBCFE8;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        [data-theme="dark"] hr {
+            border-color: var(--border-color);
+            opacity: 0.5;
+        }
+
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select {
+            color-scheme: dark;
+        }
     </style>
 </head>
 <body>
@@ -656,15 +872,16 @@ $pendingToasts = Toast::pull();
                         data-bs-toggle="offcanvas"
                         data-bs-target="#mobileSidebar"
                         aria-controls="mobileSidebar"
+                        aria-expanded="false"
                         aria-label="Toggle navigation">
-                    <i class="fas fa-bars"></i>
+                    <i class="fas fa-bars" aria-hidden="true"></i>
                 </button>
 
                 <a class="navbar-brand" href="<?= BASE_URL . '/dashboard' ?>">
                     <?php if ($logoUrl): ?>
-                        <img class="brand-logo" src="<?= $logoUrl ?>" alt="Logo">
+                        <img class="brand-logo" src="<?= $logoUrl ?>" alt="<?= $schoolFull ?>">
                     <?php else: ?>
-                        <i class="fas fa-graduation-cap brand-icon"></i>
+                        <i class="fas fa-graduation-cap brand-icon" aria-hidden="true"></i>
                     <?php endif; ?>
                     <span class="brand-text">
                         <span><?= $schoolFull ?></span>
@@ -678,7 +895,7 @@ $pendingToasts = Toast::pull();
                         id="themeToggle"
                         aria-label="Toggle theme"
                         title="Theme: System">
-                    <i class="fas fa-circle-half-stroke" id="themeToggleIcon"></i>
+                    <i class="fas fa-circle-half-stroke" id="themeToggleIcon" aria-hidden="true"></i>
                 </button>
 
                 <div class="dropdown">
@@ -690,7 +907,7 @@ $pendingToasts = Toast::pull();
                     aria-expanded="false"
                     aria-label="Notifications"
                     style="color: var(--navbar-text);">
-                        <i class="fas fa-bell fs-6"></i>
+                        <i class="fas fa-bell fs-6" aria-hidden="true"></i>
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill d-none"
                             id="notifBadge"
                             style="font-size: 0.55rem; background-color: var(--accent-color); color: #fff;">0</span>
@@ -714,7 +931,7 @@ $pendingToasts = Toast::pull();
 
                         <div id="notifList" style="max-height: 380px; overflow-y: auto;">
                             <div class="text-center py-4 small" style="color: var(--text-muted);">
-                                <i class="fas fa-spinner fa-spin me-2"></i>Loading…
+                                <i class="fas fa-spinner fa-spin me-2" aria-hidden="true"></i>Loading…
                             </div>
                         </div>
 
@@ -730,15 +947,15 @@ $pendingToasts = Toast::pull();
                 </div>
 
                 <div class="dropdown">
-                    <a class="user-chip dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                    <a class="user-chip dropdown-toggle-no-caret" href="#" data-bs-toggle="dropdown" aria-expanded="false">
                         <div class="avatar"><?= $userInitial ?></div>
                         <span class="user-name d-none d-sm-inline"><?= $userName ?></span>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-user-circle me-2 text-muted"></i>My Profile</a></li>
-                        <li><a class="dropdown-item" href="<?= BASE_URL . '/settings' ?>"><i class="fas fa-cog me-2 text-muted"></i>Settings</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-user-circle me-2 text-muted" aria-hidden="true"></i>My Profile</a></li>
+                        <li><a class="dropdown-item" href="<?= BASE_URL . '/settings' ?>"><i class="fas fa-cog me-2 text-muted" aria-hidden="true"></i>Settings</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-danger" href="<?= BASE_URL . '/logout' ?>"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        <li><a class="dropdown-item text-danger" href="<?= BASE_URL . '/logout' ?>"><i class="fas fa-sign-out-alt me-2" aria-hidden="true"></i>Logout</a></li>
                     </ul>
                 </div>
             </div>
@@ -753,12 +970,13 @@ $pendingToasts = Toast::pull();
         <div class="offcanvas-header border-bottom">
             <h5 class="offcanvas-title fw-bold d-flex align-items-center gap-2" id="mobileSidebarLabel">
                 <?php if ($logoUrl): ?>
-                    <img src="<?= $logoUrl ?>" alt="Logo" style="height: 24px; width: auto; object-fit: contain;">
+                    <img src="<?= $logoUrl ?>" alt="<?= $schoolFull ?>" style="height: 24px; width: auto; object-fit: contain;">
                 <?php else: ?>
-                    <i class="fas fa-graduation-cap fs-5" style="color: var(--accent-color);"></i>
+                    <i class="fas fa-graduation-cap fs-5" style="color: var(--accent-color);" aria-hidden="true"></i>
                 <?php endif; ?>
                 <span><?= $schoolFull ?></span>
             </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body p-0">
             <?php include __DIR__ . '/_sidebar_menu.php'; ?>
@@ -769,220 +987,278 @@ $pendingToasts = Toast::pull();
         <?= $content ?>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        (function () {
-            const navbar = document.getElementById('mainNavbar');
-            if (navbar) {
+        document.addEventListener('DOMContentLoaded', function () {
+
+            (function () {
+                const navbar = document.getElementById('mainNavbar');
+                if (!navbar) return;
+
+                let raf = 0;
                 const syncHeight = () => {
-                    const h = navbar.getBoundingClientRect().height;
-                    document.documentElement.style.setProperty('--navbar-height', h + 'px');
+                    if (raf) return;
+                    raf = requestAnimationFrame(() => {
+                        raf = 0;
+                        const h = navbar.getBoundingClientRect().height;
+                        document.documentElement.style.setProperty('--navbar-height', h + 'px');
+                    });
                 };
+
                 syncHeight();
                 window.addEventListener('resize', syncHeight);
                 window.addEventListener('orientationchange', syncHeight);
+
                 if ('ResizeObserver' in window) {
                     new ResizeObserver(syncHeight).observe(navbar);
                 }
-            }
+            })();
 
-            const sidebar   = document.getElementById('desktopSidebar');
-            const scrollKey = 'sidebarScrollTop';
+            (function () {
+                const sidebar   = document.getElementById('desktopSidebar');
+                const scrollKey = 'sidebarScrollTop';
 
-            if (sidebar) {
-                const saved = sessionStorage.getItem(scrollKey);
-                if (saved !== null) {
-                    sidebar.scrollTop = parseInt(saved, 10);
-                }
+                if (sidebar) {
+                    const saved = sessionStorage.getItem(scrollKey);
+                    if (saved !== null) {
+                        sidebar.scrollTop = parseInt(saved, 10) || 0;
+                    }
 
-                sidebar.querySelectorAll('.page-navigation').forEach(function (link) {
-                    link.addEventListener('click', function () {
-                        sessionStorage.setItem(scrollKey, sidebar.scrollTop);
+                    sidebar.querySelectorAll('.page-navigation').forEach(function (link) {
+                        link.addEventListener('click', function () {
+                            sessionStorage.setItem(scrollKey, sidebar.scrollTop);
+                        });
                     });
-                });
-            }
+                }
 
-            const mobileSidebar = document.getElementById('mobileSidebar');
-            if (mobileSidebar) {
-                const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(mobileSidebar);
-                mobileSidebar.querySelectorAll('.page-navigation').forEach(function (link) {
-                    link.addEventListener('click', function () {
-                        bsOffcanvas.hide();
+                const mobileSidebar = document.getElementById('mobileSidebar');
+                const toggleBtn     = document.querySelector('[data-bs-target="#mobileSidebar"]');
+
+                if (mobileSidebar && window.bootstrap) {
+                    const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(mobileSidebar);
+
+                    mobileSidebar.querySelectorAll('.page-navigation').forEach(function (link) {
+                        link.addEventListener('click', function () {
+                            bsOffcanvas.hide();
+                        });
                     });
+
+                    if (toggleBtn) {
+                        mobileSidebar.addEventListener('shown.bs.offcanvas', () => {
+                            toggleBtn.setAttribute('aria-expanded', 'true');
+                        });
+                        mobileSidebar.addEventListener('hidden.bs.offcanvas', () => {
+                            toggleBtn.setAttribute('aria-expanded', 'false');
+                        });
+                    }
+                }
+            })();
+
+            (function () {
+                const STORAGE_KEY = 'theme-mode';
+                const ORDER       = ['system', 'light', 'dark'];
+                const ICONS       = {
+                    system: 'fa-circle-half-stroke',
+                    light:  'fa-sun',
+                    dark:   'fa-moon',
+                };
+                const LABELS = {
+                    system: 'Theme: System',
+                    light:  'Theme: Light',
+                    dark:   'Theme: Dark',
+                };
+
+                const button = document.getElementById('themeToggle');
+                const icon   = document.getElementById('themeToggleIcon');
+                if (!button || !icon) return;
+
+                const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+                function getStoredMode() {
+                    try {
+                        const raw = localStorage.getItem(STORAGE_KEY) || 'system';
+                        return ORDER.includes(raw) ? raw : 'system';
+                    } catch (e) {
+                        return 'system';
+                    }
+                }
+
+                function applyMode(mode) {
+                    const resolved = mode === 'system'
+                        ? (mediaQuery.matches ? 'dark' : 'light')
+                        : mode;
+
+                    document.documentElement.setAttribute('data-theme', resolved);
+                    document.documentElement.setAttribute('data-theme-mode', mode);
+
+                    icon.className = 'fas ' + ICONS[mode];
+                    button.title = LABELS[mode];
+                    button.setAttribute('aria-label', LABELS[mode]);
+                }
+
+                function setMode(mode) {
+                    try { localStorage.setItem(STORAGE_KEY, mode); } catch (e) {}
+                    applyMode(mode);
+                }
+
+                applyMode(getStoredMode());
+
+                button.addEventListener('click', function () {
+                    const current = getStoredMode();
+                    const next = ORDER[(ORDER.indexOf(current) + 1) % ORDER.length];
+                    setMode(next);
                 });
-            }
-        })();
 
-        (function () {
-            const STORAGE_KEY = 'theme-mode';
-            const ORDER       = ['system', 'light', 'dark'];
-            const ICONS       = {
-                system: 'fa-circle-half-stroke',
-                light:  'fa-sun',
-                dark:   'fa-moon',
-            };
-            const LABELS = {
-                system: 'Theme: System',
-                light:  'Theme: Light',
-                dark:   'Theme: Dark',
-            };
+                mediaQuery.addEventListener('change', function () {
+                    if (getStoredMode() === 'system') {
+                        applyMode('system');
+                    }
+                });
+            })();
 
-            const button = document.getElementById('themeToggle');
-            const icon   = document.getElementById('themeToggleIcon');
-            if (!button || !icon) return;
+            (function () {
+                const bell   = document.getElementById('notifBell');
+                const badge  = document.getElementById('notifBadge');
+                const list   = document.getElementById('notifList');
+                const markAll= document.getElementById('notifMarkAll');
+                if (!bell || !badge || !list) return;
 
-            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                const FEED_URL  = '<?= BASE_URL ?>/api/notifications/feed';
+                const READ_URL  = '<?= BASE_URL ?>/notifications/mark-read';
+                const ALL_URL   = '<?= BASE_URL ?>/notifications/mark-all-read';
 
-            function getStoredMode() {
-                try {
-                    const raw = localStorage.getItem(STORAGE_KEY) || 'system';
-                    return ORDER.includes(raw) ? raw : 'system';
-                } catch (e) {
-                    return 'system';
-                }
-            }
+                const CSRF_TOKEN = (function () {
+                    const meta = document.querySelector('meta[name="csrf-token"]');
+                    return meta ? meta.getAttribute('content') : '';
+                })();
 
-            function applyMode(mode) {
-                const resolved = mode === 'system'
-                    ? (mediaQuery.matches ? 'dark' : 'light')
-                    : mode;
+                const POLL_INTERVAL = 45000;
+                let pollId = null;
 
-                document.documentElement.setAttribute('data-theme', resolved);
-                document.documentElement.setAttribute('data-theme-mode', mode);
+                const typeColor = (type) => ({
+                    'success': 'var(--success-color)',
+                    'warning': 'var(--warning-color)',
+                    'danger':  'var(--danger-color)',
+                    'message': 'var(--accent-color)',
+                    'system':  'var(--secondary-color, #6f42c1)',
+                }[type] || 'var(--accent-color)');
 
-                icon.className = 'fas ' + ICONS[mode];
-                button.title = LABELS[mode];
-                button.setAttribute('aria-label', LABELS[mode]);
-            }
+                const typeIcon = (item) => item.icon || ({
+                    'success': 'fas fa-check-circle',
+                    'warning': 'fas fa-exclamation-triangle',
+                    'danger':  'fas fa-times-circle',
+                    'message': 'fas fa-comment-dots',
+                    'system':  'fas fa-cog',
+                }[item.type] || 'fas fa-info-circle');
 
-            function setMode(mode) {
-                try { localStorage.setItem(STORAGE_KEY, mode); } catch (e) {}
-                applyMode(mode);
-            }
+                const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({
+                    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+                }[c]));
 
-            applyMode(getStoredMode());
+                function render(items) {
+                    if (!Array.isArray(items) || items.length === 0) {
+                        list.innerHTML = '<div class="text-center py-4 small" style="color: var(--text-muted);">'
+                                       + '<i class="fas fa-bell-slash fa-lg mb-2 d-block opacity-50"></i>'
+                                       + 'You\'re all caught up.</div>';
+                        return;
+                    }
 
-            button.addEventListener('click', function () {
-                const current = getStoredMode();
-                const next = ORDER[(ORDER.indexOf(current) + 1) % ORDER.length];
-                setMode(next);
-            });
+                    list.innerHTML = items.map(item => {
+                        const wrap = item.action_url ? 'a' : 'div';
+                        const href = item.action_url ? ` href="${escapeHtml(item.action_url)}"` : '';
+                        const dataOpen = item.action_url ? ` data-notif-open="${escapeHtml(String(item.id ?? ''))}"` : '';
+                        const cls = 'notif-item' + (item.is_unread ? ' unread' : '');
 
-            mediaQuery.addEventListener('change', function () {
-                if (getStoredMode() === 'system') {
-                    applyMode('system');
-                }
-            });
-        })();
+                        return `<${wrap} class="${cls}"${href}${dataOpen}>
+                            <span class="notif-icon" style="background: ${typeColor(item.type)};">
+                                <i class="${escapeHtml(typeIcon(item))}"></i>
+                            </span>
+                            <span class="flex-grow-1 min-width-0">
+                                <span class="notif-title d-block">${escapeHtml(item.title)}</span>
+                                ${item.message ? `<span class="notif-msg d-block">${escapeHtml(item.message)}</span>` : ''}
+                                <span class="notif-time d-block">${escapeHtml(item.time_ago)}</span>
+                            </span>
+                        </${wrap}>`;
+                    }).join('');
 
-        (function () {
-            const bell   = document.getElementById('notifBell');
-            const badge  = document.getElementById('notifBadge');
-            const list   = document.getElementById('notifList');
-            const markAll= document.getElementById('notifMarkAll');
-            if (!bell || !badge || !list) return;
-
-            const FEED_URL  = '<?= BASE_URL ?>/api/notifications/feed';
-            const READ_URL  = '<?= BASE_URL ?>/notifications/mark-read';
-            const ALL_URL   = '<?= BASE_URL ?>/notifications/mark-all-read';
-
-            const typeColor = (type) => ({
-                'success': 'var(--success-color)',
-                'warning': 'var(--warning-color)',
-                'danger':  'var(--danger-color)',
-                'message': 'var(--accent-color)',
-                'system':  'var(--secondary-color, #6f42c1)',
-            }[type] || 'var(--accent-color)');
-
-            const typeIcon = (item) => item.icon || ({
-                'success': 'fas fa-check-circle',
-                'warning': 'fas fa-exclamation-triangle',
-                'danger':  'fas fa-times-circle',
-                'message': 'fas fa-comment-dots',
-                'system':  'fas fa-cog',
-            }[item.type] || 'fas fa-info-circle');
-
-            const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-            }[c]));
-
-            function render(items) {
-                if (!Array.isArray(items) || items.length === 0) {
-                    list.innerHTML = '<div class="text-center py-4 small" style="color: var(--text-muted);">'
-                                   + '<i class="fas fa-bell-slash fa-lg mb-2 d-block opacity-50"></i>'
-                                   + 'You\'re all caught up.</div>';
-                    return;
+                    list.querySelectorAll('[data-notif-open]').forEach(el => {
+                        el.addEventListener('click', function () {
+                            const id = this.dataset.notifOpen;
+                            const body = 'id=' + encodeURIComponent(id)
+                                       + (CSRF_TOKEN ? '&csrf_token=' + encodeURIComponent(CSRF_TOKEN) : '');
+                            fetch(READ_URL, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                                body: body,
+                                keepalive: true,
+                            }).catch(() => {});
+                        });
+                    });
                 }
 
-                list.innerHTML = items.map(item => {
-                    const wrap = item.action_url ? 'a' : 'div';
-                    const href = item.action_url ? ` href="${escapeHtml(item.action_url)}"` : '';
-                    const dataOpen = item.action_url ? ` data-notif-open="${item.id}"` : '';
-                    const cls = 'notif-item' + (item.is_unread ? ' unread' : '');
+                function refresh() {
+                    fetch(FEED_URL, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(r => r.json())
+                        .then(data => {
+                            const count = parseInt(data.unread || 0, 10);
+                            if (count > 0) {
+                                badge.textContent = count > 99 ? '99+' : count;
+                                badge.classList.remove('d-none');
+                            } else {
+                                badge.classList.add('d-none');
+                            }
+                            render(data.items || []);
+                        })
+                        .catch(() => {
+                            list.innerHTML = '<div class="text-center py-4 small" style="color: var(--text-muted);">'
+                                           + 'Failed to load notifications.</div>';
+                        });
+                }
 
-                    return `<${wrap} class="${cls}"${href}${dataOpen}>
-                        <span class="notif-icon" style="background: ${typeColor(item.type)};">
-                            <i class="${escapeHtml(typeIcon(item))}"></i>
-                        </span>
-                        <span class="flex-grow-1 min-width-0">
-                            <span class="notif-title d-block">${escapeHtml(item.title)}</span>
-                            ${item.message ? `<span class="notif-msg d-block">${escapeHtml(item.message)}</span>` : ''}
-                            <span class="notif-time d-block">${escapeHtml(item.time_ago)}</span>
-                        </span>
-                    </${wrap}>`;
-                }).join('');
+                function startPolling() {
+                    if (pollId !== null) return;
+                    pollId = setInterval(refresh, POLL_INTERVAL);
+                }
 
-                list.querySelectorAll('[data-notif-open]').forEach(el => {
-                    el.addEventListener('click', function () {
-                        const id = this.dataset.notifOpen;
-                        fetch(READ_URL, {
+                function stopPolling() {
+                    if (pollId === null) return;
+                    clearInterval(pollId);
+                    pollId = null;
+                }
+
+                if (markAll) {
+                    markAll.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        fetch(ALL_URL, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/x-www-form-urlencoded',
                                 'X-Requested-With': 'XMLHttpRequest',
                             },
-                            body: 'id=' + encodeURIComponent(id),
-                            keepalive: true,
-                        });
+                            body: CSRF_TOKEN ? 'csrf_token=' + encodeURIComponent(CSRF_TOKEN) : '',
+                        }).then(() => refresh()).catch(() => {});
                     });
+                }
+
+                bell.addEventListener('show.bs.dropdown', refresh);
+                refresh();
+                startPolling();
+
+                document.addEventListener('visibilitychange', function () {
+                    if (document.hidden) {
+                        stopPolling();
+                    } else {
+                        refresh();
+                        startPolling();
+                    }
                 });
-            }
-
-            function refresh() {
-                fetch(FEED_URL, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                    .then(r => r.json())
-                    .then(data => {
-                        const count = parseInt(data.unread || 0, 10);
-                        if (count > 0) {
-                            badge.textContent = count > 99 ? '99+' : count;
-                            badge.classList.remove('d-none');
-                        } else {
-                            badge.classList.add('d-none');
-                        }
-                        render(data.items || []);
-                    })
-                    .catch(() => {
-                        list.innerHTML = '<div class="text-center py-4 small" style="color: var(--text-muted);">'
-                                       + 'Failed to load notifications.</div>';
-                    });
-            }
-
-            if (markAll) {
-                markAll.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    fetch(ALL_URL, {
-                        method: 'POST',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                    }).then(() => refresh());
-                });
-            }
-
-            bell.addEventListener('show.bs.dropdown', refresh);
-            refresh();
-            setInterval(refresh, 45000);
-        })();
+            })();
+        });
     </script>
 </body>
 </html>

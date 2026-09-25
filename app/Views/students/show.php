@@ -70,7 +70,8 @@ $isActive = strtolower($student['status_name'] ?? '') === 'active';
 
                     <div class="d-flex justify-content-center flex-wrap gap-2 mb-3">
                         <?php if (!empty($student['category_name'])): ?>
-                            <span class="badge bg-primary-subtle rounded-pill px-3 py-2">
+                            <span class="badge rounded-pill px-3 py-2"
+                                  style="background: rgba(var(--accent-rgb), 0.15); color: var(--accent-color);">
                                 <?= htmlspecialchars($student['category_name']) ?>
                             </span>
                         <?php endif; ?>
