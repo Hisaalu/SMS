@@ -976,7 +976,6 @@ $pendingToasts = Toast::pull();
                 <?php endif; ?>
                 <span><?= $schoolFull ?></span>
             </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <div class="offcanvas-body p-0">
             <?php include __DIR__ . '/_sidebar_menu.php'; ?>

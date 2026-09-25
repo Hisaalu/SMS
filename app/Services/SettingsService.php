@@ -1,154 +1,252 @@
 <?php
-// File: /app/Services/SettingsService.php
+// File: /app/Controllers/SettingsController.php
 
-namespace NexaT\Services;
+namespace NexaT\Controllers;
 
-use NexaT\Core\Database;
+use NexaT\Core\Controller;
 use Throwable;
 
-class SettingsService
+class SettingsController extends Controller
 {
-    private Database $db;
-    private array $cache = [];
-    private array $categoryIndex = [];
-    private bool $loaded = false;
+    private const SCHOOL_FIELDS = [
+        'name', 'short_name', 'motto', 'slogan', 'description',
+        'type', 'registration_number', 'physical_address',
+        'postal_address', 'po_box', 'telephone', 'email', 'website',
+    ];
 
-    public function __construct()
+    private const ALLOWED_ACCENTS = [
+        '#2563EB', '#EAB308', '#EC4899',
+        '#8B5CF6', '#F97316', '#10B981',
+    ];
+
+    private const FONT_PRESETS = [
+        1 => 0.75,
+        2 => 0.875,
+        3 => 1.0,
+        4 => 1.125,
+        5 => 1.25,
+    ];
+
+    private const BRANDING_FIELDS = [
+        'logo'         => 'branding.logo',
+        'favicon'      => 'branding.favicon',
+        'school_stamp' => 'branding.school_stamp',
+        'report_logo'  => 'branding.report_logo',
+    ];
+
+    private const ALLOWED_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'ico', 'webp'];
+
+    public function index(): void
     {
-        $this->db = Database::getInstance();
-        $this->load();
+        $this->requirePermission('settings.view');
+
+        echo $this->view->renderWithLayout('settings/index', 'default', [
+            'categories' => $this->settingsCategories(),
+        ]);
     }
 
-    public function get(string $key, $default = null)
+    public function school(): void
     {
-        return $this->cache[$key] ?? $default;
+        $this->requirePermission('school.edit');
+
+        $schoolInfo = [];
+        foreach (self::SCHOOL_FIELDS as $field) {
+            $default = $field === 'type' ? 'Secondary' : '';
+            $schoolInfo[$field] = $this->settings->get('school.' . $field, $default);
+        }
+
+        echo $this->view->renderWithLayout('settings/school', 'default', [
+            'school' => $schoolInfo,
+        ]);
     }
 
-    public function set(
-        string $key,
-        $value,
-        string $type = 'string',
-        string $category = 'general',
-        string $description = ''
-    ): bool {
-        $stored = $this->prepareValueForStorage($value);
-        $now = date('Y-m-d H:i:s');
+    public function updateSchool(): void
+    {
+        $this->requirePermission('school.edit');
 
-        $existing = $this->db->fetch(
-            "SELECT id, category FROM settings WHERE setting_key = ? LIMIT 1",
-            [$key]
+        $name      = trim($_POST['name'] ?? '');
+        $email     = trim($_POST['email'] ?? '');
+        $telephone = trim($_POST['telephone'] ?? '');
+
+        if ($name === '' || $email === '' || $telephone === '') {
+            $this->flashError('School Name, Email, and Telephone are required fields.');
+            $this->redirect('/settings/school');
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->flashError('Please provide a valid email address.');
+            $this->redirect('/settings/school');
+        }
+
+        foreach (self::SCHOOL_FIELDS as $field) {
+            $this->settings->set('school.' . $field, trim($_POST[$field] ?? ''), 'string');
+        }
+
+        $postalAddress = trim($_POST['postal_address'] ?? '');
+        $poBox         = trim($_POST['po_box']         ?? '');
+
+        if ($poBox === '' && $postalAddress !== '') {
+            $this->settings->set('school.po_box', $postalAddress, 'string');
+        } elseif ($postalAddress === '' && $poBox !== '') {
+            $this->settings->set('school.postal_address', $poBox, 'string');
+        }
+
+        $this->audit('School Profile Updated', 'settings', 'School profile details updated');
+        $this->flashSuccess('School profile updated successfully.');
+        $this->redirect('/settings/school');
+    }
+
+    public function branding(): void
+    {
+        $this->requirePermission('branding.manage');
+
+        $branding = [
+            'logo'                => $this->settings->get('branding.logo', ''),
+            'favicon'             => $this->settings->get('branding.favicon', ''),
+            'login_logo'          => $this->settings->get('branding.login_logo', ''),
+            'header_logo'         => $this->settings->get('branding.header_logo', ''),
+            'footer_logo'         => $this->settings->get('branding.footer_logo', ''),
+            'report_logo'         => $this->settings->get('branding.report_logo', ''),
+            'school_stamp'        => $this->settings->get('branding.school_stamp', ''),
+            'login_background'    => $this->settings->get('branding.login_background', ''),
+            'show_nexat_branding' => $this->settings->get('branding.show_nexat', true),
+        ];
+
+        echo $this->view->renderWithLayout('settings/branding', 'default', [
+            'branding' => $branding,
+        ]);
+    }
+
+    public function updateBranding(): void
+    {
+        $this->requirePermission('branding.manage');
+
+        $uploadDir = ROOT_PATH . '/public/uploads/branding/';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+            $this->flashError('Unable to create upload directory. Check server permissions.');
+            $this->redirect('/settings/branding');
+        }
+
+        $errors = [];
+
+        foreach (self::BRANDING_FIELDS as $inputName => $settingKey) {
+            try {
+                $this->handleBrandingField($inputName, $settingKey, $uploadDir);
+            } catch (Throwable $e) {
+                $errors[] = $inputName . ': ' . $e->getMessage();
+            }
+        }
+
+        $this->settings->set(
+            'branding.show_nexat',
+            isset($_POST['show_nexat_branding']) ? 'true' : 'false',
+            'boolean'
         );
 
-        try {
-            if ($existing) {
-                $this->db->update('settings', [
-                    'setting_value' => $stored,
-                    'setting_type'  => $type,
-                    'category'      => $category,
-                    'description'   => $description,
-                    'updated_at'    => $now,
-                ], ['setting_key' => $key]);
-
-                if ($existing['category'] !== $category) {
-                    $this->reindexCategory($key, $existing['category'], $category);
-                }
-            } else {
-                $this->db->insert('settings', [
-                    'setting_key'   => $key,
-                    'setting_value' => $stored,
-                    'setting_type'  => $type,
-                    'category'      => $category,
-                    'description'   => $description,
-                    'created_at'    => $now,
-                    'updated_at'    => $now,
-                ]);
-
-                $this->categoryIndex[$category][] = $key;
-            }
-        } catch (Throwable $e) {
-            return false;
+        if (!empty($errors)) {
+            $this->flashError('Some branding files failed: ' . implode(' | ', $errors));
+            $this->redirect('/settings/branding');
         }
 
-        $this->cache[$key] = $this->castValue($stored, $type);
-
-        return true;
+        $this->audit('Branding Updated', 'settings', 'Updated branding images and configuration');
+        $this->flashSuccess('Branding settings updated successfully!');
+        $this->redirect('/settings/branding');
     }
 
-    public function getCategory(string $category): array
+    public function appearance(): void
     {
-        $result = [];
+        $this->requirePermission('branding.manage');
 
-        foreach ($this->categoryIndex[$category] ?? [] as $key) {
-            $result[$key] = $this->cache[$key];
+        echo $this->view->renderWithLayout('settings/appearance', 'default', [
+            'theme' => $this->settings->getTheme(),
+        ]);
+    }
+
+    public function updateAppearance(): void
+    {
+        $this->requirePermission('branding.manage');
+
+        $accent = trim((string) ($_POST['accent'] ?? ''));
+        if (preg_match('/^#[0-9a-fA-F]{6}$/', $accent)
+            && in_array(strtoupper($accent), array_map('strtoupper', self::ALLOWED_ACCENTS), true)) {
+            $this->settings->set('theme.accent', $accent, 'string');
         }
 
-        return $result;
+        $preset = (int) ($_POST['font_preset'] ?? 0);
+        if (isset(self::FONT_PRESETS[$preset])) {
+            $this->settings->set('theme.font_size_base', self::FONT_PRESETS[$preset], 'decimal');
+        }
+
+        $darkMode = ($_POST['dark_mode'] ?? '0') === '1';
+        $this->settings->set('theme.dark_mode', $darkMode ? 'true' : 'false', 'boolean');
+
+        $this->settings->set(
+            'theme.use_system_setting',
+            isset($_POST['use_system_setting']) ? 'true' : 'false',
+            'boolean'
+        );
+
+        $this->audit('Appearance Updated', 'settings', 'Theme colors, font size and background updated');
+        $this->flashSuccess('Appearance settings saved successfully!');
+        $this->redirect('/settings/appearance');
     }
 
-    public function getAll(): array
+    private function handleBrandingField(string $inputName, string $settingKey, string $uploadDir): void
     {
-        return $this->cache;
-    }
+        if (!empty($_POST["delete_{$inputName}"])) {
+            $this->deleteBrandingFile($settingKey);
+        }
 
-    private function load(): void
-    {
-        if ($this->loaded) {
+        if (!isset($_FILES[$inputName]) || $_FILES[$inputName]['error'] === UPLOAD_ERR_NO_FILE) {
             return;
         }
 
-        $this->loaded = true;
-
-        try {
-            $rows = $this->db->fetchAll(
-                "SELECT setting_key, setting_value, setting_type, category FROM settings"
-            );
-
-            foreach ($rows as $row) {
-                $this->cache[$row['setting_key']] = $this->castValue(
-                    $row['setting_value'],
-                    $row['setting_type']
-                );
-
-                $this->categoryIndex[$row['category'] ?? 'general'][] = $row['setting_key'];
-            }
-        } catch (Throwable $e) {
-            $this->cache = [];
-            $this->categoryIndex = [];
-        }
-    }
-
-    private function reindexCategory(string $key, string $oldCategory, string $newCategory): void
-    {
-        $this->categoryIndex[$oldCategory] = array_values(array_filter(
-            $this->categoryIndex[$oldCategory] ?? [],
-            fn($existing) => $existing !== $key
-        ));
-
-        $this->categoryIndex[$newCategory][] = $key;
-    }
-
-    private function castValue($value, string $type)
-    {
-        return match ($type) {
-            'boolean', 'bool'  => filter_var($value, FILTER_VALIDATE_BOOLEAN),
-            'integer', 'int'   => (int)$value,
-            'decimal', 'float' => (float)$value,
-            'json'             => json_decode((string)$value, true),
-            'array'            => is_array($value) ? $value : explode(',', (string)$value),
-            default            => (string)$value,
-        };
-    }
-
-    private function prepareValueForStorage($value): string
-    {
-        if (is_array($value) || is_object($value)) {
-            return json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($_FILES[$inputName]['error'] !== UPLOAD_ERR_OK) {
+            throw new \RuntimeException('Upload failed with error code ' . $_FILES[$inputName]['error']);
         }
 
-        if (is_bool($value)) {
-            return $value ? 'true' : 'false';
+        $extension = strtolower(pathinfo($_FILES[$inputName]['name'], PATHINFO_EXTENSION));
+        if (!in_array($extension, self::ALLOWED_IMAGE_EXTENSIONS, true)) {
+            throw new \RuntimeException('Unsupported file type: .' . $extension);
         }
 
-        return (string)$value;
+        if (!is_writable($uploadDir)) {
+            throw new \RuntimeException('Upload directory is not writable: ' . $uploadDir);
+        }
+
+        $this->deleteBrandingFile($settingKey);
+
+        $newFileName = $inputName . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $targetPath  = rtrim($uploadDir, '/\\') . DIRECTORY_SEPARATOR . $newFileName;
+
+        if (!move_uploaded_file($_FILES[$inputName]['tmp_name'], $targetPath)) {
+            throw new \RuntimeException('move_uploaded_file failed for ' . $newFileName);
+        }
+
+        $this->settings->set($settingKey, 'uploads/branding/' . $newFileName, 'string');
+    }
+
+    private function deleteBrandingFile(string $settingKey): void
+    {
+        $relativePath = $this->settings->get($settingKey, '');
+        if ($relativePath === '') {
+            return;
+        }
+
+        $physicalPath = ROOT_PATH . '/public/' . ltrim($relativePath, '/');
+        if (is_file($physicalPath)) {
+            @unlink($physicalPath);
+        }
+
+        $this->settings->set($settingKey, '', 'string');
+    }
+
+    private function settingsCategories(): array
+    {
+        return [
+            'System' => ['system.timezone', 'system.currency', 'system.date_format'],
+            'School' => ['school.name', 'school.short_name', 'school.motto'],
+            'Theme'  => ['theme.primary', 'theme.accent', 'theme.dark_mode'],
+        ];
     }
 }
