@@ -53,7 +53,7 @@
             <small class="text-muted">Manage Academic Years</small>
         </div>
         <a href="<?= BASE_URL ?>/academic/years/create" class="btn btn-sm btn-primary">
-            <i class="fas fa-plus me-1"></i> New Academic Year
+            <i class="fas fa-plus me-1"></i> New Year
         </a>
     </div>
 
