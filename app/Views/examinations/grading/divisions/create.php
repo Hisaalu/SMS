@@ -3,7 +3,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="mb-0 fw-bold">New Division Scheme</h4>
-            <small class="text-muted">A named grouping of aggregate ranges, tied to a grading system</small>
+            <small class="text-muted">A named grouping of your Ranges</small>
         </div>
         <a href="<?= BASE_URL ?>/grading/divisions" class="btn btn-sm btn-secondary">
             <i class="fas fa-arrow-left me-1"></i> Back
@@ -44,9 +44,6 @@
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <div class="form-text">
-                            Every range you add below will belong to this grading system.
-                        </div>
                     </div>
                     <div class="col-12">
                         <label class="form-label small fw-semibold">Description</label>
@@ -61,7 +58,7 @@
 
                 <div class="mt-4 d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Create & Add Ranges
+                        <i class="fas fa-save me-1"></i> Create | + Ranges
                     </button>
                     <a href="<?= BASE_URL ?>/grading/divisions" class="btn btn-secondary">Cancel</a>
                 </div>

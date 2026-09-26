@@ -3,7 +3,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h4 class="mb-0">Create Grading System</h4>
-            <small class="text-muted">Define a grading system for a class or the whole school</small>
+            <small class="text-muted">Define a Grading System</small>
         </div>
         <a href="<?= BASE_URL ?>/grading/systems" class="btn btn-sm btn-secondary">
             <i class="fas fa-arrow-left me-1"></i> Back
@@ -48,7 +48,7 @@
 
                 <div class="mt-4">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Create & Add Rules
+                        <i class="fas fa-save me-1"></i> Create | Add Rules
                     </button>
                     <a href="<?= BASE_URL ?>/grading/systems" class="btn btn-secondary">Cancel</a>
                 </div>

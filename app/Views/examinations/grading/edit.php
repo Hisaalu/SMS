@@ -3,7 +3,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h4 class="mb-0">Edit Grading System</h4>
-            <small class="text-muted">Update grading system and its class assignment</small>
+            <small class="text-muted">Update your Grading System</small>
         </div>
         <a href="<?= BASE_URL ?>/grading/systems" class="btn btn-sm btn-secondary">
             <i class="fas fa-arrow-left me-1"></i> Back
@@ -61,7 +61,7 @@
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="is_default" id="isDefault" value="1" <?= !empty($system['is_default']) ? 'checked' : '' ?>>
                             <label class="form-check-label" for="isDefault">
-                                School-wide default (fallback grading system)
+                                School-wide default 
                             </label>
                         </div>
                     </div>
@@ -72,7 +72,7 @@
                         <i class="fas fa-save me-1"></i> Update
                     </button>
                     <a href="<?= BASE_URL ?>/grading/systems/<?= $system['id'] ?>/rules" class="btn btn-outline-info">
-                        <i class="fas fa-list me-1"></i> Manage Rules
+                        <i class="fas fa-list me-1"></i> Rules
                     </a>
                     <a href="<?= BASE_URL ?>/grading/systems" class="btn btn-secondary">Cancel</a>
                 </div>

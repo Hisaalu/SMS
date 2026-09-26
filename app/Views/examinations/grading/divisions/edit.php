@@ -64,7 +64,7 @@
                     </button>
                     <a href="<?= BASE_URL ?>/grading/divisions/<?= (int)$scheme['id'] ?>/ranges"
                        class="btn btn-outline-info">
-                        <i class="fas fa-list me-1"></i> Manage Ranges
+                        <i class="fas fa-list me-1"></i> Ranges
                     </a>
                     <a href="<?= BASE_URL ?>/grading/divisions" class="btn btn-secondary">Cancel</a>
                 </div>

@@ -3,10 +3,10 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h4 class="mb-0">Examinations</h4>
-            <small class="text-muted">Manage school examinations</small>
+            <small class="text-muted">Manage School Exams</small>
         </div>
         <a href="<?= BASE_URL ?>/examinations/create" class="btn btn-sm btn-primary">
-            <i class="fas fa-plus me-1"></i> New Examination
+            <i class="fas fa-plus me-1"></i> New Exam
         </a>
     </div>
 
@@ -27,7 +27,7 @@
                             <th>Name</th>
                             <th>Code</th>
                             <th>Type</th>
-                            <th>Academic Year</th>
+                            <th>Year</th>
                             <th>Term</th>
                             <th>Status</th>
                             <th class="text-end">Actions</th>
@@ -64,7 +64,13 @@
                                         <a href="<?= BASE_URL ?>/results/examination/<?= $exam['id'] ?>" class="btn btn-sm btn-outline-info" title="View Results">
                                             <i class="fas fa-chart-bar"></i>
                                         </a>
-                                        <button onclick="deleteExam(<?= $exam['id'] ?>)" class="btn btn-sm btn-outline-danger" title="Delete Examination">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger"
+                                                title="Delete Examination"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#deleteExamModal"
+                                                data-exam-id="<?= $exam['id'] ?>"
+                                                data-exam-name="<?= htmlspecialchars($exam['name'], ENT_QUOTES, 'UTF-8') ?>">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </td>
@@ -78,22 +84,98 @@
     </div>
 </div>
 
+<div class="modal fade" id="deleteExamModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
+                          style="width:40px;height:40px;background:rgba(220,38,38,0.12);color:#DC2626;">
+                        <i class="fas fa-trash-alt"></i>
+                    </span>
+                    <h5 class="modal-title fw-bold mb-0">Delete Examination</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="mb-1">
+                    Are you sure you want to delete
+                    <strong id="deleteExamName">this examination</strong>?
+                </p>
+                <p class="small text-muted mb-0">
+                    This action cannot be undone. Examinations with existing marks cannot be deleted.
+                </p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteExamBtn">
+                    <i class="fas fa-trash-alt me-1"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-function deleteExam(id) {
-    if (confirm('Are you sure you want to delete this examination?')) {
-        fetch('<?= BASE_URL ?>/examinations/' + id, {
+(function () {
+    const modalEl     = document.getElementById('deleteExamModal');
+    const nameEl      = document.getElementById('deleteExamName');
+    const confirmEl   = document.getElementById('confirmDeleteExamBtn');
+
+    let deleteExamId = 0;
+
+    modalEl.addEventListener('show.bs.modal', function (event) {
+        const trigger = event.relatedTarget;
+        if (!trigger) return;
+        deleteExamId = parseInt(trigger.getAttribute('data-exam-id'), 10) || 0;
+        const name = trigger.getAttribute('data-exam-name') || 'this examination';
+        nameEl.textContent = name;
+    });
+
+    confirmEl.addEventListener('click', function () {
+        if (!deleteExamId) return;
+
+        confirmEl.disabled = true;
+        confirmEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+
+        fetch('<?= BASE_URL ?>/examinations/' + deleteExamId, {
             method: 'DELETE',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.reload();
-            } else {
-                alert(data.error || 'Failed to delete examination');
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-Token': '<?= htmlspecialchars($_SESSION[CSRF_TOKEN_NAME] ?? '', ENT_QUOTES) ?>'
             }
         })
-        .catch(() => alert('An error occurred'));
+        .then(function (r) {
+            return r.text().then(function (text) {
+                try { return { ok: r.ok, status: r.status, json: JSON.parse(text) }; }
+                catch (e) { return { ok: r.ok, status: r.status, json: null }; }
+            });
+        })
+        .then(function (res) {
+            if (res.json && res.json.success) {
+                window.location.reload();
+                return;
+            }
+            const message = (res.json && res.json.error)
+                ? res.json.error
+                : 'Failed to delete examination (HTTP ' + res.status + ').';
+            showErrorToast(message);
+            confirmEl.disabled = false;
+            confirmEl.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Delete';
+        })
+        .catch(function () {
+            showErrorToast('An error occurred. Please try again.');
+            confirmEl.disabled = false;
+            confirmEl.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Delete';
+        });
+    });
+
+    function showErrorToast(message) {
+        if (window.NexaToast && typeof window.NexaToast.error === 'function') {
+            window.NexaToast.error(message);
+            return;
+        }
+        alert(message);
     }
-}
+})();
 </script>
