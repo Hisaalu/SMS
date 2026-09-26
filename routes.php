@@ -84,12 +84,14 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->post('/academic/departments', ['DepartmentController', 'store']);
     $router->get('/academic/departments/{id}/edit', ['DepartmentController', 'edit']);
     $router->post('/academic/departments/{id}', ['DepartmentController', 'update']);
+    $router->post('/academic/departments/{id}/delete', ['DepartmentController', 'delete']);
 
     $router->get('/academic/subjects', ['SubjectController', 'index']);
     $router->get('/academic/subjects/create', ['SubjectController', 'create']);
     $router->post('/academic/subjects', ['SubjectController', 'store']);
     $router->get('/academic/subjects/{id}/edit', ['SubjectController', 'edit']);
     $router->post('/academic/subjects/{id}', ['SubjectController', 'update']);
+    $router->post('/academic/subjects/{id}/delete',    ['SubjectController', 'delete']);
 
     $router->get('/student-categories', ['StudentCategoryController', 'index']);
     $router->get('/student/categories', ['StudentCategoryController', 'index']);

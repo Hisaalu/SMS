@@ -221,4 +221,52 @@ class SubjectController extends Controller
             ['s' => $this->schoolId()]
         ) ?: [];
     }
+
+    public function delete($params): void
+    {
+        $this->requireAuth();
+
+        $id = (int)($params['id'] ?? 0);
+        $subject = Subject::find($id);
+
+        if (!$subject) {
+            $this->json(['error' => 'Subject not found.'], 404);
+        }
+
+        $guards = [
+            'marks'                => 'grade record(s)',
+            'teacher_assignments'  => 'teaching assignment(s)',
+            'examination_subjects' => 'examination assignment(s)',
+        ];
+
+        foreach ($guards as $table => $label) {
+            try {
+                $row = $this->db->fetch(
+                    "SELECT COUNT(*) AS c FROM {$table} WHERE subject_id = :id",
+                    ['id' => $id]
+                );
+                $count = (int)($row['c'] ?? 0);
+                if ($count > 0) {
+                    $this->json([
+                        'error' => "Cannot delete this subject: {$count} {$label} reference it. Remove or reassign them first."
+                    ], 409);
+                }
+            } catch (Throwable $e) {
+            }
+        }
+
+        try {
+            $name = $subject->name;
+
+            if ($subject->delete(['id' => $id])) {
+                $this->audit('Subject Deleted', 'academics', "Deleted subject: {$name}");
+                $this->json(['success' => true]);
+            }
+
+            $this->json(['error' => 'Failed to delete subject.'], 500);
+
+        } catch (Throwable $e) {
+            $this->json(['error' => 'Failed to delete subject: ' . $e->getMessage()], 500);
+        }
+    }
 }
