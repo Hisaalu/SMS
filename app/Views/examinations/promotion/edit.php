@@ -47,14 +47,13 @@
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="require_all_subjects" id="requireAll" value="1" <?= ($rule['require_all_subjects'] ?? 0) ? 'checked' : '' ?>>
                             <label class="form-check-label" for="requireAll">Require All Subjects Passed</label>
-                            <small class="d-block text-muted">Student must pass every subject to be promoted</small>
                         </div>
                     </div>
                 </div>
 
                 <div class="mt-3">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Update Promotion Rule
+                        <i class="fas fa-save me-1"></i> Update Rule
                     </button>
                     <a href="<?= BASE_URL ?>/promotion/rules" class="btn btn-secondary">Cancel</a>
                 </div>

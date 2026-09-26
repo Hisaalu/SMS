@@ -2,7 +2,7 @@
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h4 class="mb-0">Create Assessment Type</h4>
+            <h4 class="mb-0">Create Assessment</h4>
             <small class="text-muted">Define a new assessment type</small>
         </div>
         <a href="<?= BASE_URL ?>/assessment/types" class="btn btn-sm btn-secondary">
@@ -25,7 +25,6 @@
                     <div class="col-md-6">
                         <label class="form-label">Code <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="code" placeholder="e.g., CW" required>
-                        <small class="text-muted">Short code for the assessment type</small>
                     </div>
                     <div class="col-12">
                         <label class="form-label">Description</label>
@@ -47,7 +46,7 @@
 
                 <div class="mt-3">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Create Assessment Type
+                        <i class="fas fa-save me-1"></i> Create Asse.. Type
                     </button>
                     <a href="<?= BASE_URL ?>/assessment/types" class="btn btn-secondary">Cancel</a>
                 </div>

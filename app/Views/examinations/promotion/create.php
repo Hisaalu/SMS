@@ -29,12 +29,10 @@
                     <div class="col-md-4">
                         <label class="form-label">Pass Mark (%)</label>
                         <input type="number" class="form-control" name="pass_mark" value="50" step="0.01">
-                        <small class="text-muted">Minimum average mark to pass</small>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Minimum Subjects Passed</label>
                         <input type="number" class="form-control" name="min_subjects_passed" value="0">
-                        <small class="text-muted">Number of subjects that must be passed (0 = not required)</small>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Status</label>
@@ -47,14 +45,13 @@
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" name="require_all_subjects" id="requireAll" value="1">
                             <label class="form-check-label" for="requireAll">Require All Subjects Passed</label>
-                            <small class="d-block text-muted">Student must pass every subject to be promoted</small>
                         </div>
                     </div>
                 </div>
 
                 <div class="mt-3">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Create Promotion Rule
+                        <i class="fas fa-save me-1"></i> Create Rule
                     </button>
                     <a href="<?= BASE_URL ?>/promotion/rules" class="btn btn-secondary">Cancel</a>
                 </div>

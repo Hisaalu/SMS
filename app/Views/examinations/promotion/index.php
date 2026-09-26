@@ -3,10 +3,10 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h4 class="mb-0">Promotion Rules</h4>
-            <small class="text-muted">Configure promotion rules for students</small>
+            <small class="text-muted">Configure Promotion Rules</small>
         </div>
         <a href="<?= BASE_URL ?>/promotion/rules/create" class="btn btn-sm btn-primary">
-            <i class="fas fa-plus me-1"></i> New Promotion Rule
+            <i class="fas fa-plus me-1"></i> New Rule
         </a>
     </div>
 
@@ -68,7 +68,12 @@
                                         <a href="<?= BASE_URL ?>/promotion/rules/<?= $rule['id'] ?>/edit" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <button onclick="deleteRule(<?= $rule['id'] ?>)" class="btn btn-sm btn-outline-danger">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#deleteRuleModal"
+                                                data-rule-id="<?= $rule['id'] ?>"
+                                                data-rule-name="<?= htmlspecialchars($rule['name'], ENT_QUOTES, 'UTF-8') ?>">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </td>
@@ -82,26 +87,97 @@
     </div>
 </div>
 
+<div class="modal fade" id="deleteRuleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
+                          style="width:40px;height:40px;background:rgba(220,38,38,0.12);color:#DC2626;">
+                        <i class="fas fa-trash-alt"></i>
+                    </span>
+                    <h5 class="modal-title fw-bold mb-0">Delete Promotion Rule</h5>
+                </div>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="mb-1">
+                    Are you sure you want to delete
+                    <strong id="deleteRuleName">this promotion rule</strong>?
+                </p>
+                <p class="small text-muted mb-0">
+                    This action cannot be undone. Promotion rules that are actively in use cannot be deleted.
+                </p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteRuleBtn">
+                    <i class="fas fa-trash-alt me-1"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-function deleteRule(id) {
-    if (confirm('Are you sure you want to delete this promotion rule?')) {
-        fetch('<?= BASE_URL ?>/promotion/rules/' + id, {
+(function () {
+    const modalEl   = document.getElementById('deleteRuleModal');
+    const nameEl    = document.getElementById('deleteRuleName');
+    const confirmEl = document.getElementById('confirmDeleteRuleBtn');
+
+    let deleteRuleId = 0;
+
+    modalEl.addEventListener('show.bs.modal', function (event) {
+        const trigger = event.relatedTarget;
+        if (!trigger) return;
+        deleteRuleId = parseInt(trigger.getAttribute('data-rule-id'), 10) || 0;
+        const name = trigger.getAttribute('data-rule-name') || 'this promotion rule';
+        nameEl.textContent = name;
+    });
+
+    confirmEl.addEventListener('click', function () {
+        if (!deleteRuleId) return;
+
+        confirmEl.disabled = true;
+        confirmEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+
+        fetch('<?= BASE_URL ?>/promotion/rules/' + deleteRuleId, {
             method: 'DELETE',
             headers: {
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-Token': '<?= htmlspecialchars($_SESSION[CSRF_TOKEN_NAME] ?? '', ENT_QUOTES) ?>'
             }
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
+        .then(function (r) {
+            return r.text().then(function (text) {
+                try { return { ok: r.ok, status: r.status, json: JSON.parse(text) }; }
+                catch (e) { return { ok: r.ok, status: r.status, json: null }; }
+            });
+        })
+        .then(function (res) {
+            if (res.json && res.json.success) {
                 window.location.reload();
-            } else {
-                alert(data.error || 'Failed to delete promotion rule');
+                return;
             }
+            const message = (res.json && res.json.error)
+                ? res.json.error
+                : 'Failed to delete promotion rule (HTTP ' + res.status + ').';
+            showErrorToast(message);
+            confirmEl.disabled = false;
+            confirmEl.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Delete';
         })
-        .catch(error => {
-            alert('An error occurred');
+        .catch(function () {
+            showErrorToast('An error occurred. Please try again.');
+            confirmEl.disabled = false;
+            confirmEl.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Delete';
         });
+    });
+
+    function showErrorToast(message) {
+        if (window.NexaToast && typeof window.NexaToast.error === 'function') {
+            window.NexaToast.error(message);
+            return;
+        }
+        alert(message);
     }
-}
+})();
 </script>

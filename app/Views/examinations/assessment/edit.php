@@ -48,7 +48,7 @@
 
                 <div class="mt-3">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Update Assessment Type
+                        <i class="fas fa-save me-1"></i> Update Asse.. Type
                     </button>
                     <a href="<?= BASE_URL ?>/assessment/types" class="btn btn-secondary">Cancel</a>
                 </div>
