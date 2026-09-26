@@ -4,6 +4,7 @@
 namespace NexaT\Services;
 
 use NexaT\Core\Database;
+use NexaT\Core\SettingsService;
 use Throwable;
 
 class AttendanceService
