@@ -7,7 +7,7 @@
         </div>
         <a href="<?= BASE_URL ?>/academic/terms<?= !empty($selectedYearId) ? '?year=' . (int)$selectedYearId : '' ?>"
            class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Terms
+            <i class="fas fa-arrow-left me-1"></i> Back
         </a>
     </div>
 

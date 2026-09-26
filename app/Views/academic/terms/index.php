@@ -12,7 +12,7 @@
     .terms-page .term-row.current td:first-child {
         border-left: 3px solid var(--accent-color);
     }
-        .terms-page .actions-cell {
+    .terms-page .actions-cell {
         white-space: nowrap;
         min-width: 110px;
     }
@@ -22,9 +22,7 @@
         --bs-btn-font-size: 0.75rem;
         margin-left: 0.25rem;
     }
-    .terms-page .actions-cell .btn:first-child {
-        margin-left: 0;
-    }
+    .terms-page .actions-cell .btn:first-child { margin-left: 0; }
 </style>
 
 <div class="container-fluid px-0 terms-page">
@@ -100,16 +98,20 @@
                             <th>Term</th>
                             <th class="d-none d-md-table-cell">Academic Year</th>
                             <th class="d-none d-lg-table-cell">Duration</th>
-                            <th>Current</th>
-                            <th class="text-end">Actions</th>
+                            <th class="text-center">Current</th>
+                            <th class="text-end actions-cell">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($terms as $term): ?>
-                            <?php $isCurrent = !empty($term['is_current']); ?>
+                            <?php
+                                $tId       = (int)($term['id'] ?? 0);
+                                $tName     = $term['name'] ?? '';
+                                $isCurrent = !empty($term['is_current']);
+                            ?>
                             <tr class="term-row <?= $isCurrent ? 'current' : '' ?>">
                                 <td>
-                                    <div class="fw-semibold"><?= htmlspecialchars($term['name']) ?></div>
+                                    <div class="fw-semibold"><?= htmlspecialchars($tName) ?></div>
                                     <div class="small text-muted">
                                         Term <?= (int)($term['term_number'] ?? 0) ?>
                                         <?php if (!$selectedYear): ?>
@@ -125,7 +127,7 @@
                                     &rarr;
                                     <?= !empty($term['end_date']) ? date('M d, Y', strtotime($term['end_date'])) : '-' ?>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     <?php if ($isCurrent): ?>
                                         <span class="badge bg-primary">Current</span>
                                     <?php else: ?>
@@ -133,14 +135,17 @@
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-end actions-cell">
-                                    <a href="<?= BASE_URL ?>/academic/terms/<?= (int)$term['id'] ?>/edit"
+                                    <a href="<?= BASE_URL ?>/academic/terms/<?= $tId ?>/edit"
                                        class="btn btn-sm btn-outline-primary" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                     <button type="button"
                                             class="btn btn-sm btn-outline-danger"
                                             title="Delete"
-                                            onclick="deleteTerm(<?= (int)$term['id'] ?>)">
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteTermModal"
+                                            data-id="<?= $tId ?>"
+                                            data-name="<?= htmlspecialchars($tName, ENT_QUOTES, 'UTF-8') ?>">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
@@ -167,27 +172,99 @@
     </div>
 </div>
 
-<script>
-function deleteTerm(id) {
-    if (!confirm('Delete this term? This cannot be undone.')) {
-        return;
-    }
+<div class="modal fade" id="deleteTermModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
+                          style="width:40px;height:40px;background:rgba(220,38,38,0.12);color:#DC2626;">
+                        <i class="fas fa-trash-alt"></i>
+                    </span>
+                    <h5 class="modal-title fw-bold mb-0">Delete Term</h5>
+                </div>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="mb-1">Are you sure you want to delete <strong id="deleteTermName">this term</strong>?</p>
+                <p class="small text-muted mb-0">
+                    This action cannot be undone. Terms with linked records cannot be deleted.
+                </p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteTermBtn">
+                    <i class="fas fa-trash-alt me-1"></i> Delete Term
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
-    fetch('<?= BASE_URL ?>/academic/terms/' + id, {
-        method: 'DELETE',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-Token': '<?= htmlspecialchars($_SESSION[CSRF_TOKEN_NAME] ?? '', ENT_QUOTES) ?>'
+<script>
+(function () {
+    const modalEl   = document.getElementById('deleteTermModal');
+    const nameEl    = document.getElementById('deleteTermName');
+    const confirmEl = document.getElementById('confirmDeleteTermBtn');
+
+    let currentId = 0;
+
+    modalEl.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        currentId = parseInt(button.getAttribute('data-id'), 10) || 0;
+        const name = button.getAttribute('data-name') || 'this term';
+        nameEl.textContent = name;
+    });
+
+    confirmEl.addEventListener('click', function () {
+        if (!currentId) return;
+
+        confirmEl.disabled = true;
+        confirmEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+
+        const url  = '<?= BASE_URL ?>/academic/terms/' + currentId;
+        const body = new URLSearchParams();
+        body.append('<?= CSRF_TOKEN_NAME ?>', '<?= htmlspecialchars($_SESSION[CSRF_TOKEN_NAME] ?? '', ENT_QUOTES) ?>');
+
+        fetch(url, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-Token': '<?= htmlspecialchars($_SESSION[CSRF_TOKEN_NAME] ?? '', ENT_QUOTES) ?>'
+            },
+            body: body.toString()
+        })
+        .then(function (r) {
+            return r.text().then(function (text) {
+                try { return { ok: r.ok, status: r.status, json: JSON.parse(text) }; }
+                catch (e) { return { ok: r.ok, status: r.status, json: null }; }
+            });
+        })
+        .then(function (res) {
+            if (res.json && res.json.success) {
+                window.location.reload();
+                return;
+            }
+            const message = (res.json && res.json.error)
+                ? res.json.error
+                : 'Could not delete this term (HTTP ' + res.status + ').';
+            showErrorToast(message);
+            confirmEl.disabled = false;
+            confirmEl.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Delete Term';
+        })
+        .catch(function () {
+            showErrorToast('Network error. Please check your connection and try again.');
+            confirmEl.disabled = false;
+            confirmEl.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Delete Term';
+        });
+    });
+
+    function showErrorToast(message) {
+        if (window.NexaToast && typeof window.NexaToast.error === 'function') {
+            window.NexaToast.error(message);
+            return;
         }
-    })
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-        if (data.success) {
-            window.location.reload();
-        } else {
-            alert(data.error || 'Failed to delete term.');
-        }
-    })
-    .catch(function () { alert('An error occurred. Please try again.'); });
-}
+        alert(message);
+    }
+})();
 </script>

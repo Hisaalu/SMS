@@ -68,12 +68,16 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->post('/academic/classes', ['ClassController', 'store']);
     $router->get('/academic/classes/{id}/edit', ['ClassController', 'edit']);
     $router->post('/academic/classes/{id}', ['ClassController', 'update']);
+    $router->delete('/academic/classes/{id}', ['ClassController', 'delete']);
+    $router->post('/academic/classes/{id}/delete', ['ClassController', 'delete']);
 
     $router->get('/academic/streams', ['StreamController', 'index']);
     $router->get('/academic/streams/create', ['StreamController', 'create']);
     $router->post('/academic/streams', ['StreamController', 'store']);
     $router->get('/academic/streams/{id}/edit', ['StreamController', 'edit']);
     $router->post('/academic/streams/{id}', ['StreamController', 'update']);
+    $router->delete('/academic/streams/{id}', ['StreamController', 'delete']);
+    $router->post('/academic/streams/{id}/delete', ['StreamController', 'delete']);
 
     $router->get('/academic/departments', ['DepartmentController', 'index']);
     $router->get('/academic/departments/create', ['DepartmentController', 'create']);
