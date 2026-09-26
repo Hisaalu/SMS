@@ -638,13 +638,41 @@ $pendingToasts = Toast::pull();
         }
 
         @media (max-width: 575.98px) {
-            .navbar-custom { padding: 0.45rem 0.6rem; }
-            .navbar-brand { font-size: 0.8rem; gap: 0.45rem; }
-            .navbar-brand .brand-logo { height: 26px; max-width: 42px; }
-            .user-chip .user-name { display: none; }
-            .navbar-actions { gap: 0.45rem; }
-            .notif-menu { width: 92vw !important; max-width: 92vw !important; }
+        .navbar-custom { padding: 0.45rem 0.6rem; }
+        .navbar-brand { font-size: 0.8rem; gap: 0.45rem; }
+        .navbar-brand .brand-logo { height: 26px; max-width: 42px; }
+        .user-chip .user-name { display: none; }
+        .navbar-actions { gap: 0.45rem; }
+
+        .dropdown-menu.notif-menu {
+            width: 92vw !important;
+            max-width: 92vw !important;
+            min-width: 0 !important;
+            position: fixed !important;
+            top: calc(var(--navbar-height) + 4px) !important;
+            left: 4vw !important;
+            right: 4vw !important;
+            margin: 0 !important;
+            transform: none !important;
         }
+
+        .notif-item {
+            padding: 0.65rem 0.75rem;
+            gap: 0.5rem;
+        }
+        .notif-title {
+            font-size: 0.82rem;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+        .notif-msg {
+            -webkit-line-clamp: 3;
+        }
+
+        .notif-menu .fw-bold.small {
+            font-size: 0.82rem;
+        }
+    }
 
         .badge.bg-primary-subtle {
             background: #DBEAFE !important;

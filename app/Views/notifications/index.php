@@ -117,6 +117,7 @@
                             <button type="button"
                                     class="btn btn-sm btn-secondary"
                                     data-notif-delete="<?= (int)$n['id'] ?>"
+                                    data-notif-title="<?= htmlspecialchars($n['title'] ?? 'this notification', ENT_QUOTES, 'UTF-8') ?>"
                                     title="Delete">
                                 <i class="fas fa-trash" style="color: var(--danger-color);"></i>
                             </button>
@@ -145,6 +146,63 @@
 
 </div>
 
+<div class="modal fade" id="deleteNotifModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
+                          style="width:40px;height:40px;background:rgba(220,38,38,0.12);color:#DC2626;">
+                        <i class="fas fa-trash-alt"></i>
+                    </span>
+                    <h5 class="modal-title fw-bold mb-0">Delete Notification</h5>
+                </div>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="mb-1">
+                    Are you sure you want to delete
+                    <strong id="deleteNotifTitle">this notification</strong>?
+                </p>
+                <p class="small text-muted mb-0">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteNotifBtn">
+                    <i class="fas fa-trash-alt me-1"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="clearAllNotifModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
+                          style="width:40px;height:40px;background:rgba(220,38,38,0.12);color:#DC2626;">
+                        <i class="fas fa-broom"></i>
+                    </span>
+                    <h5 class="modal-title fw-bold mb-0">Clear All Notifications</h5>
+                </div>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="mb-1">Delete <strong>all notifications</strong>?</p>
+                <p class="small text-muted mb-0">
+                    This will remove every notification from your account. This action cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmClearAllBtn">
+                    <i class="fas fa-trash-alt me-1"></i> Delete All
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 (function () {
     const url = '<?= BASE_URL ?>';
@@ -167,18 +225,45 @@
         });
     });
 
-    document.querySelectorAll('[data-notif-delete]').forEach(btn => {
-        btn.addEventListener('click', function () {
-            if (!confirm('Delete this notification?')) return;
-            post('/notifications/delete', { id: this.dataset.notifDelete })
-                .then(() => location.reload());
+    const deleteModalEl = document.getElementById('deleteNotifModal');
+    const deleteTitleEl = document.getElementById('deleteNotifTitle');
+    const deleteBtnEl   = document.getElementById('confirmDeleteNotifBtn');
+    let   deleteTargetId = 0;
+
+    if (deleteModalEl) {
+        deleteModalEl.addEventListener('show.bs.modal', function (event) {
+            const trigger = event.relatedTarget;
+            if (!trigger) return;
+            deleteTargetId = parseInt(trigger.getAttribute('data-notif-delete'), 10) || 0;
+            const title = trigger.getAttribute('data-notif-title') || 'this notification';
+            deleteTitleEl.textContent = title;
         });
+    }
+
+    if (deleteBtnEl) {
+        deleteBtnEl.addEventListener('click', function () {
+            if (!deleteTargetId) return;
+
+            deleteBtnEl.disabled = true;
+            deleteBtnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+
+            post('/notifications/delete', { id: deleteTargetId })
+                .then(() => location.reload())
+                .catch(() => {
+                    deleteBtnEl.disabled = false;
+                    deleteBtnEl.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Delete';
+                });
+        });
+    }
+
+    document.querySelectorAll('[data-notif-delete]').forEach(btn => {
+        btn.setAttribute('data-bs-toggle', 'modal');
+        btn.setAttribute('data-bs-target', '#deleteNotifModal');
     });
 
     document.querySelectorAll('[data-notif-open]').forEach(a => {
         a.addEventListener('click', function () {
             post('/notifications/mark-read', { id: this.dataset.notifOpen });
-            // Navigation proceeds naturally
         });
     });
 
@@ -189,11 +274,26 @@
         });
     }
 
-    const clearAll = document.getElementById('clearAllBtn');
-    if (clearAll) {
-        clearAll.addEventListener('click', function () {
-            if (!confirm('Delete all notifications? This cannot be undone.')) return;
-            post('/notifications/clear').then(() => location.reload());
+    const clearAllBtn     = document.getElementById('clearAllBtn');
+    const clearAllModalEl = document.getElementById('clearAllNotifModal');
+    const confirmClearBtn = document.getElementById('confirmClearAllBtn');
+
+    if (clearAllBtn && clearAllModalEl) {
+        clearAllBtn.setAttribute('data-bs-toggle', 'modal');
+        clearAllBtn.setAttribute('data-bs-target', '#clearAllNotifModal');
+    }
+
+    if (confirmClearBtn) {
+        confirmClearBtn.addEventListener('click', function () {
+            confirmClearBtn.disabled = true;
+            confirmClearBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Clearing...';
+
+            post('/notifications/clear')
+                .then(() => location.reload())
+                .catch(() => {
+                    confirmClearBtn.disabled = false;
+                    confirmClearBtn.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Delete All';
+                });
         });
     }
 })();
