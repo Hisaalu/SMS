@@ -2,23 +2,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <?php
-$termName = 'Term 1';
-if (isset($currentTerm)) {
-    if (is_array($currentTerm)) {
-        $termName = $currentTerm['term'] ?? $currentTerm['name'] ?? 'Term 1';
-    } else {
-        $termName = (string)$currentTerm;
-    }
-}
+$yearName  = !empty($currentYear['name']) ? (string)$currentYear['name'] : date('Y');
+$termName  = !empty($currentTerm['name']) ? (string)$currentTerm['name'] : '—';
+$fullLabel = $yearName . ($termName !== '—' ? ' · ' . $termName : '');
 
-$yearName = date('Y');
-if (isset($currentYear) && !is_array($currentYear)) {
-    $yearName = (string)$currentYear;
-} elseif (isset($currentTerm) && is_array($currentTerm)) {
-    $yearName = (string)($currentTerm['year'] ?? $currentTerm['year_name'] ?? date('Y'));
-}
-
-$yearLabel             = htmlspecialchars($yearName . ' - ' . $termName, ENT_QUOTES, 'UTF-8');
+$yearLabel             = htmlspecialchars($fullLabel, ENT_QUOTES, 'UTF-8');
 $todayRate             = (int)($todayAttendance ?? 0);
 $activityList          = is_array($recentActivities ?? null) ? $recentActivities : [];
 $recentStudentList     = is_array($recentlyAddedStudents ?? null) ? $recentlyAddedStudents : [];
@@ -28,6 +16,10 @@ $genderData            = is_array($genderData ?? null) ? $genderData : ['male' =
 $classDist             = $classDistribution ?? ['labels' => [], 'male' => [], 'female' => []];
 $staffDist             = $staffCategories   ?? ['labels' => [], 'data' => []];
 $academicTermsList     = is_array($academicTermsList ?? null) ? $academicTermsList : [];
+
+$activeYearId = (int)($activeYear['id'] ?? 0);
+$activeTermId = (int)($activeTerm['id'] ?? 0);
+$isViewingCurrent = !empty($isCurrentYear) && !empty($isCurrentTerm);
 
 $totalEnrolled = (int)($genderData['male'] ?? 0) + (int)($genderData['female'] ?? 0) + (int)($genderData['other'] ?? 0);
 $maleCount     = (int)($genderData['male']   ?? 0);
@@ -39,9 +31,11 @@ $attendanceState  = $todayRate >= 75 ? 'success' : ($todayRate >= 50 ? 'warning'
 $attendanceLabel  = $todayRate >= 75 ? 'Optimal' : ($todayRate >= 50 ? 'Fair' : 'Critical');
 $attendanceIcon   = $todayRate >= 75 ? 'fa-check-circle' : ($todayRate >= 50 ? 'fa-exclamation-circle' : 'fa-times-circle');
 
-$avgTrend   = !empty($trendData) ? round(array_sum($trendData) / count($trendData)) : 0;
-$bestTrend  = !empty($trendData) ? max($trendData) : 0;
-$worstTrend = !empty($trendData) ? min(array_filter($trendData, fn($v) => $v > 0)) : 0;
+$nonZeroTrend = array_values(array_filter($trendData, fn($v) => (int)$v > 0));
+
+$avgTrend   = !empty($trendData)     ? round(array_sum($trendData) / count($trendData)) : 0;
+$bestTrend  = !empty($trendData)     ? max($trendData)                                  : 0;
+$worstTrend = !empty($nonZeroTrend)  ? min($nonZeroTrend)                               : 0;
 
 $hour      = (int)date('H');
 $greeting  = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
@@ -88,9 +82,7 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
         box-shadow: 0 1px 3px 0 rgba(0,0,0,0.02);
         transition: box-shadow 0.2s ease;
     }
-    .dash-card:hover {
-        box-shadow: 0 4px 12px 0 rgba(0,0,0,0.04);
-    }
+    .dash-card:hover { box-shadow: 0 4px 12px 0 rgba(0,0,0,0.04); }
     .dash-card .card-header {
         background: var(--surface-color);
         border-bottom: 1px solid var(--border-color);
@@ -98,16 +90,10 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
         border-top-left-radius: 0.875rem !important;
         border-top-right-radius: 0.875rem !important;
     }
-    .dash-card .card-body {
-        color: var(--text-color);
-    }
-    .dash-card h6 {
-        color: var(--text-color);
-    }
+    .dash-card .card-body { color: var(--text-color); }
+    .dash-card h6 { color: var(--text-color); }
     .dash-card small,
-    .dash-card .text-muted {
-        color: var(--text-muted) !important;
-    }
+    .dash-card .text-muted { color: var(--text-muted) !important; }
 
     .activity-dot {
         width: 8px; height: 8px;
@@ -118,11 +104,7 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
     }
 
     .stat-mini { padding: 0.5rem 0; }
-    .stat-mini .value {
-        font-size: 1.15rem;
-        font-weight: 700;
-        line-height: 1.2;
-    }
+    .stat-mini .value { font-size: 1.15rem; font-weight: 700; line-height: 1.2; }
     .stat-mini .label {
         font-size: 0.7rem;
         text-transform: uppercase;
@@ -136,7 +118,7 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
         color: #fff;
         padding: 1.5rem 2rem;
         position: relative;
-        box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.25);
+        box-shadow: 0 10px 25px -5px rgba(var(--accent-rgb), 0.35);
     }
     .hero-bg-shapes {
         position: absolute;
@@ -168,10 +150,45 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
         backdrop-filter: blur(4px);
     }
 
-    .activity-table {
-        color: var(--text-color);
-        margin-bottom: 0;
+    .period-dropdown {
+        min-width: 280px;
+        max-height: 360px;
+        overflow-y: auto;
+        border: 0;
+        padding: 0.4rem 0;
     }
+    .period-dropdown .dropdown-header {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 700;
+        color: var(--text-muted);
+        padding: 0.6rem 0.9rem 0.25rem;
+    }
+    .period-dropdown .year-header {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--text-color);
+        padding: 0.35rem 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .period-dropdown .dropdown-item {
+        font-size: 0.82rem;
+        padding: 0.35rem 0.9rem 0.35rem 1.4rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+    }
+    .period-dropdown .dropdown-item.active {
+        background: var(--accent-color);
+        color: #fff;
+    }
+    .period-dropdown .dropdown-item .badge { font-size: 0.6rem; }
+
+    .activity-table { color: var(--text-color); margin-bottom: 0; }
     .activity-table thead th {
         background: var(--background-color);
         color: var(--text-muted);
@@ -182,23 +199,16 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
         font-weight: 600;
         padding: 0.75rem 1rem;
     }
-    .activity-table tbody tr {
-        border-color: var(--border-color);
-    }
+    .activity-table tbody tr { border-color: var(--border-color); }
     .activity-table tbody td {
         color: var(--text-color);
         border-color: var(--border-color);
         vertical-align: middle;
         padding: 0.85rem 1rem;
     }
-    .activity-table tbody tr:hover {
-        background: rgba(37, 99, 235, 0.03);
-    }
+    .activity-table tbody tr:hover { background: rgba(var(--accent-rgb), 0.03); }
 
-    .chart-container {
-        position: relative;
-        width: 100%;
-    }
+    .chart-container { position: relative; width: 100%; }
 
     .chart-empty-overlay {
         position: absolute;
@@ -217,6 +227,7 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
     @media (max-width: 767px) {
         .hero-strip { padding: 1.25rem 1rem; }
         .metric-icon { width: 40px; height: 40px; }
+        .period-dropdown { min-width: 240px; }
     }
 </style>
 
@@ -232,44 +243,97 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
                     <span><i class="fas fa-calendar-alt me-1"></i><?= $yearLabel ?></span>
                     <span>•</span>
                     <span><i class="fas fa-clock me-1"></i><?= date('l, d M Y') ?></span>
+                    <?php if ($isViewingCurrent): ?>
+                        <span class="badge bg-light text-primary ms-1" style="font-size: 0.7rem;">
+                            <i class="fas fa-star me-1"></i>Current Period
+                        </span>
+                    <?php else: ?>
+                        <span class="badge bg-warning text-dark ms-1" style="font-size: 0.7rem;">
+                            <i class="fas fa-eye me-1"></i>Historical View
+                        </span>
+                    <?php endif; ?>
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <div class="dropdown">
-                    <button class="btn btn-light btn-sm dropdown-toggle shadow-sm text-dark bg-white border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-filter text-dark me-1"></i> <span class="text-dark"><?= $yearLabel ?></span>
+                    <button class="btn btn-light btn-sm dropdown-toggle shadow-sm text-dark bg-white border-0"
+                            type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-filter text-dark me-1"></i>
+                        <span class="text-dark"><?= $yearLabel ?></span>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 py-2" style="font-size: 0.85rem; max-height: 280px; overflow-y: auto; z-index: 1050;">
-                        <li><h6 class="dropdown-header text-uppercase fs-xs">Academic Filter</h6></li>
-                        <?php if (!empty($academicTermsList)): ?>
-                            <?php foreach ($academicTermsList as $termItem): ?>
-                                <?php 
-                                    $itemYear = $termItem['year_name'] ?? '';
-                                    $itemTerm = $termItem['term_name'] ?? '';
-                                    $itemLabel = $itemYear . ' - ' . $itemTerm;
-                                    $isActive = ($itemYear === $yearName && $itemTerm === $termName) || (!empty($termItem['is_current']) && empty($yearName));
-                                    $filterUrl = BASE_URL . '/dashboard?year=' . urlencode($itemYear) . '&term=' . urlencode($itemTerm);
-                                ?>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm period-dropdown">
+                        <li><h6 class="dropdown-header">Academic Period</h6></li>
+
+                        <?php
+                        $groupedByYear = [];
+                        foreach ($academicTermsList as $row) {
+                            $yid = (int)($row['year_id'] ?? 0);
+                            if (!isset($groupedByYear[$yid])) {
+                                $groupedByYear[$yid] = [
+                                    'year_id'      => $yid,
+                                    'year_name'    => $row['year_name'] ?? '—',
+                                    'year_current' => (int)($row['year_is_current'] ?? 0) === 1,
+                                    'terms'        => [],
+                                ];
+                            }
+                            $groupedByYear[$yid]['terms'][] = $row;
+                        }
+                        ?>
+
+                        <?php if (!empty($groupedByYear)): ?>
+                            <?php foreach ($groupedByYear as $group): ?>
                                 <li>
-                                    <a class="dropdown-item <?= $isActive ? 'active' : '' ?>" href="<?= $filterUrl ?>">
-                                        <?= htmlspecialchars($itemLabel, ENT_QUOTES, 'UTF-8') ?>
-                                        <?php if (!empty($termItem['is_current'])): ?>
-                                            <span class="badge bg-primary ms-1" style="font-size: 0.65rem;">Current</span>
+                                    <div class="year-header">
+                                        <i class="fas fa-calendar-alt text-muted"></i>
+                                        <span><?= htmlspecialchars($group['year_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                                        <?php if ($group['year_current']): ?>
+                                            <span class="badge bg-primary" style="font-size: 0.55rem;">Current</span>
                                         <?php endif; ?>
-                                    </a>
+                                    </div>
                                 </li>
+                                <?php foreach ($group['terms'] as $t): ?>
+                                    <?php
+                                        $tId      = (int)($t['term_id'] ?? 0);
+                                        $tActive  = ($activeYearId === $group['year_id']) && ($activeTermId === $tId);
+                                        $tCurrent = (int)($t['term_is_current'] ?? 0) === 1;
+                                        $url = BASE_URL . '/dashboard?year_id=' . $group['year_id'] . '&term_id=' . $tId;
+                                    ?>
+                                    <li>
+                                        <a class="dropdown-item <?= $tActive ? 'active' : '' ?>" href="<?= $url ?>">
+                                            <span><?= htmlspecialchars($t['term_name'] ?? '—', ENT_QUOTES, 'UTF-8') ?></span>
+                                            <?php if ($tCurrent): ?>
+                                                <span class="badge <?= $tActive ? 'bg-light text-primary' : 'bg-primary' ?>"
+                                                      style="font-size: 0.55rem;">Current</span>
+                                            <?php endif; ?>
+                                        </a>
+                                    </li>
+                                <?php endforeach; ?>
+                                <li><hr class="dropdown-divider my-1"></li>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <li><a class="dropdown-item active" href="#"><?= $yearLabel ?> (Current)</a></li>
+                            <li>
+                                <span class="dropdown-item text-muted small">
+                                    No academic terms configured yet.
+                                </span>
+                            </li>
                         <?php endif; ?>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="<?= BASE_URL . '/academic/years' ?>"><i class="fas fa-cog me-2 text-muted"></i>Manage Terms & Years</a></li>
+
+                        <li>
+                            <a class="dropdown-item small" href="<?= BASE_URL ?>/dashboard">
+                                <span><i class="fas fa-sync-alt me-2 text-muted"></i>Reset to current period</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item small" href="<?= BASE_URL ?>/academic/years">
+                                <span><i class="fas fa-cog me-2 text-muted"></i>Manage Years &amp; Terms</span>
+                            </a>
+                        </li>
                     </ul>
                 </div>
-                <a href="<?= BASE_URL . '/attendance/take' ?>" class="btn btn-light btn-sm shadow-sm fw-semibold text-dark">
+                <a href="<?= BASE_URL ?>/attendance/take" class="btn btn-light btn-sm shadow-sm fw-semibold text-dark">
                     <i class="fas fa-check-double text-dark me-1"></i>Mark Attendance
                 </a>
-                <a href="<?= BASE_URL . '/student/create' ?>" class="btn btn-outline-light btn-sm fw-semibold">
+                <a href="<?= BASE_URL ?>/student/create" class="btn btn-outline-light btn-sm fw-semibold">
                     <i class="fas fa-user-plus me-1"></i>Admit Student
                 </a>
             </div>
@@ -304,7 +368,7 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
             <div class="metric-card p-3 h-100" style="--metric-accent: #10b981;">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
-                        <div class="text-muted small fw-bold text-uppercase tracking-wide">Staff & Teachers</div>
+                        <div class="text-muted small fw-bold text-uppercase tracking-wide">Staff &amp; Teachers</div>
                         <h3 class="fw-bold my-2 mb-1"><?= number_format((int)($totalTeachers ?? 0)) ?></h3>
                         <div class="d-flex align-items-center gap-2 small">
                             <span class="metric-trend bg-success bg-opacity-10 text-success">
@@ -352,7 +416,7 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
                             <span class="metric-trend bg-<?= $attendanceState ?> bg-opacity-10 text-<?= $attendanceState ?>">
                                 <i class="fas <?= $attendanceIcon ?> me-1"></i><?= $attendanceLabel ?>
                             </span>
-                            <span class="text-muted">7d avg <?= $avgTrend ?>%</span>
+                            <span class="text-muted">Term avg <?= $avgTrend ?>%</span>
                         </div>
                     </div>
                     <div class="metric-icon bg-<?= $attendanceState ?> bg-opacity-10 text-<?= $attendanceState ?>">
@@ -366,10 +430,12 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
     <div class="row g-3 mb-4">
         <div class="col-lg-8">
             <div class="dash-card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center py-3">
+                <div class="card-header d-flex justify-content-between align-items-center py-3 flex-wrap gap-2">
                     <div>
-                        <h6 class="fw-bold mb-0"><i class="fas fa-chart-line me-2 text-primary"></i>Weekly Attendance Trend</h6>
-                        <small>Performance over the last 7 recorded days</small>
+                        <h6 class="fw-bold mb-0">
+                            <i class="fas fa-chart-line me-2 text-primary"></i>Attendance Trend
+                        </h6>
+                        <small>Performance for <?= $yearLabel ?></small>
                     </div>
                     <div class="d-flex gap-3 small">
                         <div class="stat-mini text-end">
@@ -391,7 +457,7 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
                         <?php if (empty($trendData) || array_sum($trendData) === 0): ?>
                             <div class="chart-empty-overlay">
                                 <i class="fas fa-chart-line fa-2x mb-2 opacity-50"></i>
-                                <span>No attendance trend data recorded for this week.</span>
+                                <span>No attendance recorded for this period yet.</span>
                             </div>
                         <?php endif; ?>
                         <canvas id="attendanceTrendChart"></canvas>
@@ -403,8 +469,10 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
         <div class="col-lg-4">
             <div class="dash-card h-100">
                 <div class="card-header py-3">
-                    <h6 class="fw-bold mb-0"><i class="fas fa-venus-mars me-2 text-danger"></i>Gender Distribution</h6>
-                    <small><?= number_format($totalEnrolled) ?> active students</small>
+                    <h6 class="fw-bold mb-0">
+                        <i class="fas fa-venus-mars me-2 text-danger"></i>Gender Distribution
+                    </h6>
+                    <small><?= number_format($totalEnrolled) ?> students</small>
                 </div>
                 <div class="card-body pt-3 d-flex flex-column justify-content-between">
                     <div class="chart-container" style="height: 190px;">
@@ -420,13 +488,17 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
                         <div class="col-6">
                             <div class="text-center p-2 rounded bg-primary bg-opacity-10 border border-primary border-opacity-10">
                                 <div class="fw-bold text-primary"><?= $malePct ?>%</div>
-                                <div class="small text-muted"><i class="fas fa-mars me-1"></i>Male (<?= $maleCount ?>)</div>
+                                <div class="small text-muted">
+                                    <i class="fas fa-mars me-1"></i>Male (<?= $maleCount ?>)
+                                </div>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="text-center p-2 rounded bg-danger bg-opacity-10 border border-danger border-opacity-10">
                                 <div class="fw-bold text-danger"><?= $femalePct ?>%</div>
-                                <div class="small text-muted"><i class="fas fa-venus me-1"></i>Female (<?= $femaleCount ?>)</div>
+                                <div class="small text-muted">
+                                    <i class="fas fa-venus me-1"></i>Female (<?= $femaleCount ?>)
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -439,7 +511,10 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
         <div class="col-lg-6">
             <div class="dash-card h-100">
                 <div class="card-header py-3">
-                    <h6 class="fw-bold mb-0"><i class="fas fa-chart-bar me-2 text-success"></i>Enrollment by Class</h6>
+                    <h6 class="fw-bold mb-0">
+                        <i class="fas fa-chart-bar me-2 text-success"></i>Enrollment by Class
+                    </h6>
+                    <small>For <?= $yearLabel ?></small>
                 </div>
                 <div class="card-body pt-3">
                     <div class="chart-container" style="height: 240px;">
@@ -458,7 +533,9 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
         <div class="col-lg-6">
             <div class="dash-card h-100">
                 <div class="card-header py-3">
-                    <h6 class="fw-bold mb-0"><i class="fas fa-user-tag me-2 text-warning"></i>Staff by Category</h6>
+                    <h6 class="fw-bold mb-0">
+                        <i class="fas fa-user-tag me-2 text-warning"></i>Staff by Category
+                    </h6>
                 </div>
                 <div class="card-body pt-3">
                     <div class="chart-container" style="height: 240px;">
@@ -476,12 +553,14 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
     </div>
 
     <div class="row g-3">
-        <!-- Recently Added Students (Moved to Left / First) -->
         <div class="col-lg-6">
             <div class="dash-card h-100">
                 <div class="card-header py-3 d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="fw-bold mb-0"><i class="fas fa-user-plus me-2 text-success"></i>Recently Added Learners</h6>
+                        <h6 class="fw-bold mb-0">
+                            <i class="fas fa-user-plus me-2 text-success"></i>Recently Added Learners
+                        </h6>
+                        <small>For <?= $yearLabel ?></small>
                     </div>
                     <a href="<?= BASE_URL . '/students' ?>" class="text-decoration-none small fw-semibold text-primary">
                         View All <i class="fas fa-arrow-right ms-1"></i>
@@ -501,34 +580,51 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
                                 </thead>
                                 <tbody>
                                     <?php foreach ($recentStudentList as $student): ?>
-                                        <?php 
+                                        <?php
                                             $firstNameVal = trim($student['first_name'] ?? '');
                                             $lastNameVal  = trim($student['last_name'] ?? '');
                                             $fullNameUpper = strtoupper($lastNameVal . ' ' . $firstNameVal);
-                                            $initials = strtoupper(substr($firstNameVal, 0, 1) . substr($lastNameVal, 0, 1));
-                                            $statusVal = trim($student['section_name'] ?? $student['category_name'] ?? 'UGANDA');
-                                            $statusBadge = (stripos($statusVal, 'board') !== false) ? 'bg-success bg-opacity-10 text-success' : 'bg-light text-dark border';
-                                            $admNumber = htmlspecialchars($student['registration_number'] ?? $student['admission_number'] ?? 'N/A', ENT_QUOTES, 'UTF-8');
+
+                                            $admNumber = htmlspecialchars(
+                                                $student['registration_number']
+                                                ?? $student['admission_number']
+                                                ?? 'N/A',
+                                                ENT_QUOTES,
+                                                'UTF-8'
+                                            );
+
+                                            $sectionVal = trim(
+                                                $student['section_name']
+                                                ?? $student['category_name']
+                                                ?? 'Unassigned'
+                                            );
+
+                                            $isBoarding = stripos($sectionVal, 'board') !== false;
+                                            $sectionBadge = $isBoarding
+                                                ? 'bg-success bg-opacity-10 text-success'
+                                                : 'bg-secondary bg-opacity-10 text-secondary';
                                         ?>
                                         <tr>
                                             <td>
-                                                <div class="d-flex align-items-center space-x-3">
-                                                    <div class="text-truncate" style="max-width: 150px;">
-                                                        <a href="<?= BASE_URL . '/students/show?id=' . ($student['id'] ?? '') ?>" class="fw-bold text-dark text-decoration-none uppercase small d-block text-truncate">
-                                                            <?= $fullNameUpper ?>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="text-truncate" style="max-width: 180px;">
+                                                        <a href="<?= BASE_URL . '/students/show?id=' . (int)($student['id'] ?? 0) ?>"
+                                                           class="fw-bold text-dark text-decoration-none small d-block text-truncate">
+                                                            <?= htmlspecialchars($fullNameUpper, ENT_QUOTES, 'UTF-8') ?>
                                                         </a>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td>
-                                                <span class="font-mono text-muted small">
-                                                    <?= $admNumber ?>
-                                                </span>
+                                                <span class="font-mono text-muted small"><?= $admNumber ?></span>
                                             </td>
-                                            <td class="small fw-semibold text-dark"><?= htmlspecialchars($student['class_name'] ?? 'N/A', ENT_QUOTES, 'UTF-8') ?></td>
+                                            <td class="small fw-semibold">
+                                                <?= htmlspecialchars($student['class_name'] ?? 'N/A', ENT_QUOTES, 'UTF-8') ?>
+                                            </td>
                                             <td>
-                                                <span class="badge <?= $statusBadge ?> px-2 py-1 fw-semibold uppercase" style="font-size: 0.68rem;">
-                                                    <?= htmlspecialchars($statusVal, ENT_QUOTES, 'UTF-8') ?>
+                                                <span class="badge <?= $sectionBadge ?> px-2 py-1 fw-semibold"
+                                                      style="font-size: 0.68rem;">
+                                                    <?= htmlspecialchars($sectionVal, ENT_QUOTES, 'UTF-8') ?>
                                                 </span>
                                             </td>
                                         </tr>
@@ -546,12 +642,13 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
             </div>
         </div>
 
-        <!-- Recent Activity (Moved to Right / Last) -->
         <div class="col-lg-6">
             <div class="dash-card h-100">
                 <div class="card-header py-3 d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="fw-bold mb-0"><i class="fas fa-history me-2 text-primary"></i>Recent Activity</h6>
+                        <h6 class="fw-bold mb-0">
+                            <i class="fas fa-history me-2 text-primary"></i>Recent Activity
+                        </h6>
                     </div>
                     <a href="<?= BASE_URL . '/audit' ?>" class="text-decoration-none small fw-semibold text-primary">
                         View All <i class="fas fa-arrow-right ms-1"></i>
@@ -585,14 +682,26 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
                                                 <div class="d-flex align-items-center">
                                                     <span class="activity-dot"></span>
                                                     <span class="fw-semibold small text-truncate" style="max-width: 130px;">
-                                                        <?= htmlspecialchars(trim(($activity['first_name'] ?? 'System') . ' ' . ($activity['last_name'] ?? '')), ENT_QUOTES, 'UTF-8') ?>
+                                                        <?= htmlspecialchars(
+                                                            trim(($activity['first_name'] ?? 'System') . ' ' . ($activity['last_name'] ?? '')),
+                                                            ENT_QUOTES,
+                                                            'UTF-8'
+                                                        ) ?>
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td><span class="badge <?= $badgeClass ?> px-2 py-1 fw-semibold"><?= htmlspecialchars($actionName, ENT_QUOTES, 'UTF-8') ?></span></td>
-                                            <td class="small text-muted text-truncate" style="max-width: 160px;"><?= htmlspecialchars($activity['description'] ?? 'N/A', ENT_QUOTES, 'UTF-8') ?></td>
+                                            <td>
+                                                <span class="badge <?= $badgeClass ?> px-2 py-1 fw-semibold">
+                                                    <?= htmlspecialchars($actionName, ENT_QUOTES, 'UTF-8') ?>
+                                                </span>
+                                            </td>
+                                            <td class="small text-muted text-truncate" style="max-width: 160px;">
+                                                <?= htmlspecialchars($activity['description'] ?? 'N/A', ENT_QUOTES, 'UTF-8') ?>
+                                            </td>
                                             <td class="small text-muted text-end text-nowrap">
-                                                <?= !empty($activity['created_at']) ? date('H:i, d M', strtotime($activity['created_at'])) : '-' ?>
+                                                <?= !empty($activity['created_at'])
+                                                    ? date('H:i, d M', strtotime($activity['created_at']))
+                                                    : '-' ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -637,147 +746,156 @@ document.addEventListener("DOMContentLoaded", function () {
     Chart.defaults.font.size   = 11;
     Chart.defaults.color       = textColor;
 
-    new Chart(document.getElementById('attendanceTrendChart'), {
-        type: 'line',
-        data: {
-            labels: <?= json_encode($trendLabels) ?>,
-            datasets: [{
-                label: 'Attendance %',
-                data: <?= json_encode($trendData) ?>,
-                borderColor: accentColor,
-                backgroundColor: (ctx) => {
-                    const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 250);
-                    g.addColorStop(0, 'rgba(' + accentRgb + ', 0.2)');
-                    g.addColorStop(1, 'rgba(' + accentRgb + ', 0)');
-                    return g;
-                },
-                fill: true,
-                tension: 0.4,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                pointBackgroundColor: surfaceColor,
-                pointBorderColor: accentColor,
-                pointBorderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: {
-                    min: 0, max: 100,
-                    ticks: { callback: v => v + '%', color: textColor },
-                    grid: { color: gridColor, drawBorder: false }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: textColor }
-                }
-            }
-        }
-    });
-
-    new Chart(document.getElementById('genderRatioChart'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Male', 'Female', 'Other'],
-            datasets: [{
-                data: [
-                    <?= (int)($genderData['male']   ?? 0) ?>,
-                    <?= (int)($genderData['female'] ?? 0) ?>,
-                    <?= (int)($genderData['other']  ?? 0) ?>
-                ],
-                backgroundColor: [accentColor, '#ec4899', '#94a3b8'],
-                borderWidth: 0,
-                cutout: '75%'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: true }
-            }
-        }
-    });
-
-    new Chart(document.getElementById('classDistributionChart'), {
-        type: 'bar',
-        data: {
-            labels: <?= json_encode($classDist['labels'] ?? []) ?>,
-            datasets: [
-                {
-                    label: 'Male',
-                    data: <?= json_encode($classDist['male'] ?? []) ?>,
-                    backgroundColor: accentColor,
-                    borderRadius: 0,
-                    barPercentage: 0.9,
-                    categoryPercentage: 0.65
-                },
-                {
-                    label: 'Female',
-                    data: <?= json_encode($classDist['female'] ?? []) ?>,
-                    backgroundColor: '#0d9488',
-                    borderRadius: 0,
-                    barPercentage: 0.9,
-                    categoryPercentage: 0.65
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    align: 'end',
-                    labels: {
-                        boxWidth: 12,
-                        padding: 15,
-                        font: { size: 11, weight: '500' },
-                        color: textColor
+    const attendanceCanvas = document.getElementById('attendanceTrendChart');
+    if (attendanceCanvas) {
+        new Chart(attendanceCanvas, {
+            type: 'line',
+            data: {
+                labels: <?= json_encode($trendLabels) ?>,
+                datasets: [{
+                    label: 'Attendance %',
+                    data: <?= json_encode($trendData) ?>,
+                    borderColor: accentColor,
+                    backgroundColor: (ctx) => {
+                        const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 250);
+                        g.addColorStop(0, 'rgba(' + accentRgb + ', 0.2)');
+                        g.addColorStop(1, 'rgba(' + accentRgb + ', 0)');
+                        return g;
+                    },
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: surfaceColor,
+                    pointBorderColor: accentColor,
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        min: 0, max: 100,
+                        ticks: { callback: v => v + '%', color: textColor },
+                        grid: { color: gridColor, drawBorder: false }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: textColor }
                     }
                 }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { precision: 0, color: textColor },
-                    grid: { color: gridColor, drawBorder: false }
-                },
-                x: {
-                    stacked: false,
-                    ticks: { color: textColor },
-                    grid: { display: false }
-                }
             }
-        }
-    });
+        });
+    }
 
-    new Chart(document.getElementById('staffCategoryChart'), {
-        type: 'doughnut',
-        data: {
-            labels: <?= json_encode($staffDist['labels'] ?? []) ?>,
-            datasets: [{
-                data: <?= json_encode($staffDist['data'] ?? []) ?>,
-                backgroundColor: [warningColor, accentColor, '#8b5cf6', '#f97316', '#14b8a6', '#db2777'],
-                borderWidth: 0,
-                cutout: '65%'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: { boxWidth: 10, padding: 10, font: { size: 11 }, color: textColor }
+    const genderCanvas = document.getElementById('genderRatioChart');
+    if (genderCanvas) {
+        new Chart(genderCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['Male', 'Female', 'Other'],
+                datasets: [{
+                    data: [
+                        <?= (int)($genderData['male']   ?? 0) ?>,
+                        <?= (int)($genderData['female'] ?? 0) ?>,
+                        <?= (int)($genderData['other']  ?? 0) ?>
+                    ],
+                    backgroundColor: [accentColor, '#ec4899', '#94a3b8'],
+                    borderWidth: 0,
+                    cutout: '75%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { enabled: true } }
+            }
+        });
+    }
+
+    const classCanvas = document.getElementById('classDistributionChart');
+    if (classCanvas) {
+        new Chart(classCanvas, {
+            type: 'bar',
+            data: {
+                labels: <?= json_encode($classDist['labels'] ?? []) ?>,
+                datasets: [
+                    {
+                        label: 'Male',
+                        data: <?= json_encode($classDist['male'] ?? []) ?>,
+                        backgroundColor: accentColor,
+                        borderRadius: 0,
+                        barPercentage: 0.9,
+                        categoryPercentage: 0.65
+                    },
+                    {
+                        label: 'Female',
+                        data: <?= json_encode($classDist['female'] ?? []) ?>,
+                        backgroundColor: '#0d9488',
+                        borderRadius: 0,
+                        barPercentage: 0.9,
+                        categoryPercentage: 0.65
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 15,
+                            font: { size: 11, weight: '500' },
+                            color: textColor
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0, color: textColor },
+                        grid: { color: gridColor, drawBorder: false }
+                    },
+                    x: {
+                        stacked: false,
+                        ticks: { color: textColor },
+                        grid: { display: false }
+                    }
                 }
             }
-        }
-    });
+        });
+    }
+
+    const staffCanvas = document.getElementById('staffCategoryChart');
+    if (staffCanvas) {
+        new Chart(staffCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: <?= json_encode($staffDist['labels'] ?? []) ?>,
+                datasets: [{
+                    data: <?= json_encode($staffDist['data'] ?? []) ?>,
+                    backgroundColor: [warningColor, accentColor, '#8b5cf6', '#f97316', '#14b8a6', '#db2777'],
+                    borderWidth: 0,
+                    cutout: '65%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { boxWidth: 10, padding: 10, font: { size: 11 }, color: textColor }
+                    }
+                }
+            }
+        });
+    }
 });
 </script>

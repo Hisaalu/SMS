@@ -1,7 +1,10 @@
 <!-- File: /app/Views/academic/years/create.php -->
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">Create Academic Year</h4>
+        <div>
+            <h4 class="mb-0">Create Academic Year</h4>
+            <small class="text-muted">Add an Academic Year</small>
+        </div>
         <a href="<?= BASE_URL ?>/academic/years" class="btn btn-sm btn-secondary">
             <i class="fas fa-arrow-left me-1"></i> Back
         </a>

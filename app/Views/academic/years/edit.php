@@ -1,7 +1,10 @@
 <!-- File: /app/Views/academic/years/edit.php -->
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">Edit Academic Year: <?= htmlspecialchars($year->name) ?></h4>
+        <div>
+            <h4 class="mb-0">Edit Academic Year: <?= htmlspecialchars($year->name) ?></h4>
+            <small class="text-muted">Customize your Academic Year</small>
+        </div>
         <a href="<?= BASE_URL ?>/academic/years" class="btn btn-sm btn-secondary">
             <i class="fas fa-arrow-left me-1"></i> Back
         </a>

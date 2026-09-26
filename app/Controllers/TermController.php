@@ -6,6 +6,7 @@ namespace NexaT\Controllers;
 use NexaT\Core\Controller;
 use NexaT\Models\Term;
 use NexaT\Models\AcademicYear;
+use Throwable;
 
 class TermController extends Controller
 {
@@ -13,17 +14,51 @@ class TermController extends Controller
     {
         $this->requirePermission('academic.terms.view');
 
+        $schoolId       = $this->schoolId();
         $academicYearId = (int)($_GET['year'] ?? 0);
 
-        if ($academicYearId) {
-            $terms = Term::where('academic_year_id', $academicYearId);
-            $selectedYear = AcademicYear::find($academicYearId);
-        } else {
-            $terms = Term::all();
-            $selectedYear = null;
+        if (!$academicYearId) {
+            $current = $this->db->fetch(
+                "SELECT id FROM academic_years
+                 WHERE school_id = :school_id AND is_current = 1 LIMIT 1",
+                ['school_id' => $schoolId]
+            );
+            $academicYearId = (int)($current['id'] ?? 0);
         }
 
-        $years = AcademicYear::all([], ['start_date' => 'DESC']);
+        $where  = "WHERE t.school_id = :school_id";
+        $params = ['school_id' => $schoolId];
+
+        if ($academicYearId) {
+            $where .= " AND t.academic_year_id = :year_id";
+            $params['year_id'] = $academicYearId;
+        }
+
+        $terms = $this->db->fetchAll(
+            "SELECT t.*, ay.name AS academic_year_name
+             FROM terms t
+             LEFT JOIN academic_years ay ON ay.id = t.academic_year_id
+             {$where}
+             ORDER BY t.academic_year_id DESC, t.term_number ASC",
+            $params
+        );
+
+        $years = $this->db->fetchAll(
+            "SELECT id, name, is_current FROM academic_years
+             WHERE school_id = :school_id
+             ORDER BY start_date DESC",
+            ['school_id' => $schoolId]
+        );
+
+        $selectedYear = null;
+        if ($academicYearId) {
+            foreach ($years as $y) {
+                if ((int)$y['id'] === $academicYearId) {
+                    $selectedYear = $y;
+                    break;
+                }
+            }
+        }
 
         echo $this->view->renderWithLayout('academic/terms/index', 'default', [
             'terms'        => $terms,
@@ -36,8 +71,24 @@ class TermController extends Controller
     {
         $this->requirePermission('academic.terms.create');
 
-        $years = AcademicYear::all([], ['start_date' => 'DESC']);
-        $selectedYearId = $_GET['year'] ?? null;
+        $schoolId = $this->schoolId();
+
+        $years = $this->db->fetchAll(
+            "SELECT id, name, is_current FROM academic_years
+             WHERE school_id = :school_id
+             ORDER BY start_date DESC",
+            ['school_id' => $schoolId]
+        );
+
+        $selectedYearId = (int)($_GET['year'] ?? 0);
+        if (!$selectedYearId) {
+            foreach ($years as $y) {
+                if (!empty($y['is_current'])) {
+                    $selectedYearId = (int)$y['id'];
+                    break;
+                }
+            }
+        }
 
         echo $this->view->renderWithLayout('academic/terms/create', 'default', [
             'years'          => $years,
@@ -49,13 +100,13 @@ class TermController extends Controller
     {
         $this->requirePermission('academic.terms.create');
 
+        $schoolId       = $this->schoolId();
         $academicYearId = (int)($_POST['academic_year_id'] ?? 0);
         $name           = trim($_POST['name'] ?? '');
         $termNumber     = (int)($_POST['term_number'] ?? 1);
         $startDate      = $_POST['start_date'] ?? '';
         $endDate        = $_POST['end_date'] ?? '';
         $isCurrent      = isset($_POST['is_current']) ? 1 : 0;
-        $schoolId       = $this->schoolId();
 
         if ($academicYearId === 0 || $name === '' || $startDate === '' || $endDate === '') {
             $this->flashError('All required fields must be filled out.');
@@ -73,27 +124,38 @@ class TermController extends Controller
             $this->redirect('/academic/terms/create');
         }
 
-        $term = new Term([
-            'school_id'        => $schoolId,
-            'academic_year_id' => $academicYearId,
-            'name'             => $name,
-            'term_number'      => $termNumber,
-            'start_date'       => $startDate,
-            'end_date'         => $endDate,
-            'is_current'       => $isCurrent,
-        ]);
-
         try {
-            if ($term->save()) {
-                $this->audit('Term Created', 'academic', "Created term: {$name} (Year #{$academicYearId})");
-                $this->flashSuccess('Term created successfully.');
-                $this->redirect('/academic/terms?year=' . $academicYearId);
+            $this->db->beginTransaction();
+
+            if ($isCurrent) {
+                $this->db->execute(
+                    "UPDATE terms SET is_current = 0 WHERE academic_year_id = :year_id",
+                    ['year_id' => $academicYearId]
+                );
             }
 
-            $this->flashError('Failed to create term.');
-            $this->redirect('/academic/terms/create');
+            $term = new Term([
+                'school_id'        => $schoolId,
+                'academic_year_id' => $academicYearId,
+                'name'             => $name,
+                'term_number'      => $termNumber,
+                'start_date'       => $startDate,
+                'end_date'         => $endDate,
+                'is_current'       => $isCurrent,
+            ]);
 
-        } catch (\Throwable $e) {
+            if (!$term->save()) {
+                throw new \RuntimeException('Failed to save term.');
+            }
+
+            $this->db->commit();
+
+            $this->audit('Term Created', 'academic', "Created term: {$name} (Year #{$academicYearId})");
+            $this->flashSuccess('Term created successfully.');
+            $this->redirect('/academic/terms?year=' . $academicYearId);
+
+        } catch (Throwable $e) {
+            $this->db->rollback();
             $this->flashError($this->friendlyTermError($e));
             $this->redirect('/academic/terms/create');
         }
@@ -104,14 +166,27 @@ class TermController extends Controller
         $this->requirePermission('academic.terms.edit');
 
         $termId = (int)($params['id'] ?? 0);
-        $term = Term::find($termId);
+
+        $term = $this->db->fetch(
+            "SELECT t.*, ay.name AS academic_year_name
+             FROM terms t
+             LEFT JOIN academic_years ay ON ay.id = t.academic_year_id
+             WHERE t.id = :id
+             LIMIT 1",
+            ['id' => $termId]
+        );
 
         if (!$term) {
             $this->flashError('Term not found.');
             $this->redirect('/academic/terms');
         }
 
-        $years = AcademicYear::all([], ['start_date' => 'DESC']);
+        $years = $this->db->fetchAll(
+            "SELECT id, name, is_current FROM academic_years
+             WHERE school_id = :school_id
+             ORDER BY start_date DESC",
+            ['school_id' => $this->schoolId()]
+        );
 
         echo $this->view->renderWithLayout('academic/terms/edit', 'default', [
             'term'  => $term,
@@ -124,7 +199,7 @@ class TermController extends Controller
         $this->requirePermission('academic.terms.edit');
 
         $termId = (int)($params['id'] ?? 0);
-        $term = Term::find($termId);
+        $term   = Term::find($termId);
 
         if (!$term) {
             $this->flashError('Term not found.');
@@ -154,26 +229,38 @@ class TermController extends Controller
             $this->redirect('/academic/terms/' . $termId . '/edit');
         }
 
-        $term->fill([
-            'academic_year_id' => $academicYearId,
-            'name'             => $name,
-            'term_number'      => $termNumber,
-            'start_date'       => $startDate,
-            'end_date'         => $endDate,
-            'is_current'       => $isCurrent,
-        ]);
-
         try {
-            if ($term->save()) {
-                $this->audit('Term Updated', 'academic', "Updated term: {$name} (ID: {$termId})");
-                $this->flashSuccess('Term updated successfully.');
-                $this->redirect('/academic/terms?year=' . $academicYearId);
+            $this->db->beginTransaction();
+
+            if ($isCurrent) {
+                $this->db->execute(
+                    "UPDATE terms SET is_current = 0
+                     WHERE academic_year_id = :year_id AND id != :id",
+                    ['year_id' => $academicYearId, 'id' => $termId]
+                );
             }
 
-            $this->flashError('Failed to update term.');
-            $this->redirect('/academic/terms/' . $termId . '/edit');
+            $term->fill([
+                'academic_year_id' => $academicYearId,
+                'name'             => $name,
+                'term_number'      => $termNumber,
+                'start_date'       => $startDate,
+                'end_date'         => $endDate,
+                'is_current'       => $isCurrent,
+            ]);
 
-        } catch (\Throwable $e) {
+            if (!$term->save()) {
+                throw new \RuntimeException('Failed to update term.');
+            }
+
+            $this->db->commit();
+
+            $this->audit('Term Updated', 'academic', "Updated term: {$name} (ID: {$termId})");
+            $this->flashSuccess('Term updated successfully.');
+            $this->redirect('/academic/terms?year=' . $academicYearId);
+
+        } catch (Throwable $e) {
+            $this->db->rollback();
             $this->flashError($this->friendlyTermError($e));
             $this->redirect('/academic/terms/' . $termId . '/edit');
         }
@@ -184,13 +271,28 @@ class TermController extends Controller
         $this->requirePermission('academic.terms.delete');
 
         $termId = (int)($params['id'] ?? 0);
-        $term = Term::find($termId);
+        $term   = Term::find($termId);
 
         if (!$term) {
             $this->json(['error' => 'Term not found'], 404);
         }
 
         try {
+            if (!empty($term->is_current)) {
+                $other = $this->db->fetch(
+                    "SELECT id FROM terms
+                     WHERE academic_year_id = :year_id AND id != :id
+                     LIMIT 1",
+                    ['year_id' => $term->academic_year_id, 'id' => $termId]
+                );
+
+                if (!$other) {
+                    $this->json([
+                        'error' => 'Cannot delete the only term in this academic year. Add another term first, or mark it as non-current.'
+                    ], 400);
+                }
+            }
+
             if ($term->delete(['id' => $termId])) {
                 $this->audit('Term Deleted', 'academic', "Deleted term ID: {$termId}");
                 $this->json(['success' => true]);
@@ -198,8 +300,8 @@ class TermController extends Controller
 
             $this->json(['error' => 'Failed to delete term'], 500);
 
-        } catch (\Throwable $e) {
-            $this->json(['error' => 'Failed to delete term'], 500);
+        } catch (Throwable $e) {
+            $this->json(['error' => 'Failed to delete term: ' . $e->getMessage()], 500);
         }
     }
 
@@ -230,7 +332,7 @@ class TermController extends Controller
         return null;
     }
 
-    private function friendlyTermError(\Throwable $e): string
+    private function friendlyTermError(Throwable $e): string
     {
         $message = $e->getMessage();
 
