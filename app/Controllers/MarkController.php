@@ -256,4 +256,118 @@ class MarkController extends Controller
 
         return $matrix;
     }
+
+    public function entryLookup(): void
+    {
+        $this->requireAuth();
+
+        $schoolId = $this->schoolId();
+        $type     = (string)($_GET['type'] ?? '');
+
+        try {
+            switch ($type) {
+
+                case 'terms':
+                    $yearId = (int)($_GET['year_id'] ?? 0);
+                    if (!$yearId) {
+                        $this->json([]);
+                        return;
+                    }
+
+                    $rows = $this->db->fetchAll(
+                        "SELECT id, name, term_number, is_current
+                        FROM terms
+                        WHERE school_id = :school_id
+                        AND academic_year_id = :year_id
+                        ORDER BY term_number ASC, id ASC",
+                        ['school_id' => $schoolId, 'year_id' => $yearId]
+                    );
+
+                    $this->json($rows);
+                    return;
+
+                case 'examinations':
+                    $yearId = (int)($_GET['year_id'] ?? 0);
+                    $termId = (int)($_GET['term_id'] ?? 0);
+
+                    if (!$yearId) {
+                        $this->json([]);
+                        return;
+                    }
+
+                    $sql    = "SELECT id, name, code, academic_period_id
+                            FROM examinations
+                            WHERE school_id = :school_id
+                                AND academic_year_id = :year_id";
+                    $params = ['school_id' => $schoolId, 'year_id' => $yearId];
+
+                    if ($termId) {
+                        $sql .= " AND academic_period_id = :term_id";
+                        $params['term_id'] = $termId;
+                    }
+
+                    $sql .= " ORDER BY created_at DESC";
+
+                    $this->json($this->db->fetchAll($sql, $params));
+                    return;
+
+                case 'streams':
+                    $classId = (int)($_GET['class_id'] ?? 0);
+                    if (!$classId) {
+                        $this->json([]);
+                        return;
+                    }
+
+                    $rows = $this->db->fetchAll(
+                        "SELECT id, name
+                        FROM streams
+                        WHERE school_id = :school_id AND class_id = :class_id
+                        ORDER BY name ASC",
+                        ['school_id' => $schoolId, 'class_id' => $classId]
+                    );
+
+                    $this->json($rows);
+                    return;
+
+                case 'subjects':
+                    $classId  = (int)($_GET['class_id']  ?? 0);
+
+                    if ($classId) {
+                        $rows = $this->db->fetchAll(
+                            "SELECT s.id, s.name, s.code
+                            FROM class_subjects cs
+                            INNER JOIN subjects s ON cs.subject_id = s.id
+                            WHERE cs.class_id = :class_id
+                            AND cs.school_id = :school_id
+                            ORDER BY s.code ASC, s.name ASC",
+                            ['class_id' => $classId, 'school_id' => $schoolId]
+                        );
+
+                        if (!empty($rows)) {
+                            $this->json($rows);
+                            return;
+                        }
+                    }
+
+                    $rows = $this->db->fetchAll(
+                        "SELECT s.id, s.name, s.code
+                        FROM subjects s
+                        WHERE s.school_id = :school_id
+                        AND NOT EXISTS (
+                            SELECT 1 FROM class_subjects cs WHERE cs.subject_id = s.id
+                        )
+                        ORDER BY s.code ASC, s.name ASC",
+                        ['school_id' => $schoolId]
+                    );
+
+                    $this->json($rows);
+                    return;
+            }
+
+            $this->json([]);
+
+        } catch (\Throwable $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }

@@ -447,4 +447,79 @@ class ResultController extends Controller
         }
         return null;
     }
+
+    public function lookup(): void
+    {
+        $this->requirePermission('results.view');
+
+        $schoolId = $this->schoolId();
+        $type     = (string)($_GET['type'] ?? '');
+
+        try {
+            switch ($type) {
+                case 'terms':
+                    $yearId = (int)($_GET['year_id'] ?? 0);
+                    if (!$yearId) {
+                        $this->json([]);
+                        return;
+                    }
+
+                    $this->json($this->db->fetchAll(
+                        "SELECT id, name, term_number, is_current
+                        FROM terms
+                        WHERE school_id = :school_id
+                        AND academic_year_id = :year_id
+                        ORDER BY term_number ASC, id ASC",
+                        ['school_id' => $schoolId, 'year_id' => $yearId]
+                    ));
+                    return;
+
+                case 'examinations':
+                    $yearId = (int)($_GET['year_id'] ?? 0);
+                    $termId = (int)($_GET['term_id'] ?? 0);
+
+                    if (!$yearId) {
+                        $this->json([]);
+                        return;
+                    }
+
+                    $sql    = "SELECT id, name, code, academic_period_id
+                            FROM examinations
+                            WHERE school_id = :school_id
+                                AND academic_year_id = :year_id";
+                    $params = ['school_id' => $schoolId, 'year_id' => $yearId];
+
+                    if ($termId) {
+                        $sql .= " AND academic_period_id = :term_id";
+                        $params['term_id'] = $termId;
+                    }
+
+                    $sql .= " ORDER BY created_at DESC";
+
+                    $this->json($this->db->fetchAll($sql, $params));
+                    return;
+
+                case 'streams':
+                    $classId = (int)($_GET['class_id'] ?? 0);
+                    if (!$classId) {
+                        $this->json([]);
+                        return;
+                    }
+
+                    $this->json($this->db->fetchAll(
+                        "SELECT id, name
+                        FROM streams
+                        WHERE school_id = :school_id AND class_id = :class_id
+                        ORDER BY name ASC",
+                        ['school_id' => $schoolId, 'class_id' => $classId]
+                    ));
+                    return;
+            }
+
+            $this->json([]);
+
+        } catch (Throwable $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }

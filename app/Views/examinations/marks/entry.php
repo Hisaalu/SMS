@@ -2,42 +2,46 @@
 <div class="container-fluid px-0">
     <form id="marksForm" onsubmit="return false;">
 
-        <div class="card mb-3">
-            <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div>
-                    <h6 class="mb-1 fw-bold">Marks Entry Form</h6>
-                    <small class="text-muted">
-                        <span class="badge bg-primary"><?= htmlspecialchars($examination['name'] ?? 'N/A') ?></span>
-                        <?= htmlspecialchars($academicYear['name'] ?? '') ?> |
-                        <?= htmlspecialchars($term['name'] ?? '') ?> |
-                        <strong><?= htmlspecialchars($class['name'] ?? '') ?></strong>
-                        <?= !empty($stream) ? ' (' . htmlspecialchars($stream['name']) . ')' : '' ?>
-                    </small>
-                </div>
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <h4 class="mb-0 fw-bold">Marks Entry Form</h4>
+            <small class="text-muted">
+                <span class="badge bg-primary"><?= htmlspecialchars($examination['name'] ?? 'N/A') ?></span>
+                <?= htmlspecialchars($academicYear['name'] ?? '') ?> |
+                <?= htmlspecialchars($term['name'] ?? '') ?> |
+                <strong><?= htmlspecialchars($class['name'] ?? '') ?></strong>
+                <?= !empty($stream) ? ' (' . htmlspecialchars($stream['name']) . ')' : '' ?>
+            </small>
+        </div>
+        <a href="<?= BASE_URL ?>/marks/entry" class="btn btn-sm btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back
+        </a>
+    </div>
 
-                <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <label for="subjectSelect" class="fw-semibold mb-0 text-nowrap small">Subject:</label>
-                    <select id="subjectSelect" class="form-select form-select-sm" style="width: 170px;" onchange="switchSubject(this.value)">
-                        <option value="all" <?= empty($selectedSubject) ? 'selected' : '' ?>>-- All Subjects --</option>
-                        <?php foreach ($allSubjects as $subj): ?>
-                            <option value="<?= $subj['id'] ?>" <?= (!empty($selectedSubject) && $selectedSubject['id'] == $subj['id']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($subj['code'] ?? $subj['name']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+    <div class="card mb-3">
+        <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <label for="subjectSelect" class="fw-semibold mb-0 text-nowrap small">Subject:</label>
+                <select id="subjectSelect" class="form-select form-select-sm" style="width: 170px;" onchange="switchSubject(this.value)">
+                    <option value="all" <?= empty($selectedSubject) ? 'selected' : '' ?>>-- All Subjects --</option>
+                    <?php foreach ($allSubjects as $subj): ?>
+                        <option value="<?= $subj['id'] ?>" <?= (!empty($selectedSubject) && $selectedSubject['id'] == $subj['id']) ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($subj['code'] ?? $subj['name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
 
-                    <span id="autoSaveStatus" class="small text-muted">
-                        <i class="fas fa-clock me-1"></i> Auto-save active
-                    </span>
-                    <button type="button" class="btn btn-sm btn-primary fw-bold text-nowrap btn-save-marks" onclick="saveMarks(false)">
-                        <i class="fas fa-save me-1"></i> Save Marks
-                    </button>
-                    <a href="<?= BASE_URL ?>/marks/entry" class="btn btn-sm btn-secondary">
-                        <i class="fas fa-arrow-left me-1"></i> Back
-                    </a>
-                </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span id="autoSaveStatus" class="small text-muted">
+                    <i class="fas fa-clock me-1"></i> Auto-save active
+                </span>
+                <button type="button" class="btn btn-sm btn-primary fw-bold text-nowrap btn-save-marks" onclick="saveMarks(false)">
+                    <i class="fas fa-save me-1"></i> Save Marks
+                </button>
             </div>
         </div>
+    </div>
 
         <div class="card">
             <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">

@@ -1,7 +1,6 @@
 <!-- File: /app/Views/examinations/results/selector.php -->
 <div class="container-fluid px-3 py-3">
 
-    <!-- Flash -->
     <?php if (isset($_SESSION['flash_error'])): ?>
         <div class="alert alert-danger alert-dismissible fade show mb-3">
             <i class="fas fa-exclamation-triangle me-1"></i>
@@ -10,7 +9,6 @@
         </div>
     <?php endif; ?>
 
-    <!-- Filter Bar -->
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-header bg-white pt-3 pb-0 border-0">
             <h6 class="mb-0 fw-bold text-dark">
@@ -21,61 +19,79 @@
             <form action="<?= BASE_URL ?>/results/class" method="GET" id="resultsFilterForm">
                 <div class="row g-2">
                     <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-muted mb-1">Academic Year <span class="text-danger">*</span></label>
+                        <label class="form-label small fw-semibold text-muted mb-1">
+                            Academic Year <span class="text-danger">*</span>
+                        </label>
                         <select name="academic_year_id" id="academic_year_id" class="form-select form-select-sm" required>
                             <option value="">-- Select Year --</option>
                             <?php foreach ($academicYears as $year): ?>
-                                <option value="<?= $year['id'] ?>" <?= (isset($_GET['academic_year_id']) && $_GET['academic_year_id'] == $year['id']) ? 'selected' : '' ?>>
+                                <option value="<?= (int)$year['id'] ?>"
+                                        <?= (isset($_GET['academic_year_id']) && $_GET['academic_year_id'] == $year['id']) ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($year['name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
+
                     <div class="col-md-2">
-                        <label class="form-label small fw-semibold text-muted mb-1">Term <span class="text-danger">*</span></label>
+                        <label class="form-label small fw-semibold text-muted mb-1">
+                            Term <span class="text-danger">*</span>
+                        </label>
                         <select name="term_id" id="term_id" class="form-select form-select-sm" required>
                             <option value="">-- Term --</option>
                             <?php foreach ($terms as $term): ?>
-                                <option value="<?= $term['id'] ?>" <?= (isset($_GET['term_id']) && $_GET['term_id'] == $term['id']) ? 'selected' : '' ?>>
+                                <option value="<?= (int)$term['id'] ?>"
+                                        <?= (isset($_GET['term_id']) && $_GET['term_id'] == $term['id']) ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($term['name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
+
                     <div class="col-md-2">
-                        <label class="form-label small fw-semibold text-muted mb-1">Class <span class="text-danger">*</span></label>
+                        <label class="form-label small fw-semibold text-muted mb-1">
+                            Class <span class="text-danger">*</span>
+                        </label>
                         <select name="class_id" id="class_id" class="form-select form-select-sm" required>
                             <option value="">-- Class --</option>
                             <?php foreach ($classes as $class): ?>
-                                <option value="<?= $class['id'] ?>" <?= (isset($_GET['class_id']) && $_GET['class_id'] == $class['id']) ? 'selected' : '' ?>>
+                                <option value="<?= (int)$class['id'] ?>"
+                                        <?= (isset($_GET['class_id']) && $_GET['class_id'] == $class['id']) ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($class['name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
+
                     <div class="col-md-2">
                         <label class="form-label small fw-semibold text-muted mb-1">Stream</label>
                         <select name="stream_id" id="stream_id" class="form-select form-select-sm">
                             <option value="">-- All Streams --</option>
                             <?php foreach ($streams as $str): ?>
-                                <option value="<?= $str['id'] ?>" <?= (isset($_GET['stream_id']) && $_GET['stream_id'] == $str['id']) ? 'selected' : '' ?>>
+                                <option value="<?= (int)$str['id'] ?>"
+                                        <?= (isset($_GET['stream_id']) && $_GET['stream_id'] == $str['id']) ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($str['name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
+
                     <div class="col-md-3">
-                        <label class="form-label small fw-semibold text-muted mb-1">Examination <span class="text-danger">*</span></label>
+                        <label class="form-label small fw-semibold text-muted mb-1">
+                            Examination <span class="text-danger">*</span>
+                        </label>
                         <select name="examination_id" id="examination_id" class="form-select form-select-sm" required>
                             <option value="">-- Exam --</option>
                             <?php foreach ($examinations as $exam): ?>
-                                <option value="<?= $exam['id'] ?>" <?= (isset($_GET['examination_id']) && $_GET['examination_id'] == $exam['id']) ? 'selected' : '' ?>>
+                                <option value="<?= (int)$exam['id'] ?>"
+                                        <?= (isset($_GET['examination_id']) && $_GET['examination_id'] == $exam['id']) ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($exam['name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                 </div>
+
                 <div class="row mt-3">
                     <div class="col-12 text-end">
                         <a href="<?= BASE_URL ?>/results/class" class="btn btn-sm btn-outline-secondary">
@@ -90,7 +106,6 @@
         </div>
     </div>
 
-    <!-- Results -->
     <?php if (isset($examination) && $examination): ?>
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white pt-3 pb-3 border-bottom d-flex justify-content-between align-items-center">
@@ -213,9 +228,7 @@
 </div>
 
 <style>
-    .results-table {
-        font-size: 0.85rem;
-    }
+    .results-table { font-size: 0.85rem; }
     .results-table thead th {
         font-size: 0.72rem;
         letter-spacing: 0.5px;
@@ -227,13 +240,8 @@
         border-color: #e9ecef;
         vertical-align: middle;
     }
-    .results-table tbody tr:hover {
-        background: #f8f9fa;
-    }
-    .results-table sup.score-power {
-        font-size: 0.65rem;
-        font-weight: 500;
-    }
+    .results-table tbody tr:hover { background: #f8f9fa; }
+    .results-table sup.score-power { font-size: 0.65rem; font-weight: 500; }
     @media print {
         .card-header button, .card-footer, form, .btn { display: none !important; }
         .results-table { font-size: 10px; }
@@ -242,41 +250,104 @@
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const classSelect  = document.getElementById('class_id');
-    const streamSelect = document.getElementById('stream_id');
-    const selectedStream = "<?= $_GET['stream_id'] ?? '' ?>";
+(function () {
+    const url      = '<?= BASE_URL ?>';
+    const endpoint = url + '/api/results/lookup';
 
-    function updateStreams(classId, preserveSelected = false) {
-        if (!classId) {
-            streamSelect.innerHTML = '<option value="">-- All Streams --</option>';
-            streamSelect.disabled = false;
+    const yearSel  = document.getElementById('academic_year_id');
+    const termSel  = document.getElementById('term_id');
+    const classSel = document.getElementById('class_id');
+    const strmSel  = document.getElementById('stream_id');
+    const examSel  = document.getElementById('examination_id');
+
+    function setOptions(select, items, placeholder, selected) {
+        const current = selected || select.value;
+
+        select.innerHTML = '<option value="">' + placeholder + '</option>';
+
+        if (Array.isArray(items)) {
+            items.forEach(function (item) {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.name;
+                if (String(current) === String(item.id)) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+    }
+
+    function setLoading(select, label) {
+        select.innerHTML = '<option value="">' + (label || 'Loading…') + '</option>';
+    }
+
+    function fetchJSON(params) {
+        const qs = new URLSearchParams(params).toString();
+        return fetch(endpoint + '?' + qs, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(function (r) { return r.json(); });
+    }
+
+    function onYearChange() {
+        const yearId = yearSel.value;
+
+        setLoading(termSel, '-- Loading terms… --');
+        setLoading(examSel, '-- Exam --');
+
+        if (!yearId) {
+            setOptions(termSel, [], '-- Term --');
+            setOptions(examSel, [], '-- Exam --');
             return;
         }
-        fetch(`<?= BASE_URL ?>/api/streams-by-class?class_id=${classId}`)
-            .then(r => r.json())
-            .then(data => {
-                streamSelect.innerHTML = '<option value="">-- All Streams --</option>';
-                if (!data || data.length === 0) {
-                    streamSelect.innerHTML = '<option value="">No streams assigned</option>';
-                    streamSelect.disabled = true;
-                } else {
-                    streamSelect.disabled = false;
-                    data.forEach(stream => {
-                        const option = document.createElement('option');
-                        option.value = stream.id;
-                        option.textContent = stream.name;
-                        if (preserveSelected && selectedStream == stream.id) option.selected = true;
-                        streamSelect.appendChild(option);
-                    });
-                }
-            })
-            .catch(() => { streamSelect.disabled = false; });
+
+        fetchJSON({ type: 'terms', year_id: yearId })
+            .then(function (list) { setOptions(termSel, list, '-- Term --'); })
+            .catch(function () { setOptions(termSel, [], '-- Failed to load terms --'); });
+
+        fetchJSON({ type: 'examinations', year_id: yearId })
+            .then(function (list) { setOptions(examSel, list, '-- Exam --'); })
+            .catch(function () { setOptions(examSel, [], '-- Failed to load exams --'); });
     }
 
-    if (classSelect) {
-        classSelect.addEventListener('change', function () { updateStreams(this.value); });
-        if (classSelect.value) updateStreams(classSelect.value, true);
+    function onTermChange() {
+        const yearId = yearSel.value;
+        const termId = termSel.value;
+
+        setLoading(examSel, '-- Loading exams… --');
+
+        if (!yearId) {
+            setOptions(examSel, [], '-- Exam --');
+            return;
+        }
+
+        fetchJSON({ type: 'examinations', year_id: yearId, term_id: termId })
+            .then(function (list) { setOptions(examSel, list, '-- Exam --'); })
+            .catch(function () { setOptions(examSel, [], '-- Failed to load exams --'); });
     }
-});
+
+    function onClassChange() {
+        const classId = classSel.value;
+
+        setLoading(strmSel, '-- Loading streams… --');
+
+        if (!classId) {
+            setOptions(strmSel, [], '-- All Streams --');
+            return;
+        }
+
+        fetchJSON({ type: 'streams', class_id: classId })
+            .then(function (list) { setOptions(strmSel, list, '-- All Streams --'); })
+            .catch(function () { setOptions(strmSel, [], '-- Failed to load streams --'); });
+    }
+
+    yearSel.addEventListener('change',  onYearChange);
+    termSel.addEventListener('change',  onTermChange);
+    classSel.addEventListener('change', onClassChange);
+
+    if (yearSel.value) {
+        onYearChange();
+    }
+    if (classSel.value) {
+        onClassChange();
+    }
+})();
 </script>

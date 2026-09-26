@@ -73,6 +73,51 @@
                     </select>
                 </div>
 
+                <div class="col-12">
+                    <label class="form-label fw-semibold">
+                        Offered in Classes
+                        <span class="text-muted fw-normal">(optional)</span>
+                    </label>
+
+                    <?php if (empty($classes)): ?>
+                        <div class="alert alert-light border small mb-0">
+                            <i class="fas fa-info-circle me-1"></i>
+                            No classes have been created yet.
+                            <a href="<?= BASE_URL ?>/academic/classes/create" class="ms-1">Add a class</a>
+                            to assign this subject to it.
+                        </div>
+                    <?php else: ?>
+                        <div class="border rounded p-2"
+                             style="max-height: 220px; overflow-y: auto;">
+                            <?php foreach ($classes as $cls): ?>
+                                <?php
+                                    $cId   = (int)$cls['id'];
+                                    $cName = $cls['name'] ?? '';
+                                    $cCode = $cls['code'] ?? '';
+                                    $checked = in_array($cId, $selectedClasses ?? [], true);
+                                ?>
+                                <div class="form-check">
+                                    <input type="checkbox"
+                                           name="class_ids[]"
+                                           value="<?= $cId ?>"
+                                           id="cls_<?= $cId ?>"
+                                           class="form-check-input"
+                                           <?= $checked ? 'checked' : '' ?>>
+                                    <label class="form-check-label" for="cls_<?= $cId ?>">
+                                        <?= htmlspecialchars($cName) ?>
+                                        <?php if ($cCode !== ''): ?>
+                                            <span class="text-muted small">(<?= htmlspecialchars($cCode) ?>)</span>
+                                        <?php endif; ?>
+                                    </label>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="form-text">
+                            Leave all unchecked to keep this a <strong>general subject</strong> available to every class.
+                        </div>
+                    <?php endif; ?>
+                </div>
+
                 <div class="col-12 d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save me-1"></i> Save Subject

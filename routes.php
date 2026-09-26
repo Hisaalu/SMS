@@ -247,6 +247,9 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->post('/notifications/mark-all-read', ['NotificationController', 'markAllRead']);
     $router->post('/notifications/delete',        ['NotificationController', 'delete']);
     $router->post('/notifications/clear',         ['NotificationController', 'clearAll']);
+
+    $router->get('/api/marks-entry/lookup', ['MarkController', 'entryLookup']);
+    $router->get('/api/results/lookup', ['ResultController', 'lookup']);
 });
 
 $router->group(['prefix' => '/api', 'middleware' => ['auth']], function ($router) {
