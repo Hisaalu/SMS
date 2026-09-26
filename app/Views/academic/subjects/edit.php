@@ -114,9 +114,6 @@
                                 </div>
                             <?php endforeach; ?>
                         </div>
-                        <div class="form-text">
-                            Leave all unchecked to keep this a <strong>general subject</strong> available to every class.
-                        </div>
                     <?php endif; ?>
                 </div>
 

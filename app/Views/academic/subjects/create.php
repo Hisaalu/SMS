@@ -46,7 +46,6 @@
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <div class="form-text">The subject inherits its division scheme from this system.</div>
                 </div>
 
                 <div class="col-12 col-md-6">
@@ -60,7 +59,6 @@
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <div class="form-text">Types depend on the selected grading system.</div>
                 </div>
 
                 <div class="col-12 col-md-6">
@@ -111,9 +109,6 @@
                                     </label>
                                 </div>
                             <?php endforeach; ?>
-                        </div>
-                        <div class="form-text">
-                            Leave all unchecked to keep this a <strong>general subject</strong> available to every class.
                         </div>
                     <?php endif; ?>
                 </div>

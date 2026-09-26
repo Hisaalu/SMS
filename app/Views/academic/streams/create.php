@@ -46,7 +46,6 @@
                            class="form-control"
                            placeholder="e.g. North, Blue, or A"
                            required>
-                    <div class="form-text">A short label to distinguish this stream within the class.</div>
                 </div>
 
                 <div class="col-12 d-flex flex-wrap gap-2 mt-3 pt-3 border-top">

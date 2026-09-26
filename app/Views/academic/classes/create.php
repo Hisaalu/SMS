@@ -32,7 +32,6 @@
                            class="form-control"
                            placeholder="e.g. Primary 1 or Senior 1"
                            required>
-                    <div class="form-text">The full name shown across the system.</div>
                 </div>
 
                 <div class="col-12 col-md-6">
@@ -42,7 +41,6 @@
                            id="code"
                            class="form-control"
                            placeholder="e.g. P1 or S1">
-                    <div class="form-text">Optional shorthand for quick identification.</div>
                 </div>
 
                 <div class="col-12 d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
