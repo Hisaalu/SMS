@@ -33,7 +33,7 @@
             <h4 class="mb-0 fw-bold">Academic Terms</h4>
             <?php if ($selectedYear): ?>
                 <small class="text-muted">
-                    Showing terms for
+                    Terms for
                     <strong><?= htmlspecialchars($selectedYear['name']) ?></strong>
                     <?php if (!empty($selectedYear['is_current'])): ?>
                         <span class="badge bg-primary-subtle ms-1">Current Year</span>

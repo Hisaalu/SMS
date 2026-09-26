@@ -2,12 +2,12 @@
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
-            <h4 class="mb-0 fw-bold">Create Academic Term</h4>
-            <small class="text-muted">Add a new term to an academic year</small>
+            <h4 class="mb-0 fw-bold">Create a Term</h4>
+            <small class="text-muted">Add a new Term</small>
         </div>
         <a href="<?= BASE_URL ?>/academic/terms<?= !empty($selectedYearId) ? '?year=' . (int)$selectedYearId : '' ?>"
            class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Back to Terms
+            <i class="fas fa-arrow-left me-1"></i> Terms
         </a>
     </div>
 
