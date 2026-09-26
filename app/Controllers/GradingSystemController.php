@@ -4,6 +4,7 @@
 namespace NexaT\Controllers;
 
 use NexaT\Core\Controller;
+use Throwable;
 
 class GradingSystemController extends Controller
 {
@@ -23,9 +24,14 @@ class GradingSystemController extends Controller
              LEFT JOIN classes c         ON gs.class_id = c.id
              LEFT JOIN academic_years ay ON gs.academic_year_id = ay.id
              WHERE gs.school_id = :school_id OR gs.school_id IS NULL
-             ORDER BY gs.is_default DESC, c.name ASC, gs.name ASC",
+             ORDER BY gs.is_default DESC, gs.name ASC",
             ['school_id' => $schoolId]
         );
+
+        foreach ($systems as &$system) {
+            $system['classes'] = $this->classesForSystem((int)$system['id'], $schoolId);
+        }
+        unset($system);
 
         echo $this->view->renderWithLayout('examinations/grading/index', 'default', [
             'title'   => 'Grading Systems',
@@ -38,9 +44,10 @@ class GradingSystemController extends Controller
         $this->requirePermission('grading.manage');
 
         echo $this->view->renderWithLayout('examinations/grading/create', 'default', [
-            'title'   => 'Create Grading System',
-            'classes' => $this->classesForSchool(),
-            'years'   => $this->academicYearsForSchool(),
+            'title'           => 'Create Grading System',
+            'classes'         => $this->classesForSchool(),
+            'years'           => $this->academicYearsForSchool(),
+            'selectedClasses' => [],
         ]);
     }
 
@@ -56,26 +63,41 @@ class GradingSystemController extends Controller
             return;
         }
 
-        if ($data['is_default']) {
-            $this->clearDefaultFlag($schoolId);
-        }
+        $classIds = $this->collectClassIds($schoolId);
 
-        $systemId = $this->db->insert('grading_systems', array_merge($data, [
-            'school_id'  => $schoolId,
-            'status'     => 'active',
-            'created_at' => date('Y-m-d H:i:s'),
-            'updated_at' => date('Y-m-d H:i:s'),
-        ]));
+        try {
+            $this->db->beginTransaction();
 
-        if ($systemId) {
+            if ($data['is_default']) {
+                $this->clearDefaultFlag($schoolId);
+            }
+
+            $data['class_id'] = $classIds[0] ?? null;
+
+            $systemId = $this->db->insert('grading_systems', array_merge($data, [
+                'school_id'  => $schoolId,
+                'status'     => 'active',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]));
+
+            if (!$systemId) {
+                throw new \RuntimeException('Failed to insert grading system.');
+            }
+
+            $this->syncSystemClasses((int)$systemId, $schoolId, $classIds);
+
+            $this->db->commit();
+
             $this->audit('Grading System Created', 'examinations', "Created grading system: {$data['name']}");
             $this->flashSuccess('Grading system created. Now configure its subject types and grade rules.');
             $this->redirect('/grading/systems/' . $systemId . '/subject-types');
-            return;
-        }
 
-        $this->flashError('Failed to create grading system.');
-        $this->redirect('/grading/systems/create');
+        } catch (Throwable $e) {
+            $this->db->rollback();
+            $this->flashError('Failed to create grading system: ' . $e->getMessage());
+            $this->redirect('/grading/systems/create');
+        }
     }
 
     public function edit($params): void
@@ -89,10 +111,11 @@ class GradingSystemController extends Controller
         }
 
         echo $this->view->renderWithLayout('examinations/grading/edit', 'default', [
-            'title'   => 'Edit Grading System',
-            'system'  => $system,
-            'classes' => $this->classesForSchool(),
-            'years'   => $this->academicYearsForSchool(),
+            'title'           => 'Edit Grading System',
+            'system'          => $system,
+            'classes'         => $this->classesForSchool(),
+            'years'           => $this->academicYearsForSchool(),
+            'selectedClasses' => $this->classIdsForSystem($id, $this->schoolId()),
         ]);
     }
 
@@ -116,23 +139,38 @@ class GradingSystemController extends Controller
 
         $data['status'] = $_POST['status'] ?? 'active';
 
-        if ($data['is_default']) {
-            $this->clearDefaultFlag($schoolId, $id);
-        }
+        $classIds = $this->collectClassIds($schoolId);
 
-        $ok = $this->db->update('grading_systems', array_merge($data, [
-            'updated_at' => date('Y-m-d H:i:s'),
-        ]), ['id' => $id]);
+        try {
+            $this->db->beginTransaction();
 
-        if ($ok !== false) {
+            if ($data['is_default']) {
+                $this->clearDefaultFlag($schoolId, $id);
+            }
+
+            $data['class_id'] = $classIds[0] ?? null;
+
+            $ok = $this->db->update('grading_systems', array_merge($data, [
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]), ['id' => $id]);
+
+            if ($ok === false) {
+                throw new \RuntimeException('Update returned false.');
+            }
+
+            $this->syncSystemClasses($id, $schoolId, $classIds);
+
+            $this->db->commit();
+
             $this->audit('Grading System Updated', 'examinations', "Updated grading system: {$data['name']}");
             $this->flashSuccess('Grading system updated successfully.');
             $this->redirect('/grading/systems');
-            return;
-        }
 
-        $this->flashError('Failed to update grading system.');
-        $this->redirect('/grading/systems/' . $id . '/edit');
+        } catch (Throwable $e) {
+            $this->db->rollback();
+            $this->flashError('Failed to update grading system: ' . $e->getMessage());
+            $this->redirect('/grading/systems/' . $id . '/edit');
+        }
     }
 
     public function delete($params): void
@@ -158,12 +196,27 @@ class GradingSystemController extends Controller
             $this->json(['error' => 'Cannot delete grading system with existing rules.'], 400);
         }
 
-        if ($this->db->delete('grading_systems', ['id' => $id])) {
+        try {
+            $this->db->beginTransaction();
+
+            $this->db->execute(
+                "DELETE FROM grading_system_classes WHERE grading_system_id = :id",
+                ['id' => $id]
+            );
+
+            if (!$this->db->delete('grading_systems', ['id' => $id])) {
+                throw new \RuntimeException('Delete returned false.');
+            }
+
+            $this->db->commit();
+
             $this->audit('Grading System Deleted', 'examinations', "Deleted grading system: {$system['name']}");
             $this->json(['success' => true]);
-        }
 
-        $this->json(['error' => 'Failed to delete grading system'], 500);
+        } catch (Throwable $e) {
+            $this->db->rollback();
+            $this->json(['error' => 'Failed to delete grading system: ' . $e->getMessage()], 500);
+        }
     }
 
     private function findSystemOrRedirect(int $id): ?array
@@ -194,10 +247,79 @@ class GradingSystemController extends Controller
         return [
             'name'             => $name,
             'description'      => trim($_POST['description'] ?? ''),
-            'class_id'         => !empty($_POST['class_id'])         ? (int)$_POST['class_id']         : null,
             'academic_year_id' => !empty($_POST['academic_year_id']) ? (int)$_POST['academic_year_id'] : null,
             'is_default'       => isset($_POST['is_default']) ? 1 : 0,
         ];
+    }
+
+    private function collectClassIds(int $schoolId): array
+    {
+        $raw = $_POST['class_ids'] ?? [];
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $ids = array_values(array_unique(array_filter(array_map('intval', $raw))));
+        if (empty($ids)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+        $rows = $this->db->fetchAll(
+            "SELECT id FROM classes WHERE school_id = ? AND id IN ({$placeholders})",
+            array_merge([$schoolId], $ids)
+        );
+
+        return array_map(fn($r) => (int)$r['id'], $rows);
+    }
+
+    private function syncSystemClasses(int $systemId, int $schoolId, array $classIds): void
+    {
+        $this->db->execute(
+            "DELETE FROM grading_system_classes WHERE grading_system_id = :id",
+            ['id' => $systemId]
+        );
+
+        $now = date('Y-m-d H:i:s');
+
+        foreach ($classIds as $classId) {
+            $this->db->insert('grading_system_classes', [
+                'grading_system_id' => $systemId,
+                'class_id'          => (int)$classId,
+                'created_at'        => $now,
+            ]);
+        }
+    }
+
+    private function classIdsForSystem(int $systemId, int $schoolId): array
+    {
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT class_id FROM grading_system_classes
+                 WHERE grading_system_id = :id",
+                ['id' => $systemId]
+            );
+            return array_map(fn($r) => (int)$r['class_id'], $rows);
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    private function classesForSystem(int $systemId, int $schoolId): array
+    {
+        try {
+            return $this->db->fetchAll(
+                "SELECT c.id, c.name
+                 FROM grading_system_classes gsc
+                 INNER JOIN classes c ON c.id = gsc.class_id
+                 WHERE gsc.grading_system_id = :id
+                 ORDER BY c.name ASC",
+                ['id' => $systemId]
+            ) ?: [];
+        } catch (Throwable $e) {
+            return [];
+        }
     }
 
     private function clearDefaultFlag(int $schoolId, ?int $exceptId = null): void

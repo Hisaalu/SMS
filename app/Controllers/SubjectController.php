@@ -43,7 +43,9 @@ class SubjectController extends Controller
 
         $typeList = [];
         foreach ($this->db->fetchAll(
-            "SELECT id, name, is_graded FROM grading_subject_types WHERE school_id = :s",
+            "SELECT id, name, is_graded, is_subsidiary, is_other
+             FROM grading_subject_types
+             WHERE school_id = :s",
             ['s' => $schoolId]
         ) as $row) {
             $typeList[(int)$row['id']] = $row;
@@ -340,9 +342,7 @@ class SubjectController extends Controller
             array_merge([$schoolId], $ids)
         );
 
-        $valid = array_map(fn($r) => (int)$r['id'], $rows);
-
-        return $valid;
+        return array_map(fn($r) => (int)$r['id'], $rows);
     }
 
     private function syncClassSubjects(int $subjectId, int $schoolId, array $classIds): void

@@ -46,6 +46,7 @@
                             </option>
                         <?php endforeach; ?>
                     </select>
+                    <div class="form-text">The subject inherits its division scheme from this system.</div>
                 </div>
 
                 <div class="col-12 col-md-6">
@@ -53,12 +54,18 @@
                     <select name="grading_subject_type_id" id="subjectTypeSelect" class="form-select" required>
                         <option value="">— Choose a type —</option>
                         <?php foreach ($subjectTypes as $t): ?>
+                            <?php
+                                $isSub  = !empty($t['is_subsidiary']);
+                                $isOth  = !empty($t['is_other']);
+                                $suffix = $isOth  ? ' (not graded)'
+                                        : ($isSub ? ' (subsidiary)' : '');
+                            ?>
                             <option value="<?= (int)$t['id'] ?>">
-                                <?= htmlspecialchars($t['name']) ?>
-                                <?= empty($t['is_graded']) ? ' (not graded)' : '' ?>
+                                <?= htmlspecialchars($t['name']) ?><?= $suffix ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
+                    <div class="form-text">Types depend on the selected grading system.</div>
                 </div>
 
                 <div class="col-12 col-md-6">
@@ -85,8 +92,7 @@
                             to assign this subject to it.
                         </div>
                     <?php else: ?>
-                        <div class="border rounded p-2"
-                             style="max-height: 220px; overflow-y: auto;">
+                        <div class="border rounded p-2" style="max-height: 220px; overflow-y: auto;">
                             <?php foreach ($classes as $cls): ?>
                                 <?php
                                     $cId   = (int)$cls['id'];
@@ -109,6 +115,9 @@
                                     </label>
                                 </div>
                             <?php endforeach; ?>
+                        </div>
+                        <div class="form-text">
+                            Leave all unchecked to keep this a <strong>general subject</strong> available to every class.
                         </div>
                     <?php endif; ?>
                 </div>
@@ -152,7 +161,15 @@
             list.forEach(function (t) {
                 const opt = document.createElement('option');
                 opt.value = t.id;
-                opt.textContent = t.name + (t.is_graded ? '' : ' (not graded)');
+
+                let suffix = '';
+                if (t.is_other) {
+                    suffix = ' (not graded)';
+                } else if (t.is_subsidiary) {
+                    suffix = ' (subsidiary)';
+                }
+
+                opt.textContent = t.name + suffix;
                 if (preselect && String(preselect) === String(t.id)) opt.selected = true;
                 typeSelect.appendChild(opt);
             });

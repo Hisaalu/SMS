@@ -163,6 +163,7 @@ class SubjectTypeController extends Controller
                 'code'          => $t['code'],
                 'is_graded'     => (bool)$t['is_graded'],
                 'is_subsidiary' => (bool)$t['is_subsidiary'],
+                'is_other'      => (bool)($t['is_other'] ?? false),
             ];
         }, $types));
     }
@@ -176,6 +177,23 @@ class SubjectTypeController extends Controller
             $this->flashError('Name and code are required.');
             return null;
         }
+
+        $mode = $_POST['mode'] ?? '';
+
+        if (!in_array($mode, ['graded', 'subsidiary', 'other'], true)) {
+            $mode = isset($_POST['is_subsidiary']) ? 'subsidiary'
+                  : (isset($_POST['is_graded']) ? 'graded'
+                  : (isset($_POST['is_other'])  ? 'other' : ''));
+        }
+
+        if ($mode === '') {
+            $this->flashError('Please choose exactly one mode: Graded, Subsidiary, or Other.');
+            return null;
+        }
+
+        $isGraded     = ($mode === 'graded'     || $mode === 'subsidiary') ? 1 : 0;
+        $isSubsidiary = ($mode === 'subsidiary')                            ? 1 : 0;
+        $isOther      = ($mode === 'other')                                 ? 1 : 0;
 
         $sql = "SELECT id FROM grading_subject_types
                 WHERE grading_system_id = :sys AND UPPER(code) = :code";
@@ -192,16 +210,15 @@ class SubjectTypeController extends Controller
             return null;
         }
 
-        $isSubsidiary = isset($_POST['is_subsidiary']) ? 1 : 0;
-
         return [
             'grading_system_id'    => $systemId,
             'name'                 => $name,
             'code'                 => $code,
-            'is_graded'            => isset($_POST['is_graded']) ? 1 : 0,
+            'is_graded'            => $isGraded,
             'is_subsidiary'        => $isSubsidiary,
-            'subsidiary_pass_mark' => $isSubsidiary ? (int)($_POST['subsidiary_pass_mark'] ?? 40) : null,
-            'subsidiary_score'     => $isSubsidiary ? (int)($_POST['subsidiary_score']     ?? 1)  : 1,
+            'is_other'             => $isOther,
+            'subsidiary_pass_mark' => $isSubsidiary ? (int)($_POST['subsidiary_pass_mark'] ?? 50) : null,
+            'subsidiary_score'     => $isSubsidiary ? (int)($_POST['subsidiary_score']     ?? 1)  : 0,
             'display_order'        => (int)($_POST['display_order'] ?? 0),
             'status'               => $_POST['status'] ?? 'active',
         ];

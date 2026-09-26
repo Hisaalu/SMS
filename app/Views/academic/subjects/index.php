@@ -55,13 +55,25 @@
                     <tbody>
                         <?php foreach ($subjects as $subject): ?>
                             <?php
-                                $sId        = (int)($subject->id ?? 0);
-                                $sName      = $subject->name ?? '-';
-                                $sCode      = $subject->code ?? '-';
-                                $typeRow    = $typeList[$subject->grading_subject_type_id] ?? null;
-                                $typeName   = $typeRow['name'] ?? '—';
-                                $isGraded   = $typeRow ? (bool)$typeRow['is_graded'] : true;
-                                $typeBadge  = $isGraded ? 'primary' : 'secondary';
+                                $sId   = (int)($subject->id ?? 0);
+                                $sName = $subject->name ?? '-';
+                                $sCode = $subject->code ?? '-';
+
+                                $typeRow      = $typeList[$subject->grading_subject_type_id] ?? null;
+                                $typeName     = $typeRow['name'] ?? '—';
+                                $isSubsidiary = $typeRow ? !empty($typeRow['is_subsidiary']) : false;
+                                $isOther      = $typeRow ? !empty($typeRow['is_other'])      : false;
+
+                                if (!$typeRow) {
+                                    $typeBadge = 'secondary';
+                                } elseif ($isOther) {
+                                    $typeBadge = 'secondary';
+                                } elseif ($isSubsidiary) {
+                                    $typeBadge = 'info';
+                                } else {
+                                    $typeBadge = 'primary';
+                                }
+
                                 $systemName = $systemList[$subject->grading_system_id] ?? '—';
                                 $deptName   = $deptList[$subject->department_id] ?? 'None';
                             ?>
@@ -82,8 +94,8 @@
                                 <td class="d-none d-lg-table-cell">
                                     <span class="badge bg-<?= $typeBadge ?>-subtle">
                                         <?= htmlspecialchars($typeName, ENT_QUOTES, 'UTF-8') ?>
-                                        <?php if (!$isGraded): ?>
-                                            &middot; N/G
+                                        <?php if ($isOther): ?>
+                                            &middot; Not Graded
                                         <?php endif; ?>
                                     </span>
                                 </td>

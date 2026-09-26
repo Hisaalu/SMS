@@ -17,8 +17,32 @@
         color: var(--text-color);
         overflow-wrap: anywhere;
     }
-    .subject-types-page code {
-        font-size: 0.78rem;
+    .subject-types-page code { font-size: 0.78rem; }
+
+    .subject-types-page .mode-option {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0.6rem 0.75rem;
+        margin-bottom: 0.4rem;
+        cursor: pointer;
+        transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+    .subject-types-page .mode-option:hover {
+        border-color: var(--accent-color);
+    }
+    .subject-types-page .mode-option.checked {
+        border-color: var(--accent-color);
+        background: rgba(var(--accent-rgb), 0.05);
+    }
+    .subject-types-page .mode-option .mode-title {
+        font-weight: 600;
+        color: var(--text-color);
+        font-size: 0.85rem;
+    }
+    .subject-types-page .mode-option .mode-desc {
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        margin-top: 0.1rem;
     }
 
     @media (max-width: 767.98px) {
@@ -33,16 +57,7 @@
             border: 0;
             padding: 0.15rem 0;
         }
-        .subject-types-page .type-row td.actions-cell {
-            padding-top: 0.6rem;
-        }
-        .subject-types-page .type-row td.actions-cell .btn {
-            --bs-btn-padding-y: 0.35rem;
-            --bs-btn-padding-x: 0.7rem;
-            --bs-btn-font-size: 0.8rem;
-            margin-left: 0;
-            margin-right: 0.35rem;
-        }
+        .subject-types-page .type-row td.actions-cell { padding-top: 0.6rem; }
     }
 </style>
 
@@ -93,7 +108,11 @@
                     </h6>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="<?= BASE_URL ?>/grading/systems/<?= (int)$system['id'] ?>/subject-types">
+                    <form method="POST"
+                          action="<?= BASE_URL ?>/grading/systems/<?= (int)$system['id'] ?>/subject-types"
+                          id="addTypeForm">
+                        <input type="hidden" name="<?= CSRF_TOKEN_NAME ?>" value="<?= $_SESSION[CSRF_TOKEN_NAME] ?? '' ?>">
+
                         <div class="mb-2">
                             <label class="form-label small fw-semibold">Name <span class="text-danger">*</span></label>
                             <input type="text" name="name" class="form-control form-control-sm"
@@ -118,41 +137,50 @@
                             </div>
                         </div>
 
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="is_graded"
-                                   value="1" id="isGraded" checked>
-                            <label class="form-check-label small" for="isGraded">
-                                Counts toward totals (graded)
-                            </label>
-                        </div>
+                        <label class="form-label small fw-semibold">Type behaviour <span class="text-danger">*</span></label>
 
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" name="is_subsidiary"
-                                   value="1" id="isSubsidiary">
-                            <label class="form-check-label small" for="isSubsidiary">
-                                Subsidiary — fixed points when passed
-                            </label>
-                        </div>
+                        <label class="mode-option d-block" id="modeGradedOpt">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input mode-radio" type="radio"
+                                       name="mode" value="graded" id="modeGraded" checked>
+                                <span class="mode-title">Graded</span>
+                                <div class="mode-desc">Counts toward the total. Uses standard grading rules.</div>
+                            </div>
+                        </label>
 
-                        <div id="subsidiaryFields" class="border rounded p-2 mb-2" style="display:none;">
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <label class="form-label small fw-semibold">Pass Mark</label>
-                                    <input type="number" name="subsidiary_pass_mark"
-                                           class="form-control form-control-sm" value="40">
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label small fw-semibold">Fixed Points</label>
-                                    <input type="number" name="subsidiary_score"
-                                           class="form-control form-control-sm" value="1">
+                        <label class="mode-option d-block" id="modeSubsidiaryOpt">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input mode-radio" type="radio"
+                                       name="mode" value="subsidiary" id="modeSubsidiary">
+                                <span class="mode-title">Subsidiary</span>
+                                <div class="mode-desc">Graded, but yields a fixed score when passed.</div>
+                            </div>
+                            <div id="subsidiaryFields" class="border-top mt-2 pt-2" style="display:none;">
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <label class="form-label small fw-semibold">Pass Mark</label>
+                                        <input type="number" name="subsidiary_pass_mark"
+                                               class="form-control form-control-sm" value="50">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small fw-semibold">Fixed Points</label>
+                                        <input type="number" name="subsidiary_score"
+                                               class="form-control form-control-sm" value="1">
+                                    </div>
                                 </div>
                             </div>
-                            <div class="small text-muted mt-1">
-                                A mark at or above the pass mark yields exactly the fixed points.
-                            </div>
-                        </div>
+                        </label>
 
-                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <label class="mode-option d-block" id="modeOtherOpt">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input mode-radio" type="radio"
+                                       name="mode" value="other" id="modeOther">
+                                <span class="mode-title">Other</span>
+                                <div class="mode-desc">Does not contribute to totals. Recorded for reference only.</div>
+                            </div>
+                        </label>
+
+                        <button type="submit" class="btn btn-primary btn-sm w-100 mt-2">
                             <i class="fas fa-save me-1"></i> Add Type
                         </button>
                     </form>
@@ -183,8 +211,7 @@
                                 <tr>
                                     <th class="ps-3">Type</th>
                                     <th>Code</th>
-                                    <th class="text-center">Graded</th>
-                                    <th class="text-center">Subsidiary</th>
+                                    <th class="text-center">Mode</th>
                                     <th class="text-center">Status</th>
                                     <th class="text-end pe-3 actions-cell">Actions</th>
                                 </tr>
@@ -197,10 +224,13 @@
                                         $tCode   = $t['code'] ?? '';
                                         $tGraded = !empty($t['is_graded']);
                                         $tSub    = !empty($t['is_subsidiary']);
-                                        $tPassM  = (int)($t['subsidiary_pass_mark'] ?? 40);
+                                        $tOther  = !empty($t['is_other']);
+                                        $tPassM  = (int)($t['subsidiary_pass_mark'] ?? 50);
                                         $tFixed  = (int)($t['subsidiary_score'] ?? 1);
                                         $tOrder  = (int)($t['display_order'] ?? 0);
                                         $tStatus = $t['status'] ?? 'active';
+
+                                        $mode = $tOther ? 'other' : ($tSub ? 'subsidiary' : 'graded');
                                     ?>
                                     <tr class="type-row">
                                         <td class="ps-3">
@@ -208,21 +238,14 @@
                                         </td>
                                         <td><code><?= htmlspecialchars($tCode) ?></code></td>
                                         <td class="text-center">
-                                            <?php if ($tGraded): ?>
-                                                <span class="badge bg-primary-subtle">Yes</span>
-                                            <?php else: ?>
-                                                <span class="badge bg-secondary-subtle">No</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="text-center">
-                                            <?php if ($tSub): ?>
+                                            <?php if ($mode === 'other'): ?>
+                                                <span class="badge bg-secondary-subtle">Other</span>
+                                            <?php elseif ($mode === 'subsidiary'): ?>
                                                 <span class="badge bg-info-subtle">
-                                                    <i class="fas fa-star me-1"></i>
-                                                    <?= $tFixed ?> pt
-                                                    <span class="text-muted ms-1">@ <?= $tPassM ?>+</span>
+                                                    Subsidiary — <?= $tFixed ?> pt @ <?= $tPassM ?>+
                                                 </span>
                                             <?php else: ?>
-                                                <span class="text-muted small">—</span>
+                                                <span class="badge bg-primary-subtle">Graded</span>
                                             <?php endif; ?>
                                         </td>
                                         <td class="text-center">
@@ -237,8 +260,7 @@
                                                     data-id="<?= $tId ?>"
                                                     data-name="<?= htmlspecialchars($tName, ENT_QUOTES) ?>"
                                                     data-code="<?= htmlspecialchars($tCode, ENT_QUOTES) ?>"
-                                                    data-graded="<?= $tGraded ? '1' : '0' ?>"
-                                                    data-subsidiary="<?= $tSub ? '1' : '0' ?>"
+                                                    data-mode="<?= $mode ?>"
                                                     data-pass-mark="<?= $tPassM ?>"
                                                     data-fixed-score="<?= $tFixed ?>"
                                                     data-order="<?= $tOrder ?>"
@@ -249,7 +271,6 @@
                                             </button>
                                             <button type="button"
                                                     class="btn btn-sm btn-outline-danger"
-                                                    title="Delete"
                                                     data-bs-toggle="modal"
                                                     data-bs-target="#deleteTypeModal"
                                                     data-id="<?= $tId ?>"
@@ -261,74 +282,6 @@
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
-                    </div>
-
-                    <div class="d-md-none">
-                        <?php foreach ($types as $t): ?>
-                            <?php
-                                $tId     = (int)$t['id'];
-                                $tName   = $t['name'] ?? '';
-                                $tCode   = $t['code'] ?? '';
-                                $tGraded = !empty($t['is_graded']);
-                                $tSub    = !empty($t['is_subsidiary']);
-                                $tPassM  = (int)($t['subsidiary_pass_mark'] ?? 40);
-                                $tFixed  = (int)($t['subsidiary_score'] ?? 1);
-                                $tOrder  = (int)($t['display_order'] ?? 0);
-                                $tStatus = $t['status'] ?? 'active';
-                            ?>
-                            <div class="type-row">
-                                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                                    <div class="flex-grow-1 min-width-0">
-                                        <div class="type-name"><?= htmlspecialchars($tName) ?></div>
-                                        <code class="text-muted"><?= htmlspecialchars($tCode) ?></code>
-                                    </div>
-                                    <?php if ($tStatus === 'active'): ?>
-                                        <span class="badge bg-success-subtle">Active</span>
-                                    <?php else: ?>
-                                        <span class="badge bg-secondary-subtle">Inactive</span>
-                                    <?php endif; ?>
-                                </div>
-
-                                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-                                    <?php if ($tGraded): ?>
-                                        <span class="badge bg-primary-subtle">Graded</span>
-                                    <?php else: ?>
-                                        <span class="badge bg-secondary-subtle">Not graded</span>
-                                    <?php endif; ?>
-                                    <?php if ($tSub): ?>
-                                        <span class="badge bg-info-subtle">
-                                            <i class="fas fa-star me-1"></i>
-                                            Subsidiary — <?= $tFixed ?> pt @ <?= $tPassM ?>+
-                                        </span>
-                                    <?php endif; ?>
-                                </div>
-
-                                <div class="d-flex justify-content-end gap-2 flex-wrap">
-                                    <button type="button" class="btn btn-sm btn-outline-primary edit-type-btn"
-                                            data-id="<?= $tId ?>"
-                                            data-name="<?= htmlspecialchars($tName, ENT_QUOTES) ?>"
-                                            data-code="<?= htmlspecialchars($tCode, ENT_QUOTES) ?>"
-                                            data-graded="<?= $tGraded ? '1' : '0' ?>"
-                                            data-subsidiary="<?= $tSub ? '1' : '0' ?>"
-                                            data-pass-mark="<?= $tPassM ?>"
-                                            data-fixed-score="<?= $tFixed ?>"
-                                            data-order="<?= $tOrder ?>"
-                                            data-status="<?= htmlspecialchars($tStatus, ENT_QUOTES) ?>"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#editTypeModal">
-                                        <i class="fas fa-edit me-1"></i> Edit
-                                    </button>
-                                    <button type="button"
-                                            class="btn btn-sm btn-outline-danger"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#deleteTypeModal"
-                                            data-id="<?= $tId ?>"
-                                            data-name="<?= htmlspecialchars($tName, ENT_QUOTES) ?>">
-                                        <i class="fas fa-trash me-1"></i> Delete
-                                    </button>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
                     </div>
 
                 <?php endif; ?>
@@ -394,6 +347,8 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <form id="editTypeForm" method="POST">
+                <input type="hidden" name="<?= CSRF_TOKEN_NAME ?>" value="<?= $_SESSION[CSRF_TOKEN_NAME] ?? '' ?>">
+
                 <div class="modal-header">
                     <h5 class="modal-title fw-bold">Edit Subject Type</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -419,39 +374,47 @@
                                 <option value="inactive">Inactive</option>
                             </select>
                         </div>
+
                         <div class="col-12">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="is_graded"
-                                       value="1" id="editTypeGraded">
-                                <label class="form-check-label small" for="editTypeGraded">
-                                    Counts toward totals (graded)
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="is_subsidiary"
-                                       value="1" id="editTypeSubsidiary">
-                                <label class="form-check-label small" for="editTypeSubsidiary">
-                                    Subsidiary — fixed points when passed
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-12" id="editSubsidiaryFields" style="display:none;">
-                            <div class="border rounded p-2">
-                                <div class="row g-2">
-                                    <div class="col-6">
-                                        <label class="form-label small fw-semibold">Pass Mark</label>
-                                        <input type="number" name="subsidiary_pass_mark" id="editPassMark"
-                                               class="form-control form-control-sm">
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="form-label small fw-semibold">Fixed Points</label>
-                                        <input type="number" name="subsidiary_score" id="editFixedScore"
-                                               class="form-control form-control-sm">
+                            <label class="form-label small fw-semibold">Type behaviour <span class="text-danger">*</span></label>
+
+                            <label class="mode-option d-block">
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="radio" name="mode" value="graded" id="editModeGraded">
+                                    <span class="mode-title">Graded</span>
+                                    <div class="mode-desc">Counts toward the total.</div>
+                                </div>
+                            </label>
+
+                            <label class="mode-option d-block">
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="radio" name="mode" value="subsidiary" id="editModeSubsidiary">
+                                    <span class="mode-title">Subsidiary</span>
+                                    <div class="mode-desc">Graded, but yields a fixed score when passed.</div>
+                                </div>
+                                <div id="editSubsidiaryFields" class="border-top mt-2 pt-2" style="display:none;">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">Pass Mark</label>
+                                            <input type="number" name="subsidiary_pass_mark" id="editPassMark"
+                                                   class="form-control form-control-sm">
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small fw-semibold">Fixed Points</label>
+                                            <input type="number" name="subsidiary_score" id="editFixedScore"
+                                                   class="form-control form-control-sm">
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            </label>
+
+                            <label class="mode-option d-block">
+                                <div class="form-check mb-0">
+                                    <input class="form-check-input" type="radio" name="mode" value="other" id="editModeOther">
+                                    <span class="mode-title">Other</span>
+                                    <div class="mode-desc">Does not contribute to totals.</div>
+                                </div>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -484,7 +447,7 @@
                     <strong id="deleteTypeName">this subject type</strong>?
                 </p>
                 <p class="small text-muted mb-0">
-                    This action cannot be undone. Subjects currently assigned to this type will need a replacement.
+                    Subjects currently assigned to this type will need a replacement.
                 </p>
             </div>
             <div class="modal-footer border-0 pt-0">
@@ -499,29 +462,58 @@
 
 <script>
 (function () {
-    const toggle = (checkbox, target) => {
-        const el = document.getElementById(target);
-        if (!el || !checkbox) return;
-        const sync = () => el.style.display = checkbox.checked ? 'block' : 'none';
-        checkbox.addEventListener('change', sync);
-        sync();
-    };
+    const addForm       = document.getElementById('addTypeForm');
+    const addSubsFields = document.getElementById('subsidiaryFields');
 
-    toggle(document.getElementById('isSubsidiary'),      'subsidiaryFields');
-    toggle(document.getElementById('editTypeSubsidiary'), 'editSubsidiaryFields');
+    function syncAdd() {
+        const mode = addForm.querySelector('input[name="mode"]:checked')?.value || 'graded';
+        addSubsFields.style.display = (mode === 'subsidiary') ? 'block' : 'none';
+
+        document.querySelectorAll('#addTypeForm .mode-option').forEach(function (el) {
+            el.classList.remove('checked');
+        });
+        document.querySelector('#addTypeForm .mode-option input[name="mode"]:checked')
+            ?.closest('.mode-option')?.classList.add('checked');
+    }
+
+    addForm?.querySelectorAll('input[name="mode"]').forEach(function (r) {
+        r.addEventListener('change', syncAdd);
+    });
+    syncAdd();
+
+    const editForm       = document.getElementById('editTypeForm');
+    const editSubsFields = document.getElementById('editSubsidiaryFields');
+
+    function syncEdit() {
+        const mode = editForm.querySelector('input[name="mode"]:checked')?.value || 'graded';
+        editSubsFields.style.display = (mode === 'subsidiary') ? 'block' : 'none';
+
+        editForm.querySelectorAll('.mode-option').forEach(function (el) {
+            el.classList.remove('checked');
+        });
+        editForm.querySelector('.mode-option input[name="mode"]:checked')
+            ?.closest('.mode-option')?.classList.add('checked');
+    }
+
+    editForm?.querySelectorAll('input[name="mode"]').forEach(function (r) {
+        r.addEventListener('change', syncEdit);
+    });
 
     document.querySelectorAll('.edit-type-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            document.getElementById('editTypeName').value         = this.dataset.name || '';
-            document.getElementById('editTypeCode').value         = this.dataset.code || '';
-            document.getElementById('editTypeOrder').value        = this.dataset.order || 0;
-            document.getElementById('editTypeStatus').value       = this.dataset.status || 'active';
-            document.getElementById('editTypeGraded').checked     = this.dataset.graded === '1';
-            document.getElementById('editTypeSubsidiary').checked = this.dataset.subsidiary === '1';
-            document.getElementById('editPassMark').value         = this.dataset.passMark || 40;
-            document.getElementById('editFixedScore').value       = this.dataset.fixedScore || 1;
+            const mode = this.dataset.mode || 'graded';
 
-            document.getElementById('editTypeSubsidiary').dispatchEvent(new Event('change'));
+            document.getElementById('editTypeName').value    = this.dataset.name || '';
+            document.getElementById('editTypeCode').value    = this.dataset.code || '';
+            document.getElementById('editTypeOrder').value   = this.dataset.order || 0;
+            document.getElementById('editTypeStatus').value  = this.dataset.status || 'active';
+            document.getElementById('editPassMark').value    = this.dataset.passMark || 50;
+            document.getElementById('editFixedScore').value  = this.dataset.fixedScore || 1;
+
+            const radio = editForm.querySelector('input[name="mode"][value="' + mode + '"]');
+            if (radio) radio.checked = true;
+
+            syncEdit();
 
             document.getElementById('editTypeForm').action =
                 '<?= BASE_URL ?>/grading/systems/subject-types/' + this.dataset.id + '/update';
@@ -533,7 +525,7 @@
     const deleteBtnEl   = document.getElementById('confirmDeleteTypeBtn');
     let   deleteTypeId  = 0;
 
-    deleteModalEl.addEventListener('show.bs.modal', function (event) {
+    deleteModalEl?.addEventListener('show.bs.modal', function (event) {
         const trigger = event.relatedTarget;
         if (!trigger) return;
         deleteTypeId = parseInt(trigger.getAttribute('data-id'), 10) || 0;
@@ -541,7 +533,7 @@
         deleteNameEl.textContent = name;
     });
 
-    deleteBtnEl.addEventListener('click', function () {
+    deleteBtnEl?.addEventListener('click', function () {
         if (!deleteTypeId) return;
 
         deleteBtnEl.disabled = true;

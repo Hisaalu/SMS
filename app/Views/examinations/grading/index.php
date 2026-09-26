@@ -135,10 +135,17 @@
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if ($className !== ''): ?>
-                                        <span class="badge bg-primary-subtle"><?= htmlspecialchars($className, ENT_QUOTES, 'UTF-8') ?></span>
-                                    <?php else: ?>
+                                    <?php
+                                        $systemClasses = is_array($s['classes'] ?? null) ? $s['classes'] : [];
+                                    ?>
+                                    <?php if (empty($systemClasses)): ?>
                                         <span class="badge bg-secondary-subtle">All Classes</span>
+                                    <?php else: ?>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            <?php foreach ($systemClasses as $sc): ?>
+                                                <span class="badge bg-primary-subtle"><?= htmlspecialchars($sc['name'], ENT_QUOTES, 'UTF-8') ?></span>
+                                            <?php endforeach; ?>
+                                        </div>
                                     <?php endif; ?>
                                 </td>
                                 <td class="d-none d-lg-table-cell">
@@ -221,10 +228,15 @@
                         </div>
 
                         <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-                            <?php if ($className !== ''): ?>
-                                <span class="badge bg-primary-subtle"><?= htmlspecialchars($className, ENT_QUOTES, 'UTF-8') ?></span>
-                            <?php else: ?>
+                            <?php
+                                $systemClasses = is_array($s['classes'] ?? null) ? $s['classes'] : [];
+                            ?>
+                            <?php if (empty($systemClasses)): ?>
                                 <span class="badge bg-secondary-subtle">All Classes</span>
+                            <?php else: ?>
+                                <?php foreach ($systemClasses as $sc): ?>
+                                    <span class="badge bg-primary-subtle"><?= htmlspecialchars($sc['name'], ENT_QUOTES, 'UTF-8') ?></span>
+                                <?php endforeach; ?>
                             <?php endif; ?>
                             <span class="text-muted small">
                                 <i class="fas fa-calendar-alt me-1"></i><?= htmlspecialchars($yearName, ENT_QUOTES, 'UTF-8') ?>

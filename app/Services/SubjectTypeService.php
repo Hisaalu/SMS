@@ -46,18 +46,19 @@ class SubjectTypeService
         $this->cache = [];
 
         return (int) $this->db->insert('grading_subject_types', [
-            'grading_system_id'   => (int) $data['grading_system_id'],
-            'school_id'           => $schoolId,
-            'name'                => trim($data['name']),
-            'code'                => strtoupper(trim($data['code'])),
-            'is_graded'           => !empty($data['is_graded'])           ? 1 : 0,
-            'is_subsidiary'       => !empty($data['is_subsidiary'])       ? 1 : 0,
-            'subsidiary_pass_mark'=> isset($data['subsidiary_pass_mark']) ? (int)$data['subsidiary_pass_mark'] : null,
-            'subsidiary_score'    => isset($data['subsidiary_score'])     ? (int)$data['subsidiary_score']     : 1,
-            'display_order'       => (int) ($data['display_order'] ?? 0),
-            'status'              => $data['status'] ?? 'active',
-            'created_at'          => date('Y-m-d H:i:s'),
-            'updated_at'          => date('Y-m-d H:i:s'),
+            'grading_system_id'    => (int) $data['grading_system_id'],
+            'school_id'            => $schoolId,
+            'name'                 => trim($data['name']),
+            'code'                 => strtoupper(trim($data['code'])),
+            'is_graded'            => !empty($data['is_graded'])           ? 1 : 0,
+            'is_subsidiary'        => !empty($data['is_subsidiary'])       ? 1 : 0,
+            'is_other'             => !empty($data['is_other'])            ? 1 : 0,
+            'subsidiary_pass_mark' => isset($data['subsidiary_pass_mark']) ? (int)$data['subsidiary_pass_mark'] : null,
+            'subsidiary_score'     => isset($data['subsidiary_score'])     ? (int)$data['subsidiary_score']     : 0,
+            'display_order'        => (int) ($data['display_order'] ?? 0),
+            'status'               => $data['status'] ?? 'active',
+            'created_at'           => date('Y-m-d H:i:s'),
+            'updated_at'           => date('Y-m-d H:i:s'),
         ]);
     }
 
@@ -70,8 +71,9 @@ class SubjectTypeService
             'code'                 => strtoupper(trim($data['code'])),
             'is_graded'            => !empty($data['is_graded'])           ? 1 : 0,
             'is_subsidiary'        => !empty($data['is_subsidiary'])       ? 1 : 0,
+            'is_other'             => !empty($data['is_other'])            ? 1 : 0,
             'subsidiary_pass_mark' => isset($data['subsidiary_pass_mark']) ? (int)$data['subsidiary_pass_mark'] : null,
-            'subsidiary_score'     => isset($data['subsidiary_score'])     ? (int)$data['subsidiary_score']     : 1,
+            'subsidiary_score'     => isset($data['subsidiary_score'])     ? (int)$data['subsidiary_score']     : 0,
             'display_order'        => (int) ($data['display_order'] ?? 0),
             'status'               => $data['status'] ?? 'active',
             'updated_at'           => date('Y-m-d H:i:s'),
