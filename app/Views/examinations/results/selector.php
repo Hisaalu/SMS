@@ -1,4 +1,23 @@
 <!-- File: /app/Views/examinations/results/selector.php -->
+<style>
+    .results-table {
+        border-top: 1px solid #000000 !important;
+        border-collapse: collapse !important;
+    }
+    .results-table,
+    .results-table > :not(caption) > * > * {
+        border-color: #000000 !important;
+    }
+    .results-table thead th {
+        border-top: 1px solid #000000 !important;
+        border-bottom-width: 2px !important;
+    }
+    [data-theme="dark"] .results-table,
+    [data-theme="dark"] .results-table > :not(caption) > * > * {
+        border-color: #000000 !important;
+    }
+</style>
+
 <div class="container-fluid px-3 py-3">
 
     <?php if (isset($_SESSION['flash_error'])): ?>
@@ -97,6 +116,11 @@
                         <a href="<?= BASE_URL ?>/results/class" class="btn btn-sm btn-outline-secondary">
                             <i class="fas fa-redo me-1"></i> Reset
                         </a>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary"
+                                id="printResultsBtnTop">
+                            <i class="fas fa-print me-1"></i> Print Result
+                        </button>
                         <button type="submit" class="btn btn-sm btn-dark">
                             <i class="fas fa-search me-1"></i> View Results
                         </button>
@@ -120,7 +144,9 @@
                         </small>
                     <?php endif; ?>
                 </div>
-                <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">
+                <button type="button"
+                        class="btn btn-sm btn-outline-secondary no-print"
+                        id="printResultsBtn">
                     <i class="fas fa-print me-1"></i> Print
                 </button>
             </div>
@@ -133,6 +159,7 @@
                         <p class="small mb-0">Try adjusting your filters or check that students are enrolled in this class/stream.</p>
                     </div>
                 <?php else: ?>
+
                     <div class="table-responsive" style="max-height: 650px; overflow-y: auto;">
                         <table class="table table-bordered align-middle mb-0 text-nowrap results-table">
                             <thead class="table-light sticky-top">
@@ -234,16 +261,20 @@
         letter-spacing: 0.5px;
         text-transform: uppercase;
         font-weight: 600;
-        border-bottom: 2px solid #dee2e6 !important;
+        border-bottom: 2px solid #000000 !important;
     }
     .results-table tbody td {
-        border-color: #e9ecef;
         vertical-align: middle;
     }
-    .results-table tbody tr:hover { background: #f8f9fa; }
     .results-table sup.score-power { font-size: 0.65rem; font-weight: 500; }
+
     @media print {
-        .card-header button, .card-footer, form, .btn { display: none !important; }
+        .card-header button,
+        .card-footer,
+        form,
+        .btn,
+        .no-print { display: none !important; }
+        .container-fluid > .card.border-0.shadow-sm.mb-3 { display: none !important; }
         .results-table { font-size: 10px; }
         .results-table thead th { font-size: 9px; }
     }
@@ -259,21 +290,32 @@
     const classSel = document.getElementById('class_id');
     const strmSel  = document.getElementById('stream_id');
     const examSel  = document.getElementById('examination_id');
+    const printBtn = document.getElementById('printResultsBtn');
+    const printBtnTop = document.getElementById('printResultsBtnTop');
 
-    function setOptions(select, items, placeholder, selected) {
-        const current = selected || select.value;
+    const params = new URLSearchParams(window.location.search);
+    const preselected = {
+        year:  params.get('academic_year_id') || yearSel.value  || '',
+        term:  params.get('term_id')          || termSel.value  || '',
+        class: params.get('class_id')         || classSel.value || '',
+        stream:params.get('stream_id')        || strmSel.value  || '',
+        exam:  params.get('examination_id')   || examSel.value  || '',
+    };
 
+    function setOptions(select, items, placeholder, preferred) {
         select.innerHTML = '<option value="">' + placeholder + '</option>';
 
-        if (Array.isArray(items)) {
-            items.forEach(function (item) {
-                const opt = document.createElement('option');
-                opt.value = item.id;
-                opt.textContent = item.name;
-                if (String(current) === String(item.id)) opt.selected = true;
-                select.appendChild(opt);
-            });
+        if (!Array.isArray(items)) {
+            return;
         }
+
+        items.forEach(function (item) {
+            const opt = document.createElement('option');
+            opt.value = item.id;
+            opt.textContent = item.name;
+            if (String(preferred) === String(item.id)) opt.selected = true;
+            select.appendChild(opt);
+        });
     }
 
     function setLoading(select, label) {
@@ -287,67 +329,99 @@
         }).then(function (r) { return r.json(); });
     }
 
-    function onYearChange() {
-        const yearId = yearSel.value;
-
-        setLoading(termSel, '-- Loading terms… --');
-        setLoading(examSel, '-- Exam --');
-
+    function loadTerms(yearId, preferred) {
         if (!yearId) {
             setOptions(termSel, [], '-- Term --');
-            setOptions(examSel, [], '-- Exam --');
-            return;
+            return Promise.resolve();
         }
 
-        fetchJSON({ type: 'terms', year_id: yearId })
-            .then(function (list) { setOptions(termSel, list, '-- Term --'); })
-            .catch(function () { setOptions(termSel, [], '-- Failed to load terms --'); });
+        setLoading(termSel, '-- Loading terms… --');
 
-        fetchJSON({ type: 'examinations', year_id: yearId })
-            .then(function (list) { setOptions(examSel, list, '-- Exam --'); })
-            .catch(function () { setOptions(examSel, [], '-- Failed to load exams --'); });
+        return fetchJSON({ type: 'terms', year_id: yearId })
+            .then(function (list) { setOptions(termSel, list, '-- Term --', preferred); })
+            .catch(function () { setOptions(termSel, [], '-- Failed to load terms --'); });
     }
 
-    function onTermChange() {
-        const yearId = yearSel.value;
-        const termId = termSel.value;
+    function loadExams(yearId, termId, preferred) {
+        if (!yearId) {
+            setOptions(examSel, [], '-- Exam --');
+            return Promise.resolve();
+        }
 
         setLoading(examSel, '-- Loading exams… --');
 
-        if (!yearId) {
-            setOptions(examSel, [], '-- Exam --');
-            return;
-        }
+        const query = { type: 'examinations', year_id: yearId };
+        if (termId) query.term_id = termId;
 
-        fetchJSON({ type: 'examinations', year_id: yearId, term_id: termId })
-            .then(function (list) { setOptions(examSel, list, '-- Exam --'); })
+        return fetchJSON(query)
+            .then(function (list) { setOptions(examSel, list, '-- Exam --', preferred); })
             .catch(function () { setOptions(examSel, [], '-- Failed to load exams --'); });
     }
 
-    function onClassChange() {
-        const classId = classSel.value;
+    function loadStreams(classId, preferred) {
+        if (!classId) {
+            setOptions(strmSel, [], '-- All Streams --');
+            return Promise.resolve();
+        }
 
         setLoading(strmSel, '-- Loading streams… --');
 
-        if (!classId) {
-            setOptions(strmSel, [], '-- All Streams --');
-            return;
-        }
-
-        fetchJSON({ type: 'streams', class_id: classId })
-            .then(function (list) { setOptions(strmSel, list, '-- All Streams --'); })
+        return fetchJSON({ type: 'streams', class_id: classId })
+            .then(function (list) { setOptions(strmSel, list, '-- All Streams --', preferred); })
             .catch(function () { setOptions(strmSel, [], '-- Failed to load streams --'); });
     }
 
-    yearSel.addEventListener('change',  onYearChange);
-    termSel.addEventListener('change',  onTermChange);
-    classSel.addEventListener('change', onClassChange);
+    yearSel.addEventListener('change', function () {
+        loadTerms(this.value, '').then(function () {
+            loadExams(yearSel.value, '', '');
+        });
+    });
 
-    if (yearSel.value) {
-        onYearChange();
+    termSel.addEventListener('change', function () {
+        loadExams(yearSel.value, this.value, '');
+    });
+
+    classSel.addEventListener('change', function () {
+        loadStreams(this.value, '');
+    });
+
+    if (preselected.year) {
+        loadTerms(preselected.year, preselected.term).then(function () {
+            return loadExams(preselected.year, preselected.term, preselected.exam);
+        });
     }
-    if (classSel.value) {
-        onClassChange();
+
+    if (preselected.class) {
+        loadStreams(preselected.class, preselected.stream);
     }
+
+    function openPrintResults() {
+        const required = [
+            ['academic_year_id', yearSel.value, 'Academic Year'],
+            ['term_id',          termSel.value, 'Term'],
+            ['class_id',         classSel.value, 'Class'],
+            ['examination_id',   examSel.value, 'Examination'],
+        ];
+
+        for (let i = 0; i < required.length; i++) {
+            if (!required[i][1]) {
+                alert('Please select a ' + required[i][2] + ' before printing.');
+                return;
+            }
+        }
+
+        const qs = new URLSearchParams({
+            academic_year_id: yearSel.value,
+            term_id:          termSel.value,
+            class_id:         classSel.value,
+            stream_id:        strmSel.value || '',
+            examination_id:   examSel.value,
+        }).toString();
+
+        window.open(url + '/results/class/print?' + qs, '_blank');
+    }
+
+    if (printBtn)    printBtn.addEventListener('click', openPrintResults);
+    if (printBtnTop) printBtnTop.addEventListener('click', openPrintResults);
 })();
 </script>

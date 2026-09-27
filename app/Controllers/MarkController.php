@@ -370,4 +370,110 @@ class MarkController extends Controller
             $this->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    public function printForm(): void
+    {
+        $this->requirePermission('results.enter');
+
+        $schoolId = $this->schoolId();
+
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+        $examinationId  = (int)($_GET['examination_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $streamId       = (int)($_GET['stream_id'] ?? 0);
+        $subjectId      = (int)($_GET['subject_id'] ?? 0);
+
+        if (!$academicYearId || !$termId || !$examinationId || !$classId || !$subjectId) {
+            $this->flashError('All filters are required to generate a marks form.');
+            $this->redirect('/marks/entry');
+            return;
+        }
+
+        $academicYear = $this->db->fetch(
+            "SELECT id, name FROM academic_years WHERE id = :id AND school_id = :s",
+            ['id' => $academicYearId, 's' => $schoolId]
+        );
+
+        $term = $this->db->fetch(
+            "SELECT id, name FROM terms WHERE id = :id AND academic_year_id = :y",
+            ['id' => $termId, 'y' => $academicYearId]
+        );
+
+        $examination = $this->db->fetch(
+            "SELECT id, name, code FROM examinations WHERE id = :id AND school_id = :s",
+            ['id' => $examinationId, 's' => $schoolId]
+        );
+
+        $class = $this->db->fetch(
+            "SELECT id, name FROM classes WHERE id = :id AND school_id = :s",
+            ['id' => $classId, 's' => $schoolId]
+        );
+
+        $subject = $this->db->fetch(
+            "SELECT id, name, code FROM subjects WHERE id = :id AND school_id = :s",
+            ['id' => $subjectId, 's' => $schoolId]
+        );
+
+        if (!$academicYear || !$term || !$examination || !$class || !$subject) {
+            $this->flashError('One or more selected filters could not be found.');
+            $this->redirect('/marks/entry');
+            return;
+        }
+
+        $classHasStreams = (int)($this->db->fetch(
+            "SELECT COUNT(*) AS c FROM streams WHERE class_id = :cid AND school_id = :s",
+            ['cid' => $classId, 's' => $schoolId]
+        )['c'] ?? 0) > 0;
+
+        $stream = null;
+        if ($classHasStreams && $streamId) {
+            $stream = $this->db->fetch(
+                "SELECT id, name FROM streams WHERE id = :id AND class_id = :c",
+                ['id' => $streamId, 'c' => $classId]
+            );
+        }
+
+        $studentsSql = "SELECT s.id, s.admission_number, s.first_name, s.last_name, s.gender
+                        FROM students s
+                        INNER JOIN student_enrollments se ON se.student_id = s.id
+                        WHERE se.academic_year_id = :year
+                        AND se.class_id = :class
+                        AND se.status = 'active'";
+
+        $studentsParams = [
+            'year'  => $academicYearId,
+            'class' => $classId,
+        ];
+
+        if ($stream !== null) {
+            $studentsSql .= " AND se.stream_id = :stream";
+            $studentsParams['stream'] = $stream['id'];
+        }
+
+        $studentsSql .= " ORDER BY s.last_name ASC, s.first_name ASC";
+
+        $students = $this->db->fetchAll($studentsSql, $studentsParams);
+
+        $user = $this->auth->getUser();
+        $printedBy = $user
+            ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''))
+            : '';
+        if ($printedBy === '') {
+            $printedBy = 'System';
+        }
+
+        echo $this->view->renderWithLayout('examinations/marks/print_form', 'print', [
+            'title'        => 'Marks Entry Form — ' . $class['name'],
+            'academicYear' => $academicYear,
+            'term'         => $term,
+            'examination'  => $examination,
+            'class'        => $class,
+            'stream'       => $stream,
+            'subject'      => $subject,
+            'students'     => $students,
+            'classHasStreams' => $classHasStreams,
+            'printedBy'    => $printedBy,
+        ]);
+    }
 }

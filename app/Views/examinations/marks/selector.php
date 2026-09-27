@@ -103,16 +103,16 @@
 
                 </div>
 
-                <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top">
+                <div class="d-flex justify-content-end gap-2 mt-3 pt-2 border-top flex-wrap">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-primary fw-bold"
+                            id="generateFormBtn"
+                            title="Generate a printable marks entry form for the current selection">
+                        <i class="fas fa-print me-1"></i> Print Marks Entry Form
+                    </button>
                     <button type="submit" class="btn btn-sm btn-primary fw-bold">
                         <i class="fas fa-pencil-alt me-1"></i> Enter Marks
                     </button>
-                    <a href="<?= BASE_URL ?>/marks/entry" class="btn btn-sm btn-secondary" title="Reset Filters">
-                        <i class="fas fa-undo me-1"></i> Reset
-                    </a>
-                    <a href="<?= BASE_URL ?>/examinations" class="btn btn-sm btn-secondary">
-                        <i class="fas fa-arrow-left me-1"></i> Back
-                    </a>
                 </div>
             </form>
         </div>
@@ -131,6 +131,7 @@
     const classSel = document.getElementById('classSelect');
     const strmSel  = document.getElementById('streamSelect');
     const subjSel  = document.getElementById('subjectSelect');
+    const printBtn = document.getElementById('generateFormBtn');
 
     function setOptions(select, items, placeholder, selected) {
         const current = selected || select.value;
@@ -250,6 +251,34 @@
     termSel.addEventListener('change',  onTermChange);
     examSel.addEventListener('change',  onExamChange);
     classSel.addEventListener('change', onClassChange);
+
+    printBtn.addEventListener('click', function () {
+        const required = [
+            ['academic_year_id', yearSel.value, 'Academic Year'],
+            ['term_id',          termSel.value, 'Term'],
+            ['examination_id',   examSel.value, 'Examination'],
+            ['class_id',         classSel.value, 'Class'],
+            ['subject_id',       subjSel.value, 'Subject'],
+        ];
+
+        for (let i = 0; i < required.length; i++) {
+            if (!required[i][1]) {
+                alert('Please select an ' + required[i][2] + ' before generating the form.');
+                return;
+            }
+        }
+
+        const qs = new URLSearchParams({
+            academic_year_id: yearSel.value,
+            term_id:          termSel.value,
+            examination_id:   examSel.value,
+            class_id:         classSel.value,
+            stream_id:        strmSel.value || '',
+            subject_id:       subjSel.value,
+        }).toString();
+
+        window.open(url + '/marks/entry/print?' + qs, '_blank');
+    });
 
     (function () {
         if (yearSel.value) {

@@ -217,8 +217,10 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->get('/marks/entry/{examinationId}/{subjectId}', ['MarkController', 'entry']);
     $router->post('/marks/save', ['MarkController', 'save']);
     $router->post('/marks/bulk-save', ['MarkController', 'bulkSave']);
+    $router->get('/marks/entry/print', ['MarkController', 'printForm']);
 
     $router->get('/results/class', ['ResultController', 'classResults']);
+    $router->get('/results/class/print', ['ResultController', 'printResults']);
     $router->get('/results/class/{examinationId}', ['ResultController', 'classResults']);
     $router->get('/results/student/{studentId}', ['ResultController', 'studentResults']);
     $router->post('/results/publish/{examinationId}', ['ResultController', 'publish']);
