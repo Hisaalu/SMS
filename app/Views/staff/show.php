@@ -16,14 +16,14 @@ $isActive = !empty($staff['is_active_status']);
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
             <h4 class="mb-0">Staff Profile</h4>
-            <small class="text-muted">View and manage staff member details</small>
+            <small class="text-muted">Manage staff details</small>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a href="<?= BASE_URL ?>/staff/edit?id=<?= (int)$staff['id'] ?>" class="btn btn-sm btn-secondary">
-                <i class="fas fa-edit me-1"></i> Edit Profile
+                <i class="fas fa-edit me-1"></i> Profile
             </a>
             <a href="<?= BASE_URL ?>/staff" class="btn btn-sm btn-secondary">
-                <i class="fas fa-arrow-left me-1"></i> Back to Directory
+                <i class="fas fa-arrow-left me-1"></i> Back
             </a>
         </div>
     </div>

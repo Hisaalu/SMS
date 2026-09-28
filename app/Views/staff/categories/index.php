@@ -2,15 +2,12 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <h4 class="mb-0">Staff Categories</h4>
-        <small class="text-muted">Manage staff groupings and structural categories</small>
+        <small class="text-muted">Manage your Categories</small>
     </div>
     <div>
         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-            <i class="fas fa-plus me-1"></i> Add Category
+            <i class="fas fa-plus me-1"></i> Category
         </button>
-        <a href="<?= BASE_URL ?>/staff" class="btn btn-secondary btn-sm">
-            <i class="fas fa-arrow-left me-1"></i> Back to Directory
-        </a>
     </div>
 </div>
 
@@ -24,7 +21,7 @@
                         <th>Name</th>
                         <th>Code</th>
                         <th>Description</th>
-                        <th>Staff Count</th>
+                        <th>Staffs</th>
                         <th>Status</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -59,7 +56,6 @@
                                         <input type="hidden" name="id" value="<?= $cat['id'] ?>">
                                         <div class="modal-header">
                                             <h5 class="modal-title">Edit Staff Category</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
                                         <div class="modal-body text-start">
                                             <div class="mb-3">

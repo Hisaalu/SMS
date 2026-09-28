@@ -2,15 +2,12 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
         <h4 class="mb-0">Staff Statuses</h4>
-        <small class="text-muted">Manage active, suspended, and employment states</small>
+        <small class="text-muted">Add, edit or delete Statuses</small>
     </div>
     <div>
         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addStatusModal">
             <i class="fas fa-plus me-1"></i> Add Status
         </button>
-        <a href="<?= BASE_URL ?>/staff" class="btn btn-secondary btn-sm">
-            <i class="fas fa-arrow-left me-1"></i> Back to Directory
-        </a>
     </div>
 </div>
 
@@ -21,11 +18,11 @@
                 <thead>
                     <tr>
                         <th>Order</th>
-                        <th>Status Name</th>
+                        <th>Name</th>
                         <th>Code</th>
-                        <th>Is Active</th>
-                        <th>Allows Login</th>
-                        <th>Staff Count</th>
+                        <th>Active</th>
+                        <th>Login</th>
+                        <th>Staffs</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -76,7 +73,6 @@
                                         <input type="hidden" name="id" value="<?= $st['id'] ?>">
                                         <div class="modal-header">
                                             <h5 class="modal-title">Edit Staff Status</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
                                         <div class="modal-body text-start">
                                             <div class="mb-3">
@@ -126,7 +122,6 @@
                                         <input type="hidden" name="id" value="<?= $st['id'] ?>">
                                         <div class="modal-header text-bg-danger">
                                             <h5 class="modal-title">Delete Staff Status</h5>
-                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
                                         <div class="modal-body text-start py-4">
                                             <p class="mb-0">Are you sure you want to delete status <strong><?= htmlspecialchars($st['name']) ?></strong>?</p>
@@ -158,7 +153,6 @@
             <form action="<?= BASE_URL ?>/staff/statuses/store" method="POST">
                 <div class="modal-header">
                     <h5 class="modal-title">Add Staff Status</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
@@ -194,7 +188,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Create Status</button>
+                    <button type="submit" class="btn btn-primary">Create</button>
                 </div>
             </form>
         </div>

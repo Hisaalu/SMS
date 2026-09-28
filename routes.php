@@ -127,14 +127,6 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->post('/student/enrollments/store', ['StudentController', 'storeEnrollment']);
     $router->get('/students/admission-letter', ['StudentController', 'admissionLetter']);
 
-    $router->get('/staff', ['StaffController', 'index']);
-    $router->get('/staff/create', ['StaffController', 'create']);
-    $router->post('/staff/store', ['StaffController', 'store']);
-    $router->get('/staff/show', ['StaffController', 'show']);
-    $router->get('/staff/edit', ['StaffController', 'edit']);
-    $router->post('/staff/update', ['StaffController', 'update']);
-    $router->post('/staff/change-status', ['StaffController', 'changeStatus']);
-
     $router->get('/staff/categories', ['StaffCategoryController', 'index']);
     $router->post('/staff/categories/store', ['StaffCategoryController', 'store']);
     $router->post('/staff/categories/update', ['StaffCategoryController', 'update']);
@@ -143,6 +135,14 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->post('/staff/statuses/store', ['StaffStatusController', 'store']);
     $router->post('/staff/statuses/update', ['StaffStatusController', 'update']);
     $router->post('/staff/statuses/delete', ['StaffStatusController', 'delete']);
+
+    $router->get('/staff', ['StaffController', 'index']);
+    $router->get('/staff/create', ['StaffController', 'create']);
+    $router->post('/staff/store', ['StaffController', 'store']);
+    $router->get('/staff/show', ['StaffController', 'show']);
+    $router->get('/staff/edit', ['StaffController', 'edit']);
+    $router->post('/staff/update', ['StaffController', 'update']);
+    $router->post('/staff/change-status', ['StaffController', 'changeStatus']);
 
     $router->get('/teacher-assignments', ['TeacherAssignmentController', 'index']);
     $router->post('/teacher-assignments/store', ['TeacherAssignmentController', 'store']);

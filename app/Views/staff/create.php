@@ -17,9 +17,6 @@
     <?php $formData = $_SESSION['staff_form_data'] ?? []; ?>
 
     <form method="POST" action="<?= BASE_URL ?>/staff/store" enctype="multipart/form-data">
-        <!-- ============================================= -->
-        <!-- 1. Personal Information -->
-        <!-- ============================================= -->
         <div class="card mb-3">
             <div class="card-header fw-bold bg-light">
                 <i class="fas fa-user me-1"></i> Personal Information
@@ -94,10 +91,7 @@
                 </div>
             </div>
         </div>
-
-        <!-- ============================================= -->
-        <!-- 2. Employment Information -->
-        <!-- ============================================= -->
+        
         <div class="card mb-3">
             <div class="card-header fw-bold bg-light">
                 <i class="fas fa-briefcase me-1"></i> Employment Information
@@ -164,9 +158,6 @@
             </div>
         </div>
 
-        <!-- ============================================= -->
-        <!-- 3. System Login Account -->
-        <!-- ============================================= -->
         <div class="card mb-3">
             <div class="card-header fw-bold bg-light">
                 <i class="fas fa-key me-1"></i> System Login Account
@@ -215,9 +206,6 @@
             </div>
         </div>
 
-        <!-- ============================================= -->
-        <!-- 4. Teaching Assignments (Optional) -->
-        <!-- ============================================= -->
         <div class="card mb-3">
             <div class="card-header fw-bold bg-light d-flex justify-content-between align-items-center">
                 <span><i class="fas fa-chalkboard-teacher me-1"></i> Teaching Assignments (Optional)</span>
@@ -231,7 +219,6 @@
             </div>
         </div>
 
-        <!-- Submit -->
         <div class="text-end mb-4">
             <button type="submit" class="btn btn-primary px-4">
                 <i class="fas fa-save me-1"></i> Save Staff
@@ -298,7 +285,6 @@ function addAssignmentRow() {
     document.getElementById('assignment-list').appendChild(wrapper.firstElementChild);
 }
 
-// Toggle login fields
 document.getElementById('create_login').addEventListener('change', function () {
     document.getElementById('login-fields').style.display = this.checked ? 'block' : 'none';
 });

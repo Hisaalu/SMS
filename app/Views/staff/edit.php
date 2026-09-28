@@ -2,18 +2,17 @@
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h4 class="mb-0">Edit Staff Member</h4>
-            <small class="text-muted">Update information for <?= htmlspecialchars(($staff['first_name'] ?? '') . ' ' . ($staff['last_name'] ?? '')) ?></small>
+            <h4 class="mb-0">Edit Staff</h4>
+            <small class="text-muted">Update Staff Info</small>
         </div>
         <a href="<?= BASE_URL ?>/staff/show?id=<?= $staff['id'] ?>" class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Back to Profile
+            <i class="fas fa-arrow-left me-1"></i> Back
         </a>
     </div>
 
     <?php if (isset($_SESSION['flash_error'])): ?>
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <?= htmlspecialchars($_SESSION['flash_error']); unset($_SESSION['flash_error']); ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     <?php endif; ?>
 
@@ -21,9 +20,7 @@
         <input type="hidden" name="id" value="<?= $staff['id'] ?>">
 
         <div class="row g-3">
-            <!-- Left Column: Personal + Employment + Assignments -->
             <div class="col-md-8">
-                <!-- Personal Information -->
                 <div class="card mb-3">
                     <div class="card-header bg-light">
                         <h6 class="mb-0"><i class="fas fa-user me-1"></i> Personal Information</h6>
@@ -68,12 +65,12 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-semibold">Phone Number</label>
+                                <label class="form-label small fw-semibold">Phone Number 1</label>
                                 <input type="text" name="phone" class="form-control form-control-sm" 
                                        value="<?= htmlspecialchars($staff['phone'] ?? '') ?>">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label small fw-semibold">Alt Phone Number</label>
+                                <label class="form-label small fw-semibold">Phone Number 2</label>
                                 <input type="text" name="alt_phone" class="form-control form-control-sm" 
                                        value="<?= htmlspecialchars($staff['alt_phone'] ?? '') ?>">
                             </div>
@@ -91,7 +88,6 @@
                     </div>
                 </div>
 
-                <!-- Employment Information -->
                 <div class="card mb-3">
                     <div class="card-header bg-light">
                         <h6 class="mb-0"><i class="fas fa-briefcase me-1"></i> Employment Information</h6>
@@ -154,12 +150,11 @@
                     </div>
                 </div>
 
-                <!-- Teaching Assignments -->
                 <div class="card mb-3" id="assignments">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <h6 class="mb-0"><i class="fas fa-chalkboard-teacher me-1"></i> Teaching Assignments</h6>
                         <button type="button" class="btn btn-sm btn-outline-primary" onclick="addAssignmentRow()">
-                            <i class="fas fa-plus me-1"></i> Add Class/Subject
+                            <i class="fas fa-plus me-1"></i> Class/Subject
                         </button>
                     </div>
                     <div class="card-body">
@@ -167,7 +162,6 @@
                             Manage this staff member's teaching assignments. Mark an existing one for removal, or add a new one below.
                         </p>
 
-                        <!-- Existing Assignments -->
                         <?php if (!empty($teacherAssignments)): ?>
                             <div class="table-responsive mb-3">
                                 <table class="table table-sm table-bordered mb-0">
@@ -205,13 +199,11 @@
                             <p class="text-muted small mb-2">No teaching assignments yet. Add one below.</p>
                         <?php endif; ?>
 
-                        <!-- New Assignments -->
                         <div id="assignment-list"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- Right Column: Photo & Actions -->
             <div class="col-md-4">
                 <div class="card mb-3">
                     <div class="card-header bg-light">
@@ -245,7 +237,6 @@
     </form>
 </div>
 
-<!-- Assignment Row Template -->
 <template id="assignment-template">
     <div class="row g-2 mb-2 assignment-row align-items-end border-top pt-2">
         <div class="col-md-3">

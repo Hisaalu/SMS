@@ -16,7 +16,7 @@ $hasFilters = !empty($filters);
                 <i class="fas fa-toggle-on me-1"></i> Statuses
             </a>
             <a href="<?= BASE_URL ?>/staff/create" class="btn btn-sm btn-primary">
-                <i class="fas fa-user-plus me-1"></i> Add Staff
+                <i class="fas fa-user-plus me-1"></i> Staff
             </a>
         </div>
     </div>
