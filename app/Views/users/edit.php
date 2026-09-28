@@ -1,12 +1,12 @@
 <!-- File: /app/Views/users/edit.php -->
 <div class="container-fluid px-0">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h4 class="fw-bold mb-1">Edit User: <?= htmlspecialchars($user->username) ?></h4>
-            <span class="text-muted small">Update profile settings, security access, and roles</span>
+    <div class="d-flex justify-content-between align-items-start flex-nowrap mb-4 gap-2">
+        <div class="flex-grow-1">
+            <h4 class="fw-bold mb-1">Edit <?= htmlspecialchars($user->username) ?></h4>
+            <span class="text-muted small">Update profile settings</span>
         </div>
-        <a href="<?= BASE_URL ?>/users" class="btn btn-secondary btn-sm px-3">
-            <i class="fas fa-arrow-left me-1"></i> Back to Users
+        <a href="<?= BASE_URL ?>/users" class="btn btn-secondary btn-sm px-3 text-nowrap">
+            <i class="fas fa-arrow-left me-1"></i> Back
         </a>
     </div>
 
@@ -83,7 +83,7 @@
             <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
                 <a href="<?= BASE_URL ?>/users" class="btn btn-secondary px-4">Cancel</a>
                 <button type="submit" class="btn btn-primary px-4">
-                    <i class="fas fa-save me-2"></i> Update User
+                    <i class="fas fa-save me-2"></i> Update
                 </button>
             </div>
         </form>

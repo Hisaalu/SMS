@@ -1,15 +1,14 @@
 <!-- File: /app/Views/users/index.php -->
 <div class="container-fluid px-0">
-    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-2">
-        <div>
+    <div class="d-flex justify-content-between align-items-start flex-nowrap mb-4 gap-2">
+        <div class="flex-grow-1">
             <h4 class="fw-bold mb-1">User Management</h4>
             <span class="text-muted small">
-                <i class="fas fa-school me-1" style="color: var(--accent-color);"></i>
-                School: <strong><?= htmlspecialchars($schoolName ?? 'My School') ?></strong>
+                Manage your Users
             </span>
         </div>
-        <a href="<?= BASE_URL ?>/users/create" class="btn btn-primary px-3">
-            <i class="fas fa-user-plus me-2"></i> New User
+        <a href="<?= BASE_URL ?>/users/create" class="btn btn-primary px-3 text-nowrap">
+            <i class="fas fa-user-plus me-2"></i> User
         </a>
     </div>
 
@@ -33,10 +32,10 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead>
                         <tr>
-                            <th class="ps-4 py-3">User Details</th>
+                            <th class="ps-4 py-3">User</th>
                             <th class="py-3">Username</th>
                             <th class="py-3">Email</th>
-                            <th class="py-3">Assigned Roles</th>
+                            <th class="py-3">Roles</th>
                             <th class="py-3">Status</th>
                             <th class="text-end pe-4 py-3">Actions</th>
                         </tr>
@@ -85,7 +84,13 @@
                                             <i class="fas fa-pen" style="color: var(--accent-color);"></i>
                                         </a>
                                         <?php if ($user->id != $currentUserId): ?>
-                                            <button onclick="deleteUser(<?= $user->id ?>)" class="btn btn-secondary" title="Delete User">
+                                            <button type="button"
+                                                    class="btn btn-secondary"
+                                                    title="Delete User"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#deleteUserModal"
+                                                    data-id="<?= (int)$user->id ?>"
+                                                    data-name="<?= htmlspecialchars(trim($user->first_name . ' ' . $user->last_name), ENT_QUOTES, 'UTF-8') ?>">
                                                 <i class="fas fa-trash-alt" style="color: var(--danger-color);"></i>
                                             </button>
                                         <?php endif; ?>
@@ -109,22 +114,94 @@
     </div>
 </div>
 
+<div class="modal fade" id="deleteUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
+                          style="width:40px;height:40px;background:rgba(220,38,38,0.12);color:#DC2626;">
+                        <i class="fas fa-trash-alt"></i>
+                    </span>
+                    <h5 class="modal-title fw-bold mb-0">Delete User</h5>
+                </div>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="mb-1">Are you sure you want to delete <strong id="deleteUserName">this user</strong>?</p>
+                <p class="small text-muted mb-0">
+                    This action cannot be undone. The account and its role assignments will be removed permanently.
+                </p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteUserBtn">
+                    <i class="fas fa-trash-alt me-1"></i> Delete User
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-function deleteUser(id) {
-    if (confirm('Are you sure you want to permanently remove this user account?')) {
-        fetch('<?= BASE_URL ?>/users/' + id, {
+(function () {
+    const modalEl   = document.getElementById('deleteUserModal');
+    const nameEl    = document.getElementById('deleteUserName');
+    const confirmEl = document.getElementById('confirmDeleteUserBtn');
+
+    let currentId = 0;
+
+    modalEl.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        currentId = parseInt(button.getAttribute('data-id'), 10) || 0;
+        const name = button.getAttribute('data-name') || 'this user';
+        nameEl.textContent = name;
+    });
+
+    confirmEl.addEventListener('click', function () {
+        if (!currentId) return;
+
+        confirmEl.disabled = true;
+        confirmEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+
+        fetch('<?= BASE_URL ?>/users/' + currentId, {
             method: 'DELETE',
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.reload();
-            } else {
-                alert(data.error || 'Failed to delete user');
-            }
+        .then(function (r) {
+            return r.text().then(function (text) {
+                try { return { ok: r.ok, status: r.status, json: JSON.parse(text) }; }
+                catch (e) { return { ok: r.ok, status: r.status, json: null, raw: text }; }
+            });
         })
-        .catch(() => alert('An unexpected network error occurred.'));
+        .then(function (res) {
+            if (res.json && res.json.success) {
+                window.location.reload();
+                return;
+            }
+
+            const message = (res.json && res.json.error)
+                ? res.json.error
+                : 'Could not delete this user (HTTP ' + res.status + ').';
+
+            showErrorToast(message);
+
+            confirmEl.disabled = false;
+            confirmEl.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Delete User';
+        })
+        .catch(function () {
+            showErrorToast('Network error. Please check your connection and try again.');
+
+            confirmEl.disabled = false;
+            confirmEl.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Delete User';
+        });
+    });
+
+    function showErrorToast(message) {
+        if (window.NexaToast && typeof window.NexaToast.error === 'function') {
+            window.NexaToast.error(message);
+            return;
+        }
+        alert(message);
     }
-}
+})();
 </script>
