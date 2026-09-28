@@ -1,15 +1,23 @@
+<!-- File: /app/Views/attendance/view.php -->
 <div class="container-fluid px-0">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h4 class="mb-0">Attendance Register Details</h4>
-            <small class="text-muted">Viewing recorded register summary and individual records</small>
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+                <h4 class="mb-0">Attendance Details</h4>
+                <small class="text-muted">Viewing recorded register</small>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="<?= BASE_URL ?>/attendance" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Back
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="printRegisterBtn">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-success" id="exportRegisterBtn">
+                    <i class="fas fa-file-excel me-1"></i> Export
+                </button>
+            </div>
         </div>
-        <a href="<?= BASE_URL ?>/attendance" class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Back to Registers
-        </a>
-    </div>
 
-    <!-- Metadata Card -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
             <div class="row g-3">
@@ -37,7 +45,6 @@
         </div>
     </div>
 
-    <!-- Attendance Details Table -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -46,7 +53,7 @@
                         <tr>
                             <th>#</th>
                             <th>Admin No</th>
-                            <th>Student Name</th>
+                            <th>Name</th>
                             <th>Status Code</th>
                             <th>Status</th>
                             <th>Reason</th>
@@ -87,3 +94,18 @@
         </div>
     </div>
 </div>
+
+<script>
+(function () {
+    const url = '<?= BASE_URL ?>';
+    const registerId = <?= (int)($register['id'] ?? 0) ?>;
+
+    document.getElementById('printRegisterBtn').addEventListener('click', function () {
+        window.open(url + '/attendance/view/' + registerId + '/print', '_blank');
+    });
+
+    document.getElementById('exportRegisterBtn').addEventListener('click', function () {
+        window.open(url + '/attendance/view/' + registerId + '/export', '_blank');
+    });
+})();
+</script>

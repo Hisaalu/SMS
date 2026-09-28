@@ -152,6 +152,8 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->get('/attendance/take', ['AttendanceController', 'take']);
     $router->post('/attendance/save', ['AttendanceController', 'save']);
     $router->get('/attendance/view/{id}', ['AttendanceController', 'view']);
+    $router->get('/attendance/view/{id}/print', ['AttendanceController', 'printRegister']);
+    $router->get('/attendance/view/{id}/export', ['AttendanceController', 'exportRegister']);
     $router->get('/attendance/edit/{id}', ['AttendanceController', 'edit']);
 
     $router->get('/attendance/statuses', ['AttendanceStatusController', 'index']);

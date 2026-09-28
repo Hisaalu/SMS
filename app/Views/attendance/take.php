@@ -85,7 +85,7 @@
                                     <th>Admin No</th>
                                     <th>Student Name</th>
                                     <th>Status</th>
-                                    <th>Reason (If applicable)</th>
+                                    <th>Reason</th>
                                     <th>Remarks</th>
                                 </tr>
                             </thead>
@@ -132,7 +132,7 @@
                 <?php if (!empty($students)): ?>
                     <div class="card-footer bg-white text-end py-3">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i> Save Attendance Register
+                            <i class="fas fa-save me-1"></i> Save 
                         </button>
                     </div>
                 <?php endif; ?>

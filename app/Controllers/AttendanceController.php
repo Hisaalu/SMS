@@ -410,4 +410,173 @@ class AttendanceController extends Controller
             'attendance_date'       => $register['attendance_date'],
         ]));
     }
+
+        /**
+     * Printable register for the headed paper.
+     */
+    public function printRegister($params): void
+    {
+        $this->requirePermission('attendance.view');
+
+        $id = (int)($params['id'] ?? 0);
+
+        $register = $this->db->fetch(
+            "SELECT r.*, c.name AS class_name, s.name AS stream_name,
+                    sess.name AS session_name, u.first_name, u.last_name
+             FROM attendance_registers r
+             LEFT JOIN classes c ON r.class_id = c.id
+             LEFT JOIN streams s ON r.stream_id = s.id
+             LEFT JOIN attendance_sessions sess ON r.attendance_session_id = sess.id
+             LEFT JOIN users u ON r.recorded_by = u.id
+             WHERE r.id = :id",
+            ['id' => $id]
+        );
+
+        if (!$register) {
+            $this->flashError('Register not found.');
+            $this->redirect('/attendance');
+            return;
+        }
+
+        $records = $this->db->fetchAll(
+            "SELECT ar.*, st.first_name, st.last_name, st.admission_number,
+                    ast.name AS status_name, ast.code AS status_code,
+                    ast.counts_as_present, ast.counts_as_absent, ast.counts_as_late
+             FROM attendance_records ar
+             INNER JOIN students st ON ar.student_id = st.id
+             INNER JOIN attendance_statuses ast ON ar.attendance_status_id = ast.id
+             WHERE ar.register_id = :id
+             ORDER BY st.first_name ASC",
+            ['id' => $id]
+        );
+
+        // Summary counts
+        $total     = count($records);
+        $present   = 0;
+        $absent    = 0;
+        $late      = 0;
+        foreach ($records as $r) {
+            if (!empty($r['counts_as_present'])) $present++;
+            if (!empty($r['counts_as_absent']))  $absent++;
+            if (!empty($r['counts_as_late']))    $late++;
+        }
+
+        $meta = [
+            ['label' => 'Date',    'value' => date('d M Y', strtotime($register['attendance_date']))],
+            ['label' => 'Class',   'value' => (string)($register['class_name'] ?? '-')],
+        ];
+        if (!empty($register['stream_name'])) {
+            $meta[] = ['label' => 'Stream', 'value' => $register['stream_name']];
+        }
+        $meta[] = ['label' => 'Session', 'value' => (string)($register['session_name'] ?? 'Daily')];
+        $meta[] = ['label' => 'Status',  'value' => ucfirst((string)($register['status'] ?? 'draft'))];
+        $meta[] = ['label' => 'Students','value' => $total];
+        $meta[] = ['label' => 'Present', 'value' => $present];
+        $meta[] = ['label' => 'Absent',  'value' => $absent];
+        if ($late > 0) {
+            $meta[] = ['label' => 'Late', 'value' => $late];
+        }
+
+        $user = $this->auth->getUser();
+        $printedBy = $user ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) : '';
+        if ($printedBy === '') $printedBy = 'System';
+
+        $this->audit('Attendance Register Printed', 'attendance', "Printed register #{$id}");
+
+        echo $this->view->renderWithLayout('attendance/print_register', 'print', [
+            'title'     => 'Attendance Register',
+            'register'  => $register,
+            'records'   => $records,
+            'meta'      => $meta,
+            'printedBy' => $printedBy,
+        ]);
+    }
+
+    public function exportRegister($params): void
+    {
+        $this->requirePermission('attendance.view');
+
+        $id = (int)($params['id'] ?? 0);
+
+        $register = $this->db->fetch(
+            "SELECT r.*, c.name AS class_name, s.name AS stream_name,
+                    sess.name AS session_name, u.first_name, u.last_name
+             FROM attendance_registers r
+             LEFT JOIN classes c ON r.class_id = c.id
+             LEFT JOIN streams s ON r.stream_id = s.id
+             LEFT JOIN attendance_sessions sess ON r.attendance_session_id = sess.id
+             LEFT JOIN users u ON r.recorded_by = u.id
+             WHERE r.id = :id",
+            ['id' => $id]
+        );
+
+        if (!$register) {
+            $this->flashError('Register not found.');
+            $this->redirect('/attendance');
+            return;
+        }
+
+        $records = $this->db->fetchAll(
+            "SELECT ar.*, st.first_name, st.last_name, st.admission_number,
+                    ast.name AS status_name, ast.code AS status_code,
+                    ast.counts_as_present, ast.counts_as_absent, ast.counts_as_late
+             FROM attendance_records ar
+             INNER JOIN students st ON ar.student_id = st.id
+             INNER JOIN attendance_statuses ast ON ar.attendance_status_id = ast.id
+             WHERE ar.register_id = :id
+             ORDER BY st.first_name ASC",
+            ['id' => $id]
+        );
+
+        $this->audit('Attendance Register Exported', 'attendance', "Exported register #{$id}");
+
+        $filename = 'attendance_register_' . $id . '_' . date('Ymd_His') . '.csv';
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+
+        fputcsv($out, ['Attendance Register']);
+        fputcsv($out, ['School',   $this->currentSchoolName($this->schoolId())]);
+        fputcsv($out, ['Date',     date('d M Y', strtotime($register['attendance_date']))]);
+        fputcsv($out, ['Class',    ($register['class_name'] ?? '-') . (!empty($register['stream_name']) ? ' - ' . $register['stream_name'] : '')]);
+        fputcsv($out, ['Session',  $register['session_name'] ?? 'Daily']);
+        fputcsv($out, ['Status',   ucfirst((string)($register['status'] ?? 'draft'))]);
+        fputcsv($out, ['Generated At', date('Y-m-d H:i:s')]);
+        fputcsv($out, []);
+
+        fputcsv($out, ['#', 'ADM NO', 'STUDENT NAME', 'STATUS CODE', 'STATUS', 'REASON', 'REMARKS']);
+
+        foreach ($records as $i => $r) {
+            fputcsv($out, [
+                $i + 1,
+                $r['admission_number'] ?? '',
+                trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? '')),
+                $r['status_code'] ?? '',
+                $r['status_name'] ?? '',
+                $r['reason']      ?? '',
+                $r['remarks']     ?? '',
+            ]);
+        }
+
+        fclose($out);
+        exit;
+    }
+
+    private function currentSchoolName(int $schoolId): string
+    {
+        try {
+            $row = $this->db->fetch(
+                "SELECT name FROM schools WHERE id = :id",
+                ['id' => $schoolId]
+            );
+            return $row['name'] ?? '';
+        } catch (Throwable $e) {
+            return '';
+        }
+    }
 }
