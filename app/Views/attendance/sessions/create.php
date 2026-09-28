@@ -2,8 +2,8 @@
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h4 class="mb-0">Create Attendance Session</h4>
-            <small class="text-muted">Define a new session (e.g., Morning, Afternoon, Evening)</small>
+            <h4 class="mb-0">Create Session</h4>
+            <small class="text-muted">Define an Attendance Session</small>
         </div>
         <a href="<?= BASE_URL ?>/attendance/sessions" class="btn btn-sm btn-secondary">
             <i class="fas fa-arrow-left me-1"></i> Back
@@ -46,7 +46,7 @@
 
                 <div class="mt-4">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Create Session
+                        <i class="fas fa-save me-1"></i> Create
                     </button>
                     <a href="<?= BASE_URL ?>/attendance/sessions" class="btn btn-secondary">Cancel</a>
                 </div>

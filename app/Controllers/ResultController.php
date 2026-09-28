@@ -753,4 +753,266 @@ class ResultController extends Controller
             'printedBy'     => $printedBy,
         ]);
     }
+
+    public function exportResults(): void
+    {
+        $this->requirePermission('results.view');
+
+        $examinationId  = (int)($_GET['examination_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $streamId       = (int)($_GET['stream_id'] ?? 0);
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+        $schoolId       = $this->schoolId();
+
+        if (!$examinationId || !$classId || !$academicYearId || !$termId) {
+            $this->flashError('Missing filters for the export sheet.');
+            $this->redirect('/results/class');
+            return;
+        }
+
+        $examination = $this->db->fetch(
+            "SELECT * FROM examinations WHERE id = :id AND school_id = :school_id",
+            ['id' => $examinationId, 'school_id' => $schoolId]
+        );
+
+        $academicYear = $this->db->fetch(
+            "SELECT id, name FROM academic_years WHERE id = :id AND school_id = :s",
+            ['id' => $academicYearId, 's' => $schoolId]
+        );
+
+        $term = $this->db->fetch(
+            "SELECT id, name FROM terms WHERE id = :id AND academic_year_id = :y",
+            ['id' => $termId, 'y' => $academicYearId]
+        );
+
+        $class = $this->db->fetch(
+            "SELECT id, name FROM classes WHERE id = :id AND school_id = :s",
+            ['id' => $classId, 's' => $schoolId]
+        );
+
+        $stream = null;
+        if ($streamId) {
+            $stream = $this->db->fetch(
+                "SELECT id, name FROM streams WHERE id = :id AND class_id = :c",
+                ['id' => $streamId, 'c' => $classId]
+            );
+        }
+
+        if (!$examination || !$academicYear || !$term || !$class) {
+            $this->flashError('One or more selected filters could not be found.');
+            $this->redirect('/results/class');
+            return;
+        }
+
+        $subjects = $this->db->fetchAll(
+            "SELECT s.id, s.name, s.code
+             FROM examination_subjects es
+             INNER JOIN subjects s ON es.subject_id = s.id
+             WHERE es.examination_id = :exam_id
+             ORDER BY s.code ASC, s.name ASC",
+            ['exam_id' => $examinationId]
+        );
+
+        if (empty($subjects) && $classId > 0) {
+            $subjects = $this->db->fetchAll(
+                "SELECT s.id, s.name, s.code
+                 FROM class_subjects cs
+                 INNER JOIN subjects s ON cs.subject_id = s.id
+                 WHERE cs.class_id = :class_id
+                   AND cs.school_id = :school_id
+                   AND s.status = 'active'
+                 ORDER BY s.code ASC, s.name ASC",
+                ['class_id' => $classId, 'school_id' => $schoolId]
+            );
+        }
+
+        if (empty($subjects)) {
+            $subjects = $this->db->fetchAll(
+                "SELECT s.id, s.name, s.code
+                 FROM subjects s
+                 WHERE s.school_id = :school_id
+                   AND s.status = 'active'
+                   AND NOT EXISTS (
+                       SELECT 1 FROM class_subjects cs WHERE cs.subject_id = s.id
+                   )
+                 ORDER BY s.code ASC, s.name ASC",
+                ['school_id' => $schoolId]
+            );
+        }
+
+        $students      = $this->loadEnrolledStudents($academicYearId, $classId, $streamId, $schoolId);
+        $resultsMatrix = [];
+        $scoreMatrix   = [];
+        $studentTotals = [];
+
+        if (!empty($students)) {
+            $studentIds   = array_column($students, 'id');
+            $placeholders = implode(',', array_fill(0, count($studentIds), '?'));
+
+            $rawMarks = $this->db->fetchAll(
+                "SELECT m.student_id, m.subject_id, m.marks_obtained
+                 FROM marks m
+                 WHERE m.academic_year_id = ?
+                   AND m.term_id = ?
+                   AND m.examination_id = ?
+                   AND m.student_id IN ({$placeholders})
+                   AND m.school_id = ?",
+                array_merge([$academicYearId, $termId, $examinationId], $studentIds, [$schoolId])
+            );
+
+            foreach ($rawMarks as $row) {
+                $resultsMatrix[$row['student_id']][$row['subject_id']] = $row['marks_obtained'];
+            }
+
+            $gradingSystem = (new GradingService())->getSystemForClass($classId, $schoolId, $academicYearId ?: null);
+            $rules         = $gradingSystem['rules'] ?? [];
+
+            foreach ($resultsMatrix as $sid => $subjectMarks) {
+                foreach ($subjectMarks as $subjId => $mark) {
+                    $scoreMatrix[$sid][$subjId] = $this->resolveScore((float)$mark, $rules);
+                }
+            }
+
+            $schemeService    = new DivisionSchemeService();
+            $divisionService  = new DivisionService();
+            $divisionSchemeId = null;
+            $gradingSystemId  = !empty($gradingSystem['id']) ? (int)$gradingSystem['id'] : null;
+
+            if ($gradingSystemId) {
+                $schemes = $schemeService->getForSystem($gradingSystemId, $schoolId, true);
+                if (!empty($schemes)) {
+                    $divisionSchemeId = (int)$schemes[0]['id'];
+                }
+            }
+            if ($divisionSchemeId === null) {
+                $allSchemes = $schemeService->getAll($schoolId, true);
+                if (!empty($allSchemes)) {
+                    $divisionSchemeId = (int)$allSchemes[0]['id'];
+                }
+            }
+            $divisions = $divisionSchemeId ? $divisionService->getForScheme($divisionSchemeId, true) : [];
+
+            foreach ($students as $s) {
+                $sid   = $s['id'];
+                $total = 0;
+                $ta    = 0;
+                $count = 0;
+
+                foreach ($subjects as $subj) {
+                    $raw = $resultsMatrix[$sid][$subj['id']] ?? null;
+                    if ($raw !== null) {
+                        $total += (float)$raw;
+                        $ta    += (float)($scoreMatrix[$sid][$subj['id']] ?? 0);
+                        $count++;
+                    }
+                }
+
+                $studentTotals[$sid] = [
+                    'total' => $total,
+                    'avg'   => $count > 0 ? round($total / $count, 2) : 0,
+                    'ta'    => $ta,
+                    'div'   => $this->resolveDivision($ta, $divisions),
+                    'count' => $count,
+                ];
+            }
+
+            usort($students, function ($a, $b) use ($studentTotals) {
+                $taA = $studentTotals[$a['id']]['ta'] ?? PHP_INT_MAX;
+                $taB = $studentTotals[$b['id']]['ta'] ?? PHP_INT_MAX;
+                if ($taA === $taB) {
+                    return ($studentTotals[$b['id']]['total'] ?? 0) <=> ($studentTotals[$a['id']]['total'] ?? 0);
+                }
+                return $taA <=> $taB;
+            });
+        }
+
+        $safe = function (string $value): string {
+            return preg_replace('/[^A-Za-z0-9_\-]+/', '_', $value) ?: 'export';
+        };
+
+        $filename = sprintf(
+            'class_results_%s_%s_%s%s.csv',
+            $safe($class['name']),
+            $safe($examination['name']),
+            $safe($term['name']),
+            $stream ? '_' . $safe($stream['name']) : ''
+        );
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $out = fopen('php://output', 'w');
+
+        fwrite($out, "\xEF\xBB\xBF");
+
+        fputcsv($out, ['Class Results Export']);
+        fputcsv($out, ['School',        $this->currentSchoolName($schoolId)]);
+        fputcsv($out, ['Academic Year', $academicYear['name']]);
+        fputcsv($out, ['Term',          $term['name']]);
+        fputcsv($out, ['Class',         $class['name'] . ($stream ? ' - ' . $stream['name'] : '')]);
+        fputcsv($out, ['Examination',   $examination['name']]);
+        if (!empty($gradingSystem['name'])) {
+            fputcsv($out, ['Grading System', $gradingSystem['name']]);
+        }
+        fputcsv($out, ['Generated At',  date('Y-m-d H:i:s')]);
+        fputcsv($out, []);
+
+        $headings = ['#', 'ADM NO', 'NAME', 'SEX'];
+        foreach ($subjects as $subj) {
+            $headings[] = strtoupper($subj['code'] ?: $subj['name']);
+        }
+        $headings[] = 'TOT';
+        $headings[] = 'AVG';
+        $headings[] = 'T.A';
+        $headings[] = 'DIV';
+        fputcsv($out, $headings);
+
+        foreach ($students as $index => $student) {
+            $sid   = $student['id'];
+            $total = $studentTotals[$sid] ?? null;
+
+            $rawSex = strtoupper(trim($student['gender'] ?? ''));
+            $sex    = in_array($rawSex, ['F', 'FEMALE', '2'], true)
+                ? 'F'
+                : (in_array($rawSex, ['M', 'MALE', '1'], true) ? 'M' : '-');
+
+            $row = [
+                $index + 1,
+                $student['admission_number'] ?? '',
+                strtoupper(trim(($student['last_name'] ?? '') . ' ' . ($student['first_name'] ?? ''))),
+                $sex,
+            ];
+
+            foreach ($subjects as $subj) {
+                $raw = $resultsMatrix[$sid][$subj['id']] ?? null;
+                $row[] = $raw !== null ? (int)round($raw) : '';
+            }
+
+            $row[] = $total ? (int)round($total['total']) : '';
+            $row[] = $total ? (int)round($total['avg'])   : '';
+            $row[] = $total ? (int)round($total['ta'])    : '';
+            $row[] = ($total && !empty($total['div'])) ? strtoupper($total['div']['code']) : '';
+
+            fputcsv($out, $row);
+        }
+
+        fclose($out);
+        exit;
+    }
+
+    private function currentSchoolName(int $schoolId): string
+    {
+        try {
+            $row = $this->db->fetch(
+                "SELECT name FROM schools WHERE id = :id",
+                ['id' => $schoolId]
+            );
+            return $row['name'] ?? '';
+        } catch (Throwable $e) {
+            return '';
+        }
+    }
 }

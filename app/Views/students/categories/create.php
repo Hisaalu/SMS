@@ -10,7 +10,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="mb-0 fw-bold">Create Student Category</h4>
         <a href="<?= BASE_URL ?>/student-categories" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-arrow-left me-1"></i> Back to List
+            <i class="fas fa-arrow-left me-1"></i> Back
         </a>
     </div>
 
@@ -33,7 +33,7 @@
                 </div>
 
                 <div class="text-end">
-                    <button type="submit" class="btn btn-primary px-4">Save Category</button>
+                    <button type="submit" class="btn btn-primary px-4">Save</button>
                 </div>
             </form>
         </div>

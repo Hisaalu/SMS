@@ -2,11 +2,11 @@
 <div class="container-fluid px-4 py-3">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="mb-0 fw-bold">Edit Student Details</h4>
-            <small class="text-muted">Update information for <?= htmlspecialchars($student['first_name'] . ' ' . $student['last_name']) ?></small>
+            <h4 class="mb-0 fw-bold">Edit Details</h4>
+            <small class="text-muted">Update Information
         </div>
         <a href="<?= BASE_URL ?>/students/show?id=<?= $student['id'] ?>" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-arrow-left me-1"></i> Back to Profile
+            <i class="fas fa-arrow-left me-1"></i> Profile
         </a>
     </div>
 
@@ -27,9 +27,7 @@
         <input type="hidden" name="id" value="<?= $student['id'] ?>">
 
         <div class="row g-3">
-            <!-- LEFT COLUMN -->
             <div class="col-lg-8">
-                <!-- Personal Details -->
                 <div class="card border-0 shadow-sm mb-3">
                     <div class="card-header bg-white pt-3 pb-0 border-0">
                         <h6 class="mb-0 fw-bold text-primary">
@@ -93,7 +91,6 @@
                     </div>
                 </div>
 
-                <!-- Academic Placement -->
                 <div class="card border-0 shadow-sm mb-3">
                     <div class="card-header bg-white pt-3 pb-0 border-0">
                         <h6 class="mb-0 fw-bold text-primary">
@@ -148,7 +145,6 @@
                     </div>
                 </div>
 
-                <!-- Guardian Information -->
                 <?php $primaryGuardian = $primaryGuardian ?? null; ?>
                 <div class="card border-0 shadow-sm mb-3">
                     <div class="card-header bg-white pt-3 pb-0 border-0">
@@ -190,7 +186,6 @@
                 </div>
             </div>
 
-            <!-- RIGHT COLUMN: Photo + Actions -->
             <div class="col-lg-4">
                 <div class="card border-0 shadow-sm mb-3">
                     <div class="card-header bg-white pt-3 pb-0 border-0">
@@ -201,7 +196,6 @@
                     <div class="card-body text-center">
 
                         <?php if ($hasPhoto): ?>
-                            <!-- Existing photo -->
                             <img id="photoPreview"
                                  src="<?= BASE_URL . '/public/' . htmlspecialchars($student['photo_path']) ?>"
                                  class="rounded-circle border shadow-sm mb-3"
@@ -213,7 +207,6 @@
                                 <?= $initials ?: '<i class="fas fa-user"></i>' ?>
                             </div>
                         <?php else: ?>
-                            <!-- No photo: show initials -->
                             <img id="photoPreview"
                                  class="rounded-circle border shadow-sm mb-3 d-none"
                                  style="width:140px; height:140px; object-fit:cover;"

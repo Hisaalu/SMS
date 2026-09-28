@@ -108,7 +108,7 @@
                             class="btn btn-sm btn-outline-primary fw-bold"
                             id="generateFormBtn"
                             title="Generate a printable marks entry form for the current selection">
-                        <i class="fas fa-print me-1"></i> Print Marks Entry Form
+                        <i class="fas fa-print me-1"></i> Print Form
                     </button>
                     <button type="submit" class="btn btn-sm btn-primary fw-bold">
                         <i class="fas fa-pencil-alt me-1"></i> Enter Marks

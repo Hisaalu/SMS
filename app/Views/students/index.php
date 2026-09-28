@@ -20,13 +20,13 @@
             <div class="card-body">
                 <div class="row g-2 align-items-center">
 
-                    <div class="col-md-3 d-flex align-items-center">
+                    <div class="col-md-2 d-flex align-items-center">
                         <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 60px;">Search</label>
                         <input type="text" name="search" class="form-control form-control-sm" placeholder="Name, Adm, Reg..." value="<?= htmlspecialchars($search) ?>" onchange="this.form.submit();">
                     </div>
 
                     <div class="col-md-2 d-flex align-items-center">
-                        <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 40px;">Year</label>
+                        <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 60px;">Year</label>
                         <select name="academic_year_id" class="form-select form-select-sm" onchange="this.form.submit();">
                             <option value="">-- All --</option>
                             <?php foreach ($academicYears as $ay): ?>
@@ -38,7 +38,7 @@
                     </div>
 
                     <div class="col-md-2 d-flex align-items-center">
-                        <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 45px;">Class</label>
+                        <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 60px;">Class</label>
                         <select name="class_id" class="form-select form-select-sm" onchange="this.form.submit();">
                             <option value="">-- All --</option>
                             <?php foreach ($classes as $c): ?>
@@ -50,7 +50,7 @@
                     </div>
 
                     <div class="col-md-2 d-flex align-items-center">
-                        <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 55px;">Stream</label>
+                        <label class="fw-bold me-2 mb-0 text-nowrap" style="min-width: 60px;">Stream</label>
                         <select name="stream_id" class="form-select form-select-sm" onchange="this.form.submit();">
                             <option value="">-- All --</option>
                             <?php foreach ($streams as $str): ?>
@@ -73,25 +73,56 @@
                         </select>
                     </div>
 
-                    <div class="col-md-1 text-end">
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-12 text-end">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary"
+                                id="printStudentsBtnTop">
+                            <i class="fas fa-print me-1"></i> Print
+                        </button>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-success"
+                                id="exportStudentsBtnTop">
+                            <i class="fas fa-file-excel me-1"></i> Export
+                        </button>
                         <a href="<?= BASE_URL . '/student/create' ?>" class="btn btn-sm btn-primary fw-bold text-nowrap" title="Register Student">
                             <i class="fas fa-plus me-1"></i> Register
                         </a>
                     </div>
-
                 </div>
+
             </div>
         </div>
     </form>
 
     <div class="card">
+        <div class="card-header bg-white pt-3 pb-3 border-bottom d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold text-dark">
+                <i class="fas fa-users me-2 text-secondary"></i>Students
+                <small class="text-muted fw-normal ms-1">(<?= number_format($totalStudents) ?> total)</small>
+            </h6>
+            <div class="d-flex gap-2">
+                <button type="button"
+                        class="btn btn-sm btn-outline-secondary no-print"
+                        id="printStudentsBtn">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+                <button type="button"
+                        class="btn btn-sm btn-outline-success no-print"
+                        id="exportStudentsBtn">
+                    <i class="fas fa-file-excel me-1"></i> Export
+                </button>
+            </div>
+        </div>
+
         <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
             <table class="table table-hover align-middle mb-0 text-nowrap small">
                 <thead class="sticky-top">
                     <tr>
                         <th style="width: 40px;">No</th>
                         <th>Student No</th>
-                        <th>Reg No</th>
                         <th>Name</th>
                         <th class="text-center">Sex</th>
                         <th>Class</th>
@@ -112,7 +143,6 @@
                             <tr>
                                 <td><?= $offsetIndex ?></td>
                                 <td class="fw-semibold"><?= htmlspecialchars($st['admission_number'] ?? '-') ?></td>
-                                <td><?= htmlspecialchars($st['registration_number'] ?? '-') ?></td>
                                 <td class="fw-bold text-uppercase"><?= htmlspecialchars(($st['last_name'] ?? '') . ' ' . ($st['first_name'] ?? '')) ?></td>
                                 <td class="text-center"><?= $sexDisplay ?></td>
                                 <td><?= htmlspecialchars($st['class_name'] ?? '-') ?></td>
@@ -134,7 +164,7 @@
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="10" class="text-center py-4 text-muted">
+                            <td colspan="9" class="text-center py-4 text-muted">
                                 No students found matching the selected criteria.
                             </td>
                         </tr>
@@ -180,3 +210,48 @@
     <?php endif; ?>
 
 </div>
+
+<style>
+    @media print {
+        .card-header button,
+        .no-print,
+        form { display: none !important; }
+    }
+</style>
+
+<script>
+(function () {
+    const url = '<?= BASE_URL ?>';
+
+    const printBtns  = [
+        document.getElementById('printStudentsBtn'),
+        document.getElementById('printStudentsBtnTop'),
+    ].filter(Boolean);
+
+    const exportBtns = [
+        document.getElementById('exportStudentsBtn'),
+        document.getElementById('exportStudentsBtnTop'),
+    ].filter(Boolean);
+
+    function currentQuery() {
+        const params = new URLSearchParams(window.location.search);
+
+        params.delete('page');
+
+        return params.toString();
+    }
+
+    function openPrint() {
+        const qs = currentQuery();
+        window.open(url + '/students/print' + (qs ? '?' + qs : ''), '_blank');
+    }
+
+    function openExport() {
+        const qs = currentQuery();
+        window.open(url + '/students/export' + (qs ? '?' + qs : ''), '_blank');
+    }
+
+    printBtns.forEach(function (btn)  { btn.addEventListener('click', openPrint); });
+    exportBtns.forEach(function (btn) { btn.addEventListener('click', openExport); });
+})();
+</script>

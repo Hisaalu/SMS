@@ -1,17 +1,16 @@
 <!-- File: /app/Views/attendance/index.php -->
 <div class="container-fluid px-0">
-    <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h4 class="mb-0">Attendance Overview</h4>
-            <small class="text-muted">Manage daily registers, view session summaries, and track student attendance</small>
+            <h4 class="mb-0">Attendance</h4>
+            <small class="text-muted">Manage your Registers</small>
         </div>
         <div class="d-flex gap-2">
             <a href="<?= BASE_URL ?>/attendance/take" class="btn btn-sm btn-primary">
-                <i class="fas fa-clipboard-check me-1"></i> Take Attendance
+                <i class="fas fa-clipboard-check me-1"></i> Take
             </a>
             <a href="<?= BASE_URL ?>/attendance/statuses" class="btn btn-sm btn-outline-secondary">
-                <i class="fas fa-cog me-1"></i> Manage Statuses
+                <i class="fas fa-cog me-1"></i> Statuses
             </a>
         </div>
     </div>
@@ -97,7 +96,6 @@
         </div>
     </div>
 
-    <!-- Filter & Register Table Section -->
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white py-3">
             <form method="GET" action="<?= BASE_URL ?>/attendance" class="row g-2 align-items-center">
@@ -138,9 +136,9 @@
                     <thead class="table-light">
                         <tr>
                             <th>Date</th>
-                            <th>Class / Stream</th>
+                            <th>Class</th>
                             <th>Session</th>
-                            <th>Recorded By</th>
+                            <th>Recorder</th>
                             <th>Status</th>
                             <th class="text-end">Actions</th>
                         </tr>

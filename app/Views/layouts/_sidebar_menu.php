@@ -63,7 +63,7 @@ $menuSections = [
                 'title' => 'Students',
                 'icon'  => 'fas fa-user-graduate',
                 'subitems' => [
-                    ['title' => 'Student Directory', 'icon' => 'fas fa-list',      'url' => '/students'],
+                    ['title' => 'Students Lists', 'icon' => 'fas fa-list',      'url' => '/students'],
                     ['title' => 'Enrollments',       'icon' => 'fas fa-user-plus', 'url' => '/student/enrollments'],
                     ['title' => 'Categories',        'icon' => 'fas fa-tags',      'url' => '/student/categories'],
                 ],

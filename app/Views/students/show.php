@@ -28,13 +28,13 @@ $isActive = strtolower($student['status_name'] ?? '') === 'active';
             <a href="<?= BASE_URL ?>/students/admission-letter?id=<?= (int)$student['id'] ?>"
                target="_blank"
                class="btn btn-sm btn-secondary">
-                <i class="fas fa-file-lines me-1"></i> Admission Letter
+                <i class="fas fa-file-lines me-1"></i> Letter
             </a>
             <a href="<?= BASE_URL ?>/student/edit?id=<?= (int)$student['id'] ?>" class="btn btn-sm btn-primary">
-                <i class="fas fa-edit me-1"></i> Edit Profile
+                <i class="fas fa-edit me-1"></i> Profile
             </a>
             <a href="<?= BASE_URL ?>/students" class="btn btn-sm btn-secondary">
-                <i class="fas fa-arrow-left me-1"></i> Back to Students
+                <i class="fas fa-arrow-left me-1"></i> Back
             </a>
         </div>
     </div>

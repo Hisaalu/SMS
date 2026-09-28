@@ -152,6 +152,9 @@ class StudentCategoryController extends Controller
         $id = (int)($_POST['id'] ?? $_GET['id'] ?? 0);
         $schoolId = $this->schoolId();
 
+        $isAjax = isset($_SERVER['HTTP_X_REQUESTED_WITH'])
+            && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
         try {
             $usage = $this->db->fetch(
                 "SELECT COUNT(*) AS count FROM students
@@ -160,14 +163,33 @@ class StudentCategoryController extends Controller
             );
 
             if (!empty($usage['count']) && (int)$usage['count'] > 0) {
-                $this->flashError("Cannot delete category: assigned to {$usage['count']} student(s).");
+                $message = "Cannot delete category: assigned to {$usage['count']} student(s).";
+
+                if ($isAjax) {
+                    $this->json(['success' => false, 'error' => $message], 409);
+                    return;
+                }
+
+                $this->flashError($message);
                 $this->redirect('/student-categories');
+                return;
             }
 
             $this->db->delete('student_categories', ['id' => $id, 'school_id' => $schoolId]);
+
+            if ($isAjax) {
+                $this->json(['success' => true]);
+                return;
+            }
+
             $this->flashSuccess('Student category deleted successfully.');
 
         } catch (Throwable $e) {
+            if ($isAjax) {
+                $this->json(['success' => false, 'error' => $e->getMessage()], 500);
+                return;
+            }
+
             $this->flashError('Error deleting category: ' . $e->getMessage());
         }
 

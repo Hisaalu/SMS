@@ -2,14 +2,13 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h4 class="mb-0">Take Attendance</h4>
-            <small class="text-muted">Select class criteria to load students and record daily attendance</small>
+            <small class="text-muted">Select Register</small>
         </div>
         <a href="<?= BASE_URL ?>/attendance" class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i> Back to Registers
+            <i class="fas fa-arrow-left me-1"></i> Back
         </a>
     </div>
 
-    <!-- Selection Card -->
     <div class="card mb-4 border-0 shadow-sm">
         <div class="card-body">
             <form method="GET" action="<?= BASE_URL ?>/attendance/take" class="row g-3">
@@ -52,14 +51,13 @@
                 </div>
                 <div class="col-12 text-end">
                     <button type="submit" class="btn btn-sm btn-primary">
-                        <i class="fas fa-users me-1"></i> Load Student Sheet
+                        <i class="fas fa-users me-1"></i> Load Students
                     </button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Attendance Form -->
     <?php if ($selectedClassId): ?>
         <form method="POST" action="<?= BASE_URL ?>/attendance/save">
             <input type="hidden" name="attendance_date" value="<?= htmlspecialchars($selectedDate) ?>">
@@ -108,7 +106,6 @@
                                             <td><code><?= htmlspecialchars($student['admission_number'] ?? 'N/A') ?></code></td>
                                             <td><strong><?= htmlspecialchars($student['first_name'] . ' ' . $student['last_name']) ?></strong></td>
                                             <td>
-                                                <!-- Hidden input to submit the student's enrollment ID -->
                                                 <input type="hidden" name="records[<?= $student['id'] ?>][enrollment_id]" value="<?= htmlspecialchars($student['enrollment_id'] ?? '') ?>">
                                                 <select name="records[<?= $student['id'] ?>][status_id]" class="form-select form-select-sm status-select" required>
                                                     <?php foreach ($statuses as $st): ?>

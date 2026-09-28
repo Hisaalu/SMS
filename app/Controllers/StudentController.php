@@ -36,32 +36,7 @@ class StudentController extends Controller
         $limit  = 15;
         $offset = ($page - 1) * $limit;
 
-        $where  = ["s.school_id = :school_id"];
-        $params = ['school_id' => $schoolId];
-
-        if ($search !== '') {
-            $where[] = "(s.first_name LIKE :s1 OR s.last_name LIKE :s2
-                      OR s.admission_number LIKE :s3 OR s.registration_number LIKE :s4)";
-            $like = "%{$search}%";
-            $params += ['s1' => $like, 's2' => $like, 's3' => $like, 's4' => $like];
-        }
-
-        $filters = [
-            'academic_year_id' => [$academicYearId, 'se.academic_year_id'],
-            'class_id'         => [$classId,        'se.class_id'],
-            'stream_id'        => [$streamId,       'se.stream_id'],
-            'category_id'      => [$categoryId,     'se.student_category_id'],
-            'status_id'        => [$statusId,       'se.student_status_id'],
-        ];
-
-        foreach ($filters as $key => [$value, $column]) {
-            if ($value > 0) {
-                $where[] = "{$column} = :{$key}";
-                $params[$key] = $value;
-            }
-        }
-
-        $whereClause = 'WHERE ' . implode(' AND ', $where);
+        [$whereClause, $params] = $this->buildStudentFilter($schoolId, $search, $academicYearId, $classId, $streamId, $categoryId, $statusId);
 
         $totalStudents = (int)($this->db->fetch(
             "SELECT COUNT(DISTINCT s.id) AS total
@@ -321,7 +296,8 @@ class StudentController extends Controller
             "Printed admission letter for student #{$studentId} ({$student['admission_number']})"
         );
 
-        echo $this->view->render('students/admission_letter', [
+        echo $this->view->renderWithLayout('students/admission_letter', 'print', [
+            'title'        => 'Admission Letter',
             'student'      => $student,
             'guardian'     => $guardian,
             'enrollment'   => $enrollment,
@@ -490,9 +466,10 @@ class StudentController extends Controller
 
         $schoolId = $this->schoolId();
 
-        $selectedYear  = (int)($_GET['academic_year_id'] ?? 0);
-        $selectedClass = (int)($_GET['class_id'] ?? 0);
-        $selectedTerm  = (int)($_GET['term_id'] ?? 0);
+        $selectedYear   = (int)($_GET['academic_year_id'] ?? 0);
+        $selectedClass  = (int)($_GET['class_id'] ?? 0);
+        $selectedTerm   = (int)($_GET['term_id'] ?? 0);
+        $selectedStream = (int)($_GET['stream_id'] ?? 0);
 
         $selectedTermName = '-';
         if ($selectedTerm > 0) {
@@ -518,20 +495,25 @@ class StudentController extends Controller
             $params['class_id'] = $selectedClass;
         }
 
+        if ($selectedStream > 0) {
+            $where[] = "se.stream_id = :stream_id";
+            $params['stream_id'] = $selectedStream;
+        }
+
         $candidateStudents = $this->db->fetchAll(
             "SELECT s.id, s.admission_number, s.first_name, s.last_name, s.gender,
                     cl.name AS class_name, str.name AS stream_name,
                     sc.name AS section_name, st.name AS status_name,
                     ay.name AS academic_year_name
-             FROM student_enrollments se
-             INNER JOIN students s            ON se.student_id = s.id
-             LEFT JOIN classes cl             ON se.class_id = cl.id
-             LEFT JOIN streams str            ON se.stream_id = str.id
-             LEFT JOIN student_categories sc  ON se.student_category_id = sc.id
-             LEFT JOIN student_statuses st    ON se.student_status_id = st.id
-             LEFT JOIN academic_years ay      ON se.academic_year_id = ay.id
-             WHERE " . implode(' AND ', $where) . "
-             ORDER BY s.last_name ASC, s.first_name ASC",
+            FROM student_enrollments se
+            INNER JOIN students s            ON se.student_id = s.id
+            LEFT JOIN classes cl             ON se.class_id = cl.id
+            LEFT JOIN streams str            ON se.stream_id = str.id
+            LEFT JOIN student_categories sc  ON se.student_category_id = sc.id
+            LEFT JOIN student_statuses st    ON se.student_status_id = st.id
+            LEFT JOIN academic_years ay      ON se.academic_year_id = ay.id
+            WHERE " . implode(' AND ', $where) . "
+            ORDER BY s.last_name ASC, s.first_name ASC",
             $params
         );
 
@@ -542,14 +524,95 @@ class StudentController extends Controller
         echo $this->view->renderWithLayout('students/enrollment', 'default', [
             'academicYears'     => $this->db->fetchAll("SELECT id, name FROM academic_years WHERE school_id = :s ORDER BY id DESC", ['s' => $schoolId]),
             'classes'           => $this->db->fetchAll("SELECT id, name FROM classes WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
-            'terms'             => $this->db->fetchAll("SELECT id, name FROM terms WHERE school_id = :s ORDER BY term_number ASC", ['s' => $schoolId]),
-            'streams'           => $this->db->fetchAll("SELECT id, name FROM streams WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
+            'terms'             => $this->db->fetchAll("SELECT id, name, academic_year_id FROM terms WHERE school_id = :s ORDER BY term_number ASC", ['s' => $schoolId]),
+            'streams'           => $this->db->fetchAll("SELECT id, name, class_id FROM streams WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
             'categories'        => $this->activeCategories($schoolId),
             'statuses'          => $this->activeStatuses($schoolId),
             'candidateStudents' => $candidateStudents,
             'selectedYear'      => $selectedYear,
             'selectedClass'     => $selectedClass,
             'selectedTerm'      => $selectedTerm,
+            'selectedStream'    => $selectedStream,
+        ]);
+    }
+
+    public function printEnrollments(): void
+    {
+        $this->requirePermission('students.view');
+
+        $schoolId = $this->schoolId();
+
+        $selectedYear   = (int)($_GET['academic_year_id'] ?? 0);
+        $selectedClass  = (int)($_GET['class_id'] ?? 0);
+        $selectedTerm   = (int)($_GET['term_id'] ?? 0);
+        $selectedStream = (int)($_GET['stream_id'] ?? 0);
+
+        $selectedTermName = '-';
+        if ($selectedTerm > 0) {
+            $row = $this->db->fetch(
+                "SELECT name FROM terms WHERE id = :id AND school_id = :s",
+                ['id' => $selectedTerm, 's' => $schoolId]
+            );
+            if ($row) $selectedTermName = $row['name'];
+        }
+
+        $where  = ["s.school_id = :s", "se.status = 'active'"];
+        $params = ['s' => $schoolId];
+
+        if ($selectedYear > 0)   { $where[] = "se.academic_year_id = :year_id"; $params['year_id']   = $selectedYear; }
+        if ($selectedClass > 0)  { $where[] = "se.class_id = :class_id";        $params['class_id']  = $selectedClass; }
+        if ($selectedStream > 0) { $where[] = "se.stream_id = :stream_id";      $params['stream_id'] = $selectedStream; }
+
+        $students = $this->db->fetchAll(
+            "SELECT s.id, s.admission_number, s.first_name, s.last_name, s.gender,
+                    cl.name AS class_name, str.name AS stream_name,
+                    sc.name AS section_name, st.name AS status_name,
+                    ay.name AS academic_year_name
+            FROM student_enrollments se
+            INNER JOIN students s            ON se.student_id = s.id
+            LEFT JOIN classes cl             ON se.class_id = cl.id
+            LEFT JOIN streams str            ON se.stream_id = str.id
+            LEFT JOIN student_categories sc  ON se.student_category_id = sc.id
+            LEFT JOIN student_statuses st    ON se.student_status_id = st.id
+            LEFT JOIN academic_years ay      ON se.academic_year_id = ay.id
+            WHERE " . implode(' AND ', $where) . "
+            ORDER BY s.last_name ASC, s.first_name ASC",
+            $params
+        );
+
+        foreach ($students as &$s) {
+            $s['term_name'] = $selectedTermName;
+        }
+
+        $meta = [];
+        if ($selectedYear > 0) {
+            $r = $this->db->fetch("SELECT name FROM academic_years WHERE id = :id AND school_id = :s", ['id' => $selectedYear, 's' => $schoolId]);
+            if ($r) $meta[] = ['label' => 'Academic Year', 'value' => $r['name']];
+        }
+        if ($selectedClass > 0) {
+            $r = $this->db->fetch("SELECT name FROM classes WHERE id = :id AND school_id = :s", ['id' => $selectedClass, 's' => $schoolId]);
+            if ($r) $meta[] = ['label' => 'Class', 'value' => $r['name']];
+        }
+        if ($selectedStream > 0) {
+            $r = $this->db->fetch("SELECT name FROM streams WHERE id = :id AND school_id = :s", ['id' => $selectedStream, 's' => $schoolId]);
+            if ($r) $meta[] = ['label' => 'Stream', 'value' => $r['name']];
+        }
+        if ($selectedTerm > 0) {
+            $meta[] = ['label' => 'Term', 'value' => $selectedTermName];
+        }
+        $meta[] = ['label' => 'Students', 'value' => count($students)];
+
+        $user = $this->auth->getUser();
+        $printedBy = $user ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) : '';
+        if ($printedBy === '') $printedBy = 'System';
+
+        $this->audit('Enrollment List Printed', 'students', 'Printed enrollment list.');
+
+        echo $this->view->renderWithLayout('students/print_enrollments', 'print', [
+            'title'     => 'Enrollment List',
+            'students'  => $students,
+            'meta'      => $meta,
+            'printedBy' => $printedBy,
         ]);
     }
 
@@ -619,6 +682,166 @@ class StudentController extends Controller
         }
 
         $this->redirect('/students/enrollments?academic_year_id=' . $academicYearId . '&class_id=' . $classId);
+    }
+
+    public function printStudents(): void
+    {
+        $this->requirePermission('students.view');
+
+        $schoolId = $this->schoolId();
+
+        $search         = trim($_GET['search'] ?? '');
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $streamId       = (int)($_GET['stream_id'] ?? 0);
+        $categoryId     = (int)($_GET['category_id'] ?? 0);
+        $statusId       = (int)($_GET['status_id'] ?? 0);
+
+        [$whereClause, $params] = $this->buildStudentFilter($schoolId, $search, $academicYearId, $classId, $streamId, $categoryId, $statusId);
+
+        $students = $this->db->fetchAll(
+            "SELECT s.id, s.admission_number, s.registration_number,
+                    s.first_name, s.last_name, s.gender,
+                    cl.name AS class_name,
+                    st.name AS stream_name,
+                    sc.name AS category_name,
+                    ss.name AS status_name
+             FROM students s
+             LEFT JOIN student_enrollments se ON se.student_id = s.id AND se.status = 'active'
+             LEFT JOIN classes cl            ON se.class_id = cl.id
+             LEFT JOIN streams st            ON se.stream_id = st.id
+             LEFT JOIN student_categories sc ON se.student_category_id = sc.id
+             LEFT JOIN student_statuses ss   ON se.student_status_id = ss.id
+             {$whereClause}
+             ORDER BY s.last_name ASC, s.first_name ASC",
+            $params
+        );
+
+        $meta = [];
+
+        if ($academicYearId > 0) {
+            $row = $this->db->fetch("SELECT name FROM academic_years WHERE id = :id AND school_id = :s", ['id' => $academicYearId, 's' => $schoolId]);
+            if ($row) $meta[] = ['label' => 'Academic Year', 'value' => $row['name']];
+        }
+        if ($classId > 0) {
+            $row = $this->db->fetch("SELECT name FROM classes WHERE id = :id AND school_id = :s", ['id' => $classId, 's' => $schoolId]);
+            if ($row) $meta[] = ['label' => 'Class', 'value' => $row['name']];
+        }
+        if ($streamId > 0) {
+            $row = $this->db->fetch("SELECT name FROM streams WHERE id = :id AND school_id = :s", ['id' => $streamId, 's' => $schoolId]);
+            if ($row) $meta[] = ['label' => 'Stream', 'value' => $row['name']];
+        }
+        if ($categoryId > 0) {
+            $row = $this->db->fetch("SELECT name FROM student_categories WHERE id = :id AND school_id = :s", ['id' => $categoryId, 's' => $schoolId]);
+            if ($row) $meta[] = ['label' => 'Section', 'value' => $row['name']];
+        }
+        if ($statusId > 0) {
+            $row = $this->db->fetch("SELECT name FROM student_statuses WHERE id = :id AND school_id = :s", ['id' => $statusId, 's' => $schoolId]);
+            if ($row) $meta[] = ['label' => 'Status', 'value' => $row['name']];
+        }
+        if ($search !== '') {
+            $meta[] = ['label' => 'Search', 'value' => $search];
+        }
+
+        $meta[] = ['label' => 'Students', 'value' => count($students)];
+
+        $user = $this->auth->getUser();
+        $printedBy = $user
+            ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? ''))
+            : '';
+        if ($printedBy === '') {
+            $printedBy = 'System';
+        }
+
+        $this->audit('Student List Printed', 'students', 'Printed student list.');
+
+        echo $this->view->renderWithLayout('students/print_students', 'print', [
+            'title'     => 'Student List',
+            'students'  => $students,
+            'meta'      => $meta,
+            'printedBy' => $printedBy,
+        ]);
+    }
+
+    public function exportStudents(): void
+    {
+        $this->requirePermission('students.view');
+
+        $schoolId = $this->schoolId();
+
+        $search         = trim($_GET['search'] ?? '');
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $streamId       = (int)($_GET['stream_id'] ?? 0);
+        $categoryId     = (int)($_GET['category_id'] ?? 0);
+        $statusId       = (int)($_GET['status_id'] ?? 0);
+
+        [$whereClause, $params] = $this->buildStudentFilter($schoolId, $search, $academicYearId, $classId, $streamId, $categoryId, $statusId);
+
+        $students = $this->db->fetchAll(
+            "SELECT s.id, s.admission_number, s.registration_number,
+                    s.first_name, s.last_name, s.gender,
+                    cl.name AS class_name,
+                    st.name AS stream_name,
+                    sc.name AS category_name,
+                    ss.name AS status_name
+             FROM students s
+             LEFT JOIN student_enrollments se ON se.student_id = s.id AND se.status = 'active'
+             LEFT JOIN classes cl            ON se.class_id = cl.id
+             LEFT JOIN streams st            ON se.stream_id = st.id
+             LEFT JOIN student_categories sc ON se.student_category_id = sc.id
+             LEFT JOIN student_statuses ss   ON se.student_status_id = ss.id
+             {$whereClause}
+             ORDER BY s.last_name ASC, s.first_name ASC",
+            $params
+        );
+
+        $this->audit('Student List Exported', 'students', 'Exported student list to CSV.');
+
+        $safe = function (string $value): string {
+            $value = preg_replace('/[^A-Za-z0-9_\-]+/', '_', $value) ?: 'export';
+            return trim($value, '_') ?: 'export';
+        };
+
+        $filename = 'students_' . date('Ymd_His') . '.csv';
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $out = fopen('php://output', 'w');
+
+        fwrite($out, "\xEF\xBB\xBF");
+
+        fputcsv($out, ['Student List Export']);
+        fputcsv($out, ['School',        $this->currentSchoolName($schoolId)]);
+        fputcsv($out, ['Generated At',  date('Y-m-d H:i:s')]);
+        fputcsv($out, ['Total Records', count($students)]);
+        fputcsv($out, []);
+
+        fputcsv($out, ['#', 'ADM NO', 'NAME', 'SEX', 'CLASS', 'STREAM', 'SECTION', 'STATUS']);
+
+        foreach ($students as $index => $st) {
+            $rawSex = strtoupper(trim($st['gender'] ?? ''));
+            $sex    = in_array($rawSex, ['F', 'FEMALE', '2'], true)
+                ? 'F'
+                : (in_array($rawSex, ['M', 'MALE', '1'], true) ? 'M' : '-');
+
+            fputcsv($out, [
+                $index + 1,
+                $st['admission_number'] ?? '',
+                strtoupper(trim(($st['last_name'] ?? '') . ' ' . ($st['first_name'] ?? ''))),
+                $sex,
+                $st['class_name']    ?? '',
+                $st['stream_name']   ?? '',
+                $st['category_name'] ?? '',
+                $st['status_name']   ?? '',
+            ]);
+        }
+
+        fclose($out);
+        exit;
     }
 
     private function activeCategories(int $schoolId): array
@@ -840,5 +1063,55 @@ class StudentController extends Controller
                 'relationship' => $relationship,
             ]
         );
+    }
+
+    private function buildStudentFilter(
+        int $schoolId,
+        string $search,
+        int $academicYearId,
+        int $classId,
+        int $streamId,
+        int $categoryId,
+        int $statusId
+    ): array {
+        $where  = ["s.school_id = :school_id"];
+        $params = ['school_id' => $schoolId];
+
+        if ($search !== '') {
+            $where[] = "(s.first_name LIKE :s1 OR s.last_name LIKE :s2
+                      OR s.admission_number LIKE :s3 OR s.registration_number LIKE :s4)";
+            $like = "%{$search}%";
+            $params += ['s1' => $like, 's2' => $like, 's3' => $like, 's4' => $like];
+        }
+
+        $filters = [
+            'academic_year_id' => [$academicYearId, 'se.academic_year_id'],
+            'class_id'         => [$classId,        'se.class_id'],
+            'stream_id'        => [$streamId,       'se.stream_id'],
+            'category_id'      => [$categoryId,     'se.student_category_id'],
+            'status_id'        => [$statusId,       'se.student_status_id'],
+        ];
+
+        foreach ($filters as $key => [$value, $column]) {
+            if ($value > 0) {
+                $where[] = "{$column} = :{$key}";
+                $params[$key] = $value;
+            }
+        }
+
+        return ['WHERE ' . implode(' AND ', $where), $params];
+    }
+
+    private function currentSchoolName(int $schoolId): string
+    {
+        try {
+            $row = $this->db->fetch(
+                "SELECT name FROM schools WHERE id = :id",
+                ['id' => $schoolId]
+            );
+            return $row['name'] ?? '';
+        } catch (Throwable $e) {
+            return '';
+        }
     }
 }

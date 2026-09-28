@@ -108,6 +108,8 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->post('/student-statuses', ['StudentStatusController', 'store']);
 
     $router->get('/students', ['StudentController', 'index']);
+    $router->get('/students/print', ['StudentController', 'printStudents']);
+    $router->get('/students/export', ['StudentController', 'exportStudents']);
     $router->get('/student/create', ['StudentController', 'create']);
     $router->post('/students/store', ['StudentController', 'store']);
     $router->get('/students/show', ['StudentController', 'show']);
@@ -115,6 +117,7 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->post('/students/update', ['StudentController', 'update']);
     $router->get('/students/delete', ['StudentController', 'delete']);
     $router->get('/students/enrollments', ['StudentController', 'enrollments']);
+    $router->get('/students/enrollments/print', ['StudentController', 'printEnrollments']);
     $router->post('/students/enrollments/store', ['StudentController', 'storeEnrollment']);
 
     $router->get('/student/show', ['StudentController', 'show']);
@@ -221,6 +224,7 @@ $router->group(['middleware' => ['auth']], function ($router) {
 
     $router->get('/results/class', ['ResultController', 'classResults']);
     $router->get('/results/class/print', ['ResultController', 'printResults']);
+    $router->get('/results/class/export', ['ResultController', 'exportResults']);
     $router->get('/results/class/{examinationId}', ['ResultController', 'classResults']);
     $router->get('/results/student/{studentId}', ['ResultController', 'studentResults']);
     $router->post('/results/publish/{examinationId}', ['ResultController', 'publish']);

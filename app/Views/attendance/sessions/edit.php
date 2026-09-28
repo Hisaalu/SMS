@@ -2,7 +2,7 @@
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h4 class="mb-0">Edit Attendance Session</h4>
+            <h4 class="mb-0">Edit Sessions</h4>
             <small class="text-muted">Update session settings</small>
         </div>
         <a href="<?= BASE_URL ?>/attendance/sessions" class="btn btn-sm btn-secondary">
@@ -53,7 +53,7 @@
 
                 <div class="mt-4">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Update Session
+                        <i class="fas fa-save me-1"></i> Update
                     </button>
                     <a href="<?= BASE_URL ?>/attendance/sessions" class="btn btn-secondary">Cancel</a>
                 </div>

@@ -113,16 +113,18 @@
 
                 <div class="row mt-3">
                     <div class="col-12 text-end">
-                        <a href="<?= BASE_URL ?>/results/class" class="btn btn-sm btn-outline-secondary">
-                            <i class="fas fa-redo me-1"></i> Reset
-                        </a>
                         <button type="button"
                                 class="btn btn-sm btn-outline-secondary"
                                 id="printResultsBtnTop">
-                            <i class="fas fa-print me-1"></i> Print Result
+                            <i class="fas fa-print me-1"></i> Print
+                        </button>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-success"
+                                id="exportResultsBtnTop">
+                            <i class="fas fa-file-excel me-1"></i> Export
                         </button>
                         <button type="submit" class="btn btn-sm btn-dark">
-                            <i class="fas fa-search me-1"></i> View Results
+                            <i class="fas fa-search me-1"></i> View
                         </button>
                     </div>
                 </div>
@@ -144,11 +146,18 @@
                         </small>
                     <?php endif; ?>
                 </div>
-                <button type="button"
-                        class="btn btn-sm btn-outline-secondary no-print"
-                        id="printResultsBtn">
-                    <i class="fas fa-print me-1"></i> Print
-                </button>
+                <div class="d-flex gap-2">
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary no-print"
+                            id="printResultsBtn">
+                        <i class="fas fa-print me-1"></i> Print
+                    </button>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-success no-print"
+                            id="exportResultsBtn">
+                        <i class="fas fa-file-excel me-1"></i> Export
+                    </button>
+                </div>
             </div>
 
             <div class="card-body p-0">
@@ -292,6 +301,8 @@
     const examSel  = document.getElementById('examination_id');
     const printBtn = document.getElementById('printResultsBtn');
     const printBtnTop = document.getElementById('printResultsBtnTop');
+    const exportBtn = document.getElementById('exportResultsBtn');
+    const exportBtnTop = document.getElementById('exportResultsBtnTop');
 
     const params = new URLSearchParams(window.location.search);
     const preselected = {
@@ -395,7 +406,7 @@
         loadStreams(preselected.class, preselected.stream);
     }
 
-    function openPrintResults() {
+    function validateFilters() {
         const required = [
             ['academic_year_id', yearSel.value, 'Academic Year'],
             ['term_id',          termSel.value, 'Term'],
@@ -406,8 +417,15 @@
         for (let i = 0; i < required.length; i++) {
             if (!required[i][1]) {
                 alert('Please select a ' + required[i][2] + ' before printing.');
-                return;
+                return false;
             }
+        }
+        return true;
+    }
+
+    function openPrintResults() {
+        if (!validateFilters()) {
+            return;
         }
 
         const qs = new URLSearchParams({
@@ -421,7 +439,25 @@
         window.open(url + '/results/class/print?' + qs, '_blank');
     }
 
+    function exportResults() {
+        if (!validateFilters()) {
+            return;
+        }
+
+        const qs = new URLSearchParams({
+            academic_year_id: yearSel.value,
+            term_id:          termSel.value,
+            class_id:         classSel.value,
+            stream_id:        strmSel.value || '',
+            examination_id:   examSel.value,
+        }).toString();
+
+        window.open(url + '/results/class/export?' + qs, '_blank');
+    }
+
     if (printBtn)    printBtn.addEventListener('click', openPrintResults);
     if (printBtnTop) printBtnTop.addEventListener('click', openPrintResults);
+    if (exportBtn)   exportBtn.addEventListener('click', exportResults);
+    if (exportBtnTop) exportBtnTop.addEventListener('click', exportResults);
 })();
 </script>
