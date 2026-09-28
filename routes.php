@@ -219,10 +219,12 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->delete('/examinations/{id}', ['ExaminationController', 'delete']);
 
     $router->get('/marks/entry', ['MarkController', 'entrySelector']);
+    $router->get('/marks/entry/print', ['MarkController', 'printForm']);
+    $router->get('/marks/entry/print-filled', ['MarkController', 'printFilled']);
+    $router->get('/marks/entry/export', ['MarkController', 'exportForm']);
     $router->get('/marks/entry/{examinationId}/{subjectId}', ['MarkController', 'entry']);
     $router->post('/marks/save', ['MarkController', 'save']);
     $router->post('/marks/bulk-save', ['MarkController', 'bulkSave']);
-    $router->get('/marks/entry/print', ['MarkController', 'printForm']);
 
     $router->get('/results/class', ['ResultController', 'classResults']);
     $router->get('/results/class/print', ['ResultController', 'printResults']);

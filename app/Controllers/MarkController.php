@@ -58,9 +58,29 @@ class MarkController extends Controller
         }
 
         $allSubjects = $this->db->fetchAll(
-            "SELECT * FROM subjects WHERE school_id = :s AND status = 'active' ORDER BY code ASC, name ASC",
-            ['s' => $schoolId]
+            "SELECT s.*
+            FROM class_subjects cs
+            INNER JOIN subjects s ON cs.subject_id = s.id
+            WHERE cs.class_id = :class_id
+            AND cs.school_id = :school_id
+            AND s.status = 'active'
+            ORDER BY s.code ASC, s.name ASC",
+            ['class_id' => $classId, 'school_id' => $schoolId]
         );
+
+        if (empty($allSubjects)) {
+            $allSubjects = $this->db->fetchAll(
+                "SELECT s.*
+                FROM subjects s
+                WHERE s.school_id = :school_id
+                AND s.status = 'active'
+                AND NOT EXISTS (
+                    SELECT 1 FROM class_subjects cs WHERE cs.subject_id = s.id
+                )
+                ORDER BY s.code ASC, s.name ASC",
+                ['school_id' => $schoolId]
+            );
+        }
 
         $selectedSubject = null;
         $subjects = $allSubjects;
@@ -131,6 +151,26 @@ class MarkController extends Controller
                     $rawMark = trim((string)$rawMark);
 
                     if ($rawMark === '') {
+                        $existing = $this->db->fetch(
+                            "SELECT id FROM marks
+                            WHERE student_id = :student_id
+                            AND subject_id = :subject_id
+                            AND academic_year_id = :year
+                            AND term_id = :term
+                            AND examination_id = :exam",
+                            [
+                                'student_id' => $studentId,
+                                'subject_id' => $subjectId,
+                                'year'       => $academicYearId,
+                                'term'       => $termId,
+                                'exam'       => $examinationId,
+                            ]
+                        );
+
+                        if ($existing) {
+                            $this->db->delete('marks', ['id' => $existing['id']]);
+                        }
+
                         continue;
                     }
 
@@ -475,5 +515,265 @@ class MarkController extends Controller
             'classHasStreams' => $classHasStreams,
             'printedBy'    => $printedBy,
         ]);
+    }
+
+    public function printFilled(): void
+    {
+        $this->requirePermission('results.enter');
+
+        $schoolId = $this->schoolId();
+
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+        $examinationId  = (int)($_GET['examination_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $streamId       = (int)($_GET['stream_id'] ?? 0);
+        $subjectId      = (int)($_GET['subject_id'] ?? 0);
+
+        if (!$academicYearId || !$termId || !$examinationId || !$classId || !$subjectId) {
+            $this->flashError('All filters are required.');
+            $this->redirect('/marks/entry');
+            return;
+        }
+
+        $academicYear = $this->db->fetch(
+            "SELECT id, name FROM academic_years WHERE id = :id AND school_id = :s",
+            ['id' => $academicYearId, 's' => $schoolId]
+        );
+        $term = $this->db->fetch(
+            "SELECT id, name FROM terms WHERE id = :id AND academic_year_id = :y",
+            ['id' => $termId, 'y' => $academicYearId]
+        );
+        $examination = $this->db->fetch(
+            "SELECT id, name, code FROM examinations WHERE id = :id AND school_id = :s",
+            ['id' => $examinationId, 's' => $schoolId]
+        );
+        $class = $this->db->fetch(
+            "SELECT id, name FROM classes WHERE id = :id AND school_id = :s",
+            ['id' => $classId, 's' => $schoolId]
+        );
+        $subject = $this->db->fetch(
+            "SELECT id, name, code FROM subjects WHERE id = :id AND school_id = :s",
+            ['id' => $subjectId, 's' => $schoolId]
+        );
+
+        if (!$academicYear || !$term || !$examination || !$class || !$subject) {
+            $this->flashError('One or more selected filters could not be found.');
+            $this->redirect('/marks/entry');
+            return;
+        }
+
+        $classHasStreams = (int)($this->db->fetch(
+            "SELECT COUNT(*) AS c FROM streams WHERE class_id = :cid AND school_id = :s",
+            ['cid' => $classId, 's' => $schoolId]
+        )['c'] ?? 0) > 0;
+
+        $stream = null;
+        if ($classHasStreams && $streamId) {
+            $stream = $this->db->fetch(
+                "SELECT id, name FROM streams WHERE id = :id AND class_id = :c",
+                ['id' => $streamId, 'c' => $classId]
+            );
+        }
+
+        $studentsSql = "SELECT s.id, s.admission_number, s.first_name, s.last_name, s.gender
+                        FROM students s
+                        INNER JOIN student_enrollments se ON se.student_id = s.id
+                        WHERE se.academic_year_id = :year
+                        AND se.class_id = :class
+                        AND se.status = 'active'";
+
+        $studentsParams = ['year' => $academicYearId, 'class' => $classId];
+
+        if ($stream !== null) {
+            $studentsSql .= " AND se.stream_id = :stream";
+            $studentsParams['stream'] = $stream['id'];
+        }
+
+        $studentsSql .= " ORDER BY s.last_name ASC, s.first_name ASC";
+
+        $students = $this->db->fetchAll($studentsSql, $studentsParams);
+
+        $marks = [];
+        if (!empty($students)) {
+            $studentIds = array_column($students, 'id');
+            $placeholders = implode(',', array_fill(0, count($studentIds), '?'));
+
+            $rows = $this->db->fetchAll(
+                "SELECT student_id, marks_obtained
+                 FROM marks
+                 WHERE academic_year_id = ?
+                   AND term_id = ?
+                   AND examination_id = ?
+                   AND subject_id = ?
+                   AND student_id IN ({$placeholders})",
+                array_merge(
+                    [$academicYearId, $termId, $examinationId, $subjectId],
+                    $studentIds
+                )
+            );
+
+            foreach ($rows as $r) {
+                $marks[(int)$r['student_id']] = $r['marks_obtained'];
+            }
+        }
+
+        $user = $this->auth->getUser();
+        $printedBy = $user ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) : '';
+        if ($printedBy === '') $printedBy = 'System';
+
+        echo $this->view->renderWithLayout('examinations/marks/print_filled', 'print', [
+            'title'        => 'Marks Sheet — ' . $class['name'],
+            'academicYear' => $academicYear,
+            'term'         => $term,
+            'examination'  => $examination,
+            'class'        => $class,
+            'stream'       => $stream,
+            'subject'      => $subject,
+            'students'     => $students,
+            'marks'        => $marks,
+            'printedBy'    => $printedBy,
+        ]);
+    }
+
+    public function exportForm(): void
+    {
+        $this->requirePermission('results.enter');
+
+        $schoolId = $this->schoolId();
+
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+        $examinationId  = (int)($_GET['examination_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $streamId       = (int)($_GET['stream_id'] ?? 0);
+        $subjectId      = (int)($_GET['subject_id'] ?? 0);
+
+        if (!$academicYearId || !$termId || !$examinationId || !$classId || !$subjectId) {
+            $this->flashError('All filters are required to export a marks form.');
+            $this->redirect('/marks/entry');
+            return;
+        }
+
+        $academicYear = $this->db->fetch(
+            "SELECT id, name FROM academic_years WHERE id = :id AND school_id = :s",
+            ['id' => $academicYearId, 's' => $schoolId]
+        );
+        $term = $this->db->fetch(
+            "SELECT id, name FROM terms WHERE id = :id AND academic_year_id = :y",
+            ['id' => $termId, 'y' => $academicYearId]
+        );
+        $examination = $this->db->fetch(
+            "SELECT id, name, code FROM examinations WHERE id = :id AND school_id = :s",
+            ['id' => $examinationId, 's' => $schoolId]
+        );
+        $class = $this->db->fetch(
+            "SELECT id, name FROM classes WHERE id = :id AND school_id = :s",
+            ['id' => $classId, 's' => $schoolId]
+        );
+        $subject = $this->db->fetch(
+            "SELECT id, name, code FROM subjects WHERE id = :id AND school_id = :s",
+            ['id' => $subjectId, 's' => $schoolId]
+        );
+
+        if (!$academicYear || !$term || !$examination || !$class || !$subject) {
+            $this->flashError('One or more selected filters could not be found.');
+            $this->redirect('/marks/entry');
+            return;
+        }
+
+        $classHasStreams = (int)($this->db->fetch(
+            "SELECT COUNT(*) AS c FROM streams WHERE class_id = :cid AND school_id = :s",
+            ['cid' => $classId, 's' => $schoolId]
+        )['c'] ?? 0) > 0;
+
+        $stream = null;
+        if ($classHasStreams && $streamId) {
+            $stream = $this->db->fetch(
+                "SELECT id, name FROM streams WHERE id = :id AND class_id = :c",
+                ['id' => $streamId, 'c' => $classId]
+            );
+        }
+
+        $studentsSql = "SELECT s.id, s.admission_number, s.first_name, s.last_name, s.gender
+                        FROM students s
+                        INNER JOIN student_enrollments se ON se.student_id = s.id
+                        WHERE se.academic_year_id = :year
+                        AND se.class_id = :class
+                        AND se.status = 'active'";
+
+        $studentsParams = ['year' => $academicYearId, 'class' => $classId];
+
+        if ($stream !== null) {
+            $studentsSql .= " AND se.stream_id = :stream";
+            $studentsParams['stream'] = $stream['id'];
+        }
+
+        $studentsSql .= " ORDER BY s.last_name ASC, s.first_name ASC";
+
+        $students = $this->db->fetchAll($studentsSql, $studentsParams);
+
+        $this->audit('Marks Form Exported', 'marks', "Exported marks form for class #{$classId}");
+
+        $safe = function (string $value): string {
+            $value = preg_replace('/[^A-Za-z0-9_\-]+/', '_', $value) ?: 'export';
+            return trim($value, '_') ?: 'export';
+        };
+
+        $filename = 'marks_form_' . $safe($class['name'])
+                  . ($stream ? '_' . $safe($stream['name']) : '')
+                  . '_' . $safe($subject['code'] ?? $subject['name'])
+                  . '_' . date('Ymd_His') . '.csv';
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+
+        fputcsv($out, ['Marks Entry Form']);
+        fputcsv($out, ['School',        $this->currentSchoolName($schoolId)]);
+        fputcsv($out, ['Academic Year', $academicYear['name']]);
+        fputcsv($out, ['Term',          $term['name']]);
+        fputcsv($out, ['Examination',   $examination['name']]);
+        fputcsv($out, ['Class',         $class['name'] . ($stream ? ' - ' . $stream['name'] : '')]);
+        fputcsv($out, ['Subject',       $subject['code'] ?? $subject['name']]);
+        fputcsv($out, ['Generated At',  date('Y-m-d H:i:s')]);
+        fputcsv($out, []);
+
+        fputcsv($out, ['#', 'ADM NO', 'NAME', 'SEX', 'MARK']);
+
+        foreach ($students as $i => $st) {
+            $rawSex = strtoupper(trim($st['gender'] ?? ''));
+            $sex = in_array($rawSex, ['F', 'FEMALE', '2'], true)
+                ? 'F'
+                : (in_array($rawSex, ['M', 'MALE', '1'], true) ? 'M' : '-');
+
+            fputcsv($out, [
+                $i + 1,
+                $st['admission_number'] ?? '',
+                strtoupper(trim(($st['last_name'] ?? '') . ' ' . ($st['first_name'] ?? ''))),
+                $sex,
+                '', 
+            ]);
+        }
+
+        fclose($out);
+        exit;
+    }
+
+    private function currentSchoolName(int $schoolId): string
+    {
+        try {
+            $row = $this->db->fetch(
+                "SELECT name FROM schools WHERE id = :id",
+                ['id' => $schoolId]
+            );
+            return $row['name'] ?? '';
+        } catch (\Throwable $e) {
+            return '';
+        }
     }
 }

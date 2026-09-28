@@ -38,9 +38,20 @@
                     <?= !empty($stream) ? ' (' . htmlspecialchars($stream['name']) . ')' : '' ?>
                 </small>
             </div>
-            <a href="<?= BASE_URL ?>/marks/entry" class="btn btn-sm btn-secondary">
-                <i class="fas fa-arrow-left me-1"></i> Back
-            </a>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="printMarksBtn"
+                        <?= empty($selectedSubject) ? 'disabled title="Select a single subject to print a blank marks form"' : '' ?>>
+                    <i class="fas fa-print me-1"></i> Form
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="printFilledBtn"
+                        <?= empty($selectedSubject) ? 'disabled title="Select a single subject to print the filled marks sheet"' : '' ?>>
+                    <i class="fas fa-table-list me-1"></i> Sheet
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-success" id="exportMarksBtn"
+                        <?= empty($selectedSubject) ? 'disabled title="Select a single subject to export a blank marks form"' : '' ?>>
+                    <i class="fas fa-file-excel me-1"></i> Export
+                </button>
+            </div>
         </div>
 
         <div class="card mb-3">
@@ -214,6 +225,50 @@ function saveMarks(isAutoSave = false) {
         });
     });
 }
+
+(function () {
+    const url      = '<?= BASE_URL ?>';
+    const yearId   = <?= (int)($academicYear['id'] ?? 0) ?>;
+    const termId   = <?= (int)($term['id'] ?? 0) ?>;
+    const examId   = <?= (int)($examination['id'] ?? 0) ?>;
+    const classId  = <?= (int)($class['id'] ?? 0) ?>;
+    const streamId = <?= (int)($stream['id'] ?? 0) ?>;
+    const subjectId = <?= (int)($selectedSubject['id'] ?? 0) ?>;
+
+    const printBtn       = document.getElementById('printMarksBtn');
+    const printFilledBtn = document.getElementById('printFilledBtn');
+    const exportBtn      = document.getElementById('exportMarksBtn');
+
+    function buildQs() {
+        const p = new URLSearchParams({
+            academic_year_id: yearId,
+            term_id:          termId,
+            examination_id:   examId,
+            class_id:         classId,
+            stream_id:        streamId,
+            subject_id:       subjectId,
+        });
+        return p.toString();
+    }
+
+    if (printBtn && subjectId) {
+        printBtn.addEventListener('click', function () {
+            window.open(url + '/marks/entry/print?' + buildQs(), '_blank');
+        });
+    }
+
+    if (printFilledBtn && subjectId) {
+        printFilledBtn.addEventListener('click', function () {
+            window.open(url + '/marks/entry/print-filled?' + buildQs(), '_blank');
+        });
+    }
+
+    if (exportBtn && subjectId) {
+        exportBtn.addEventListener('click', function () {
+            window.open(url + '/marks/entry/export?' + buildQs(), '_blank');
+        });
+    }
+})();
 
 setInterval(() => saveMarks(true), 30000);
 </script>
