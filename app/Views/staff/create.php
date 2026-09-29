@@ -2,8 +2,8 @@
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h4 class="mb-0">Register New Staff</h4>
-            <small class="text-muted">Add staff member and optionally create a login account</small>
+            <h4 class="mb-0">Register Staff</h4>
+            <small class="text-muted">Add Staff Member</small>
         </div>
         <a href="<?= BASE_URL ?>/staff" class="btn btn-sm btn-secondary">
             <i class="fas fa-arrow-left me-1"></i> Back

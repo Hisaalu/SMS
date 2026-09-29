@@ -244,11 +244,8 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->post('/promotion/students', ['PromotionController', 'promote']);
 
     $router->get('/reports/academic', ['AcademicReportController', 'index']);
-    $router->get('/reports/academic/report-cards', ['AcademicReportController', 'reportCards']);
-    $router->get('/reports/academic/report-card/view', ['AcademicReportController', 'generateReportCard']);
     $router->get('/reports/academic/subject-analysis', ['AcademicReportController', 'subjectAnalysis']);
     $router->get('/reports/academic/class-analysis', ['AcademicReportController', 'classAnalysis']);
-
     $router->get('/reports/academic/batch-report-cards', ['AcademicReportController', 'batchReportCards']);
     $router->get('/reports/academic/batch-report-cards/view', ['AcademicReportController', 'generateBatchReportCards']);
 
