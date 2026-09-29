@@ -96,14 +96,16 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
                 <hr class="my-3">
 
                 <label class="form-label small fw-semibold">Examinations <span class="text-danger">*</span></label>
-                <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;" id="examinations-container">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="examinations[]" value="all" id="exam_all">
                         <label class="form-check-label fw-bold" for="exam_all">All</label>
                     </div>
                     <hr class="my-1">
                     <?php foreach ($filters['examinations'] as $exam): ?>
-                        <div class="form-check">
+                        <div class="form-check exam-item" 
+                             data-year="<?= (int)($exam['academic_year_id'] ?? 0) ?>" 
+                             data-term="<?= (int)($exam['academic_period_id'] ?? 0) ?>">
                             <input class="form-check-input exam-checkbox" type="checkbox"
                                    name="examinations[]" value="<?= (int)$exam['id'] ?>"
                                    id="exam_<?= (int)$exam['id'] ?>">
@@ -271,13 +273,44 @@ $sel = static fn($current, $value) => (string)$current === (string)$value ? ' se
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const examAll = document.getElementById('exam_all');
-    if (!examAll) return;
+    if (examAll) {
+        examAll.addEventListener('change', function () {
+            document.querySelectorAll('.exam-item:not([style*="display: none"]) .exam-checkbox').forEach(function (cb) {
+                cb.checked = examAll.checked;
+                cb.disabled = examAll.checked;
+            });
+        });
+    }
 
-    examAll.addEventListener('change', function () {
-        document.querySelectorAll('.exam-checkbox').forEach(function (cb) {
-            cb.checked = this.checked;
-            cb.disabled = this.checked;
-        }.bind(this));
-    });
+    const yearSelect = document.querySelector('select[name="academic_year_id"]');
+    const termSelect = document.querySelector('select[name="term_id"]');
+
+    function filterExaminations() {
+        const selectedYear = yearSelect ? yearSelect.value : '';
+        const selectedTerm = termSelect ? termSelect.value : '';
+
+        document.querySelectorAll('.exam-item').forEach(function (item) {
+            const examYear = item.getAttribute('data-year');
+            const examTerm = item.getAttribute('data-term');
+
+            const matchesYear = !selectedYear || !examYear || examYear === selectedYear;
+            const matchesTerm = !selectedTerm || !examTerm || examTerm === selectedTerm;
+
+            if (matchesYear && matchesTerm) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+                const cb = item.querySelector('.exam-checkbox');
+                if (cb) {
+                    cb.checked = false;
+                }
+            }
+        });
+    }
+
+    if (yearSelect) yearSelect.addEventListener('change', filterExaminations);
+    if (termSelect) termSelect.addEventListener('change', filterExaminations);
+
+    filterExaminations();
 });
 </script>

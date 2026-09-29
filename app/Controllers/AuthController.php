@@ -4,7 +4,7 @@
 namespace NexaT\Controllers;
 
 use NexaT\Core\Controller;
-use NexaT\Services\SettingsService;
+use NexaT\Core\SettingsService;
 
 class AuthController extends Controller
 {

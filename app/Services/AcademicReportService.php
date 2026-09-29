@@ -45,7 +45,7 @@ class AcademicReportService
                 ['s' => $schoolId]
             ),
             'examinations' => $this->safeFetchAll(
-                "SELECT id, name FROM {$this->examinationTable()} WHERE school_id = :s ORDER BY id DESC",
+                "SELECT id, name, academic_year_id, academic_period_id FROM {$this->examinationTable()} WHERE school_id = :s ORDER BY id DESC",
                 ['s' => $schoolId]
             ),
         ];
