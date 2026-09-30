@@ -1,4 +1,4 @@
-<!-- File: /app/Views/reports/academic/batch_report_cards.php -->
+<!-- File: /app/Views/reports/academic/report_cards.php -->
 <div class="container-fluid px-0 py-2">
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
@@ -19,7 +19,7 @@
         </div>
     <?php endif; ?>
 
-    <form method="GET" action="<?= BASE_URL ?>/reports/academic/batch-report-cards/view" target="_blank" id="batchReportForm">
+    <form method="GET" action="<?= BASE_URL ?>/reports/academic/report-cards/view" target="_blank" id="ReportForm">
 
         <div class="card shadow-sm border-0 mb-4 rounded-3">
             <div class="card-header bg-white py-3 border-bottom">
@@ -84,7 +84,7 @@
             </div>
             <div class="card-body">
                 <?php
-                    $formAction     = BASE_URL . '/reports/academic/batch-report-cards/view';
+                    $formAction     = BASE_URL . '/reports/academic/report-cards/view';
                     $includeStudent = false;
                     $defaults       = $defaults ?? [];
                     include __DIR__ . '/_report_config.php';

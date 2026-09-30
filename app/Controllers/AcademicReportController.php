@@ -87,19 +87,19 @@ class AcademicReportController extends Controller
         ]);
     }
 
-    public function batchReportCards(): void
+    public function ReportCards(): void
     {
         $this->requirePermission('reports.report_cards.view');
 
         $schoolId = $this->schoolId();
 
-        echo $this->view->renderWithLayout('reports/academic/batch_report_cards', 'default', [
-            'title'   => 'Batch Report Cards',
+        echo $this->view->renderWithLayout('reports/academic/report_cards', 'default', [
+            'title'   => 'Report Cards',
             'filters' => $this->reportService->getReportFilters($schoolId),
         ]);
     }
 
-    public function generateBatchReportCards(): void
+    public function generateReportCards(): void
     {
         $this->requirePermission('reports.report_cards.view');
 
@@ -111,7 +111,7 @@ class AcademicReportController extends Controller
 
         if (!$academicYearId || !$termId || !$classId) {
             $this->flashError('Missing required parameters.');
-            $this->redirect('/reports/academic/batch-report-cards');
+            $this->redirect('/reports/academic/report-cards');
         }
 
         $examinationIds = $this->resolveExaminationIds(
@@ -123,7 +123,7 @@ class AcademicReportController extends Controller
 
         if (empty($examinationIds)) {
             $this->flashError('No examinations found for the selected year and term.');
-            $this->redirect('/reports/academic/batch-report-cards');
+            $this->redirect('/reports/academic/report-cards');
         }
 
         $options  = $this->collectReportOptions($_GET);
@@ -142,7 +142,7 @@ class AcademicReportController extends Controller
             }
         }
 
-        echo $this->view->render('reports/academic/batch_report_cards_view', [
+        echo $this->view->render('reports/academic/report_cards_view', [
             'allData'          => $allData,
             'academicYearName' => $academicYear['name'] ?? '',
             'termName'         => $term['name'] ?? '',

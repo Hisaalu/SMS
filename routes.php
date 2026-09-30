@@ -246,8 +246,8 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->get('/reports/academic', ['AcademicReportController', 'index']);
     $router->get('/reports/academic/subject-analysis', ['AcademicReportController', 'subjectAnalysis']);
     $router->get('/reports/academic/class-analysis', ['AcademicReportController', 'classAnalysis']);
-    $router->get('/reports/academic/batch-report-cards', ['AcademicReportController', 'batchReportCards']);
-    $router->get('/reports/academic/batch-report-cards/view', ['AcademicReportController', 'generateBatchReportCards']);
+    $router->get('/reports/academic/report-cards', ['AcademicReportController', 'ReportCards']);
+    $router->get('/reports/academic/report-cards/view', ['AcademicReportController', 'generateReportCards']);
 
     $router->get('/notifications',                ['NotificationController', 'index']);
     $router->post('/notifications/mark-read',     ['NotificationController', 'markRead']);

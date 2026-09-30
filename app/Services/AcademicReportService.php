@@ -392,11 +392,11 @@ class AcademicReportService
 
         [$marksByExam, $subjectsSeen] = $this->loadMarksByExam($studentId, $academicYearId, $termId, $exams, $gradingSystem);
 
-        $examTotals      = $this->computeExamTotals($exams, $marksByExam, $gradingSystem);
+        $examTotals      = $this->computeExamTotals($exams, $marksByExam, $gradingSystem, $subjectsSeen);
         $teacherInitials = $this->loadTeacherInitials($schoolId, $student, $subjectsSeen);
 
         [$subjectAverages, $sourceExamIds, $sourceLabel] = $this->computeSubjectAverages(
-            $subjectsSeen, $marksByExam, $gradingSystem, $exams, $options['final_grade_method'] ?? 'average'
+            $subjectsSeen, $marksByExam, $gradingSystem, $exams, $options['final_grade_method'] ?? 'average', $examTotals
         );
 
         foreach ($teacherInitials as $sid => $initials) {
@@ -492,12 +492,7 @@ class AcademicReportService
             $ctRemark = $this->remarkFromAverage($totalScore / $gradedCount);
         }
 
-        $nextTerm = $this->safeFetch(
-            "SELECT name, start_date, end_date FROM terms
-             WHERE school_id = :s AND start_date > CURDATE()
-             ORDER BY start_date ASC LIMIT 1",
-            ['s' => $schoolId]
-        );
+        $nextTerm = $this->resolveNextTerm($schoolId, $academicYearId, $termId);
 
         return [
             'school_id'           => $schoolId,
@@ -530,6 +525,70 @@ class AcademicReportService
             'source_exam_ids'     => $sourceExamIds,
             'position_ranking'    => $positionRanking,
         ];
+    }
+
+    private function resolveNextTerm(int $schoolId, int $academicYearId, int $termId): ?array
+    {
+        // 1. Try the next term within the same academic year
+        $current = $this->safeFetch(
+            "SELECT term_number FROM terms WHERE id = :id AND school_id = :s",
+            ['id' => $termId, 's' => $schoolId]
+        );
+
+        if ($current && !empty($current['term_number'])) {
+            $next = $this->safeFetch(
+                "SELECT name, start_date, end_date
+                 FROM terms
+                 WHERE school_id = :s
+                   AND academic_year_id = :y
+                   AND term_number > :n
+                 ORDER BY term_number ASC
+                 LIMIT 1",
+                [
+                    's' => $schoolId,
+                    'y' => $academicYearId,
+                    'n' => (int)$current['term_number'],
+                ]
+            );
+
+            if ($next && !empty($next['start_date'])) {
+                return $next;
+            }
+        }
+
+        // 2. Fall back to the first term of the next academic year
+        $nextYear = $this->safeFetch(
+            "SELECT id FROM academic_years
+             WHERE school_id = :s AND start_date > (
+                 SELECT start_date FROM academic_years WHERE id = :y
+             )
+             ORDER BY start_date ASC
+             LIMIT 1",
+            ['s' => $schoolId, 'y' => $academicYearId]
+        );
+
+        if ($nextYear) {
+            $firstTerm = $this->safeFetch(
+                "SELECT name, start_date, end_date
+                 FROM terms
+                 WHERE school_id = :s AND academic_year_id = :y
+                 ORDER BY term_number ASC
+                 LIMIT 1",
+                ['s' => $schoolId, 'y' => (int)$nextYear['id']]
+            );
+
+            if ($firstTerm && !empty($firstTerm['start_date'])) {
+                return $firstTerm;
+            }
+        }
+
+        // 3. Fallback: any future term
+        return $this->safeFetch(
+            "SELECT name, start_date, end_date FROM terms
+             WHERE school_id = :s AND start_date > CURDATE()
+             ORDER BY start_date ASC LIMIT 1",
+            ['s' => $schoolId]
+        );
     }
 
     private function loadMarksByExam(int $studentId, int $yearId, int $termId, array $exams, ?array $gradingSystem): array
@@ -592,17 +651,46 @@ class AcademicReportService
         return [$marksByExam, $subjectsSeen];
     }
 
-    private function computeExamTotals(array $exams, array $marksByExam, ?array $gradingSystem): array
+    private function computeExamTotals(array $exams, array $marksByExam, ?array $gradingSystem, array $subjectsSeen = []): array
     {
         $totals = [];
 
+        $expectedNonOtherIds = [];
+        foreach ($subjectsSeen as $sid => $subj) {
+            if (empty($subj['is_other'])) {
+                $expectedNonOtherIds[] = (int)$sid;
+            }
+        }
+
         foreach ($exams as $exam) {
             $examId = $exam['id'];
+            $examMarks = $marksByExam[$examId] ?? [];
+
+            $hasMissing = false;
+            foreach ($expectedNonOtherIds as $sid) {
+                if (!isset($examMarks[$sid]) || !isset($examMarks[$sid]['marks_obtained']) || $examMarks[$sid]['marks_obtained'] === '' || $examMarks[$sid]['marks_obtained'] === null) {
+                    $hasMissing = true;
+                    break;
+                }
+            }
+
+            if ($hasMissing || empty($expectedNonOtherIds)) {
+                $totals[$examId] = [
+                    'total'       => 'U',
+                    'average'     => 'U',
+                    'count'       => 0,
+                    'score'       => 'U',
+                    'grade'       => 'U',
+                    'is_ungraded' => true,
+                ];
+                continue;
+            }
+
             $total = 0;
             $count = 0;
             $totalScore = 0;
 
-            foreach ($marksByExam[$examId] ?? [] as $mark) {
+            foreach ($examMarks as $sid => $mark) {
                 if (!empty($mark['is_other'])) {
                     continue;
                 }
@@ -617,11 +705,12 @@ class AcademicReportService
                 : null;
 
             $totals[$examId] = [
-                'total'   => $total,
-                'average' => $avg,
-                'count'   => $count,
-                'score'   => $totalScore,
-                'grade'   => $grade['grade'] ?? '-',
+                'total'       => $total,
+                'average'     => $avg,
+                'count'       => $count,
+                'score'       => $totalScore,
+                'grade'       => $grade['grade'] ?? '-',
+                'is_ungraded' => false,
             ];
         }
 
@@ -714,16 +803,23 @@ class AcademicReportService
         array $marksByExam,
         ?array $gradingSystem,
         array $exams,
-        string $finalGradeMethod
+        string $finalGradeMethod,
+        array $examTotals = []
     ): array {
         $allExamIds = array_column($exams, 'id');
 
         $studentExamAverages = [];
         foreach ($marksByExam as $exId => $subjectMarks) {
+            if (!empty($examTotals[$exId]['is_ungraded'])) {
+                continue;
+            }
             $sum = 0;
             $count = 0;
             foreach ($subjectMarks as $m) {
                 if (!empty($m['is_other'])) {
+                    continue;
+                }
+                if (!isset($m['marks_obtained']) || $m['marks_obtained'] === '' || $m['marks_obtained'] === null) {
                     continue;
                 }
                 $sum += (float)$m['marks_obtained'];
@@ -763,9 +859,10 @@ class AcademicReportService
             $isOther = (!$isGraded && !$isSubsidiary);
 
             $vals = [];
+
             foreach ($sourceExamIds as $srcId) {
                 $row = $marksByExam[$srcId][$sid] ?? null;
-                if ($row) {
+                if ($row && isset($row['marks_obtained']) && $row['marks_obtained'] !== '' && $row['marks_obtained'] !== null) {
                     $vals[] = (float)$row['marks_obtained'];
                 }
             }
@@ -896,9 +993,11 @@ class AcademicReportService
 
         uasort($rankings, function ($a, $b) use ($positionRanking) {
             $cmp = match ($positionRanking) {
-                'total'   => $b['total'] <=> $a['total'],
-                'average' => $b['average'] <=> $a['average'],
-                default   => $a['aggregate'] <=> $b['aggregate'],
+                'total', 'highest_total'         => $b['total'] <=> $a['total'],
+                'average', 'highest_average'     => $b['average'] <=> $a['average'],
+                'highest_aggregate'              => $b['aggregate'] <=> $a['aggregate'],
+                'aggregate', 'lowest_aggregate'   => $a['aggregate'] <=> $b['aggregate'],
+                default                          => $a['aggregate'] <=> $b['aggregate'],
             };
 
             if ($cmp !== 0) return $cmp;
@@ -1031,7 +1130,8 @@ class AcademicReportService
     private function safeFetch(string $sql, array $params = []): ?array
     {
         try {
-            return $this->db->fetch($sql, $params) ?: null;
+            $result = $this->db->fetch($sql, $params);
+            return $result !== false && $result !== null ? $result : null;
         } catch (Throwable $e) {
             return null;
         }

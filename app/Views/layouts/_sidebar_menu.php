@@ -125,7 +125,7 @@ $menuSections = [
                 'title' => 'Academic Reports',
                 'icon'  => 'fas fa-chart-pie',
                 'subitems' => [
-                    ['title' => 'Report Cards',    'icon' => 'fas fa-file-alt',    'url' => '/reports/academic/batch-report-cards'],
+                    ['title' => 'Report Cards',    'icon' => 'fas fa-file-alt',    'url' => '/reports/academic/report-cards'],
                     ['title' => 'Class Analysis',        'icon' => 'fas fa-users',       'url' => '/reports/academic/class-analysis'],
                     ['title' => 'Subject Analysis',      'icon' => 'fas fa-book',        'url' => '/reports/academic/subject-analysis'],
                     ['title' => 'Student Results',       'icon' => 'fas fa-graduation-cap', 'url' => '/reports/academic/student-results'],
