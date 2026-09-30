@@ -10,9 +10,9 @@ $colorSwatches = [
     '#2563EB' => 'Blue',
     '#EAB308' => 'Yellow',
     '#EC4899' => 'Pink',
-    '#8B5CF6' => 'Purple',
-    '#F97316' => 'Orange',
-    '#10B981' => 'Green',
+    '#7f2677' => 'Purple',
+    '#f06724' => 'Orange',
+    '#23a74c' => 'Green',
 ];
 
 $fontSizePresets = [
@@ -35,7 +35,10 @@ foreach ($fontSizePresets as $step => $size) {
 }
 
 $isDarkMode    = !empty($theme['dark_mode']);
-$currentAccent = $theme['accent'] ?? '#2563EB';
+$currentAccent = strtolower((string) ($theme['accent'] ?? '#2563EB'));
+
+$isPresetColor = in_array($currentAccent, array_map('strtolower', array_keys($colorSwatches)), true);
+$customColor   = $isPresetColor ? '' : $currentAccent;
 ?>
 
 <style>
@@ -100,6 +103,7 @@ $currentAccent = $theme['accent'] ?? '#2563EB';
         display: flex;
         gap: 1.25rem;
         flex-wrap: wrap;
+        align-items: center;
     }
 
     .color-swatch {
@@ -115,6 +119,7 @@ $currentAccent = $theme['accent'] ?? '#2563EB';
         justify-content: center;
         color: #fff;
         font-size: 0.95rem;
+        padding: 0;
     }
 
     .color-swatch:hover { transform: scale(1.08); }
@@ -124,6 +129,60 @@ $currentAccent = $theme['accent'] ?? '#2563EB';
         font-family: 'Font Awesome 6 Free';
         font-weight: 900;
         font-size: 0.95rem;
+    }
+
+    .color-swatch.custom {
+        background: conic-gradient(
+            #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000
+        );
+        position: relative;
+        overflow: hidden;
+    }
+
+    .color-swatch.custom::before {
+        content: '';
+        position: absolute;
+        inset: 6px;
+        border-radius: 50%;
+        background: var(--surface-color);
+    }
+
+    .color-swatch.custom .plus {
+        position: relative;
+        z-index: 1;
+        color: var(--text-color);
+        font-size: 1rem;
+        font-weight: 700;
+    }
+
+    .color-swatch.custom.selected::after {
+        content: '';
+    }
+
+    .custom-color-input {
+        position: absolute;
+        width: 0;
+        height: 0;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .custom-color-preview {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+    }
+
+    .custom-color-preview .chip {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        display: inline-block;
+        background: <?= htmlspecialchars($customColor ?: $currentAccent) ?>;
     }
 
     .background-options {
@@ -249,13 +308,33 @@ $currentAccent = $theme['accent'] ?? '#2563EB';
             <div class="color-swatches" id="colorSwatches">
                 <?php foreach ($colorSwatches as $hex => $name): ?>
                     <button type="button"
-                            class="color-swatch <?= strcasecmp($currentAccent, $hex) === 0 ? 'selected' : '' ?>"
+                            class="color-swatch <?= $isPresetColor && strcasecmp($currentAccent, $hex) === 0 ? 'selected' : '' ?>"
                             style="background: <?= $hex ?>;"
                             data-color="<?= $hex ?>"
                             title="<?= htmlspecialchars($name) ?>"
                             aria-label="<?= htmlspecialchars($name) ?>"></button>
                 <?php endforeach; ?>
+
+                <button type="button"
+                        class="color-swatch custom <?= !$isPresetColor ? 'selected' : '' ?>"
+                        id="customSwatch"
+                        title="Custom colour"
+                        aria-label="Custom colour">
+                    <span class="plus"><i class="fas fa-plus"></i></span>
+                </button>
+
+                <input type="color"
+                       id="customColorPicker"
+                       class="custom-color-input"
+                       value="<?= htmlspecialchars($customColor ?: $currentAccent) ?>"
+                       aria-label="Pick custom colour">
             </div>
+
+            <div class="custom-color-preview">
+                <span class="chip" id="customColorChip" style="background: <?= htmlspecialchars($customColor ?: $currentAccent) ?>;"></span>
+                <span id="customColorLabel"><?= htmlspecialchars($customColor ?: $currentAccent) ?></span>
+            </div>
+
             <input type="hidden" name="accent" id="accentValue"
                    value="<?= htmlspecialchars($currentAccent) ?>">
         </div>
@@ -311,6 +390,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const accentValue    = document.getElementById('accentValue');
     const darkModeValue  = document.getElementById('darkModeValue');
 
+    const swatches       = document.querySelectorAll('#colorSwatches .color-swatch');
+    const customSwatch   = document.getElementById('customSwatch');
+    const customPicker   = document.getElementById('customColorPicker');
+    const customChip     = document.getElementById('customColorChip');
+    const customLabel    = document.getElementById('customColorLabel');
+
     const fontPresets = {1: 0.75, 2: 0.875, 3: 1.0, 4: 1.125, 5: 1.25};
 
     function applyFontSize(size) {
@@ -326,16 +411,35 @@ document.addEventListener('DOMContentLoaded', function () {
         applyFontSize(size);
     });
 
-    document.querySelectorAll('#colorSwatches .color-swatch').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            document.querySelectorAll('#colorSwatches .color-swatch')
-                .forEach(el => el.classList.remove('selected'));
-            this.classList.add('selected');
+    function clearSelection() {
+        swatches.forEach(el => el.classList.remove('selected'));
+    }
 
-            const color = this.dataset.color;
-            accentValue.value = color;
-            document.documentElement.style.setProperty('--accent-color', color);
+    function applyAccent(color) {
+        const c = String(color).toLowerCase();
+        accentValue.value = c;
+        document.documentElement.style.setProperty('--accent-color', c);
+        customChip.style.background = c;
+        customLabel.textContent = c;
+    }
+
+    swatches.forEach(function (btn) {
+        if (btn === customSwatch) return;
+        btn.addEventListener('click', function () {
+            clearSelection();
+            this.classList.add('selected');
+            applyAccent(this.dataset.color);
         });
+    });
+
+    customSwatch.addEventListener('click', function () {
+        customPicker.click();
+    });
+
+    customPicker.addEventListener('input', function () {
+        clearSelection();
+        customSwatch.classList.add('selected');
+        applyAccent(this.value);
     });
 
     document.querySelectorAll('.bg-option').forEach(function (opt) {

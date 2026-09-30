@@ -14,8 +14,12 @@ class SettingsController extends Controller
     ];
 
     private const ALLOWED_ACCENTS = [
-        '#2563EB', '#EAB308', '#EC4899',
-        '#8B5CF6', '#F97316', '#10B981',
+        '#2563EB', 
+        '#EAB308', 
+        '#EC4899', 
+        '#7f2677', 
+        '#f06724', 
+        '#23a74c', 
     ];
 
     private const FONT_PRESETS = [
@@ -81,8 +85,6 @@ class SettingsController extends Controller
             $this->settings->set('school.' . $field, trim($_POST[$field] ?? ''), 'string');
         }
 
-        // Keep `po_box` and `postal_address` in sync so report views
-        // reading either key always resolve to the same value.
         $postalAddress = trim($_POST['postal_address'] ?? '');
         $poBox         = trim($_POST['po_box']         ?? '');
 
@@ -156,9 +158,8 @@ class SettingsController extends Controller
         $this->requirePermission('branding.manage');
 
         $accent = trim((string) ($_POST['accent'] ?? ''));
-        if (preg_match('/^#[0-9a-fA-F]{6}$/', $accent)
-            && in_array(strtoupper($accent), array_map('strtoupper', self::ALLOWED_ACCENTS), true)) {
-            $this->settings->set('theme.accent', $accent, 'string');
+        if (preg_match('/^#[0-9a-fA-F]{6}$/', $accent)) {
+            $this->settings->set('theme.accent', strtolower($accent), 'string');
         }
 
         $preset = (int) ($_POST['font_preset'] ?? 0);
