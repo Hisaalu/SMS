@@ -73,11 +73,12 @@ class AcademicReportController extends Controller
             'term_id'          => $_GET['term_id']          ?? null,
             'class_id'         => $_GET['class_id']         ?? null,
             'stream_id'        => $_GET['stream_id']        ?? null,
+            'examination_id'   => $_GET['examination_id']   ?? null,
         ]);
 
-        $matrix = !empty($filters['academic_year_id'])
-            ? $this->reportService->getClassResultsMatrix($schoolId, $filters)
-            : ['students' => [], 'subjects' => [], 'marks' => []];
+        $matrix = !empty($filters['academic_year_id']) && !empty($filters['class_id'])
+            ? $this->reportService->getClassAnalysisMatrix($schoolId, $filters)
+            : ['students' => [], 'subjects' => [], 'marks' => [], 'totals' => [], 'headers' => []];
 
         echo $this->view->renderWithLayout('reports/academic/class_analysis', 'default', [
             'title'           => 'Class Performance Analysis',
@@ -129,8 +130,14 @@ class AcademicReportController extends Controller
         $options  = $this->collectReportOptions($_GET);
         $students = $this->loadClassStudents($schoolId, $academicYearId, $classId, $streamId);
 
-        $academicYear = $this->db->fetch("SELECT name FROM academic_years WHERE id = :id", ['id' => $academicYearId]);
-        $term         = $this->db->fetch("SELECT name FROM terms WHERE id = :id", ['id' => $termId]);
+        $academicYear = $this->db->fetch(
+            "SELECT name FROM academic_years WHERE id = :id AND school_id = :school_id", 
+            ['id' => $academicYearId, 'school_id' => $schoolId]
+        );
+        $term = $this->db->fetch(
+            "SELECT name FROM terms WHERE id = :id AND school_id = :school_id", 
+            ['id' => $termId, 'school_id' => $schoolId]
+        );
 
         $allData = [];
         foreach ($students as $s) {
@@ -223,5 +230,160 @@ class AcademicReportController extends Controller
             'final_grade_method'  => $input['final_grade_method']  ?? 'average',
             'position_ranking'    => $input['position_ranking']    ?? 'aggregate',
         ];
+    }
+
+        public function printClassAnalysis(): void
+    {
+        $this->requirePermission('reports.class_analysis.view');
+
+        $schoolId = $this->schoolId();
+
+        $filters = array_filter([
+            'academic_year_id' => $_GET['academic_year_id'] ?? null,
+            'term_id'          => $_GET['term_id']          ?? null,
+            'class_id'         => $_GET['class_id']         ?? null,
+            'stream_id'        => $_GET['stream_id']        ?? null,
+            'examination_id'   => $_GET['examination_id']   ?? null,
+        ]);
+
+        $matrix = !empty($filters['academic_year_id']) && !empty($filters['class_id'])
+            ? $this->reportService->getClassAnalysisMatrix($schoolId, $filters)
+            : ['students' => [], 'subjects' => [], 'marks' => [], 'totals' => [], 'headers' => []];
+
+        $meta = [];
+        if (!empty($filters['academic_year_id'])) {
+            $row = $this->db->fetch("SELECT name FROM academic_years WHERE id = :id AND school_id = :s", [
+                'id' => (int)$filters['academic_year_id'], 's' => $schoolId
+            ]);
+            if ($row) $meta[] = ['label' => 'Academic Year', 'value' => $row['name']];
+        }
+        if (!empty($filters['term_id'])) {
+            $row = $this->db->fetch("SELECT name FROM terms WHERE id = :id AND school_id = :s", [
+                'id' => (int)$filters['term_id'], 's' => $schoolId
+            ]);
+            if ($row) $meta[] = ['label' => 'Term', 'value' => $row['name']];
+        }
+        if (!empty($filters['class_id'])) {
+            $row = $this->db->fetch("SELECT name FROM classes WHERE id = :id AND school_id = :s", [
+                'id' => (int)$filters['class_id'], 's' => $schoolId
+            ]);
+            if ($row) $meta[] = ['label' => 'Class', 'value' => $row['name']];
+        }
+        if (!empty($filters['stream_id'])) {
+            $row = $this->db->fetch("SELECT name FROM streams WHERE id = :id AND school_id = :s", [
+                'id' => (int)$filters['stream_id'], 's' => $schoolId
+            ]);
+            if ($row) $meta[] = ['label' => 'Stream', 'value' => $row['name']];
+        }
+        if (!empty($filters['examination_id'])) {
+            $row = $this->db->fetch("SELECT name FROM examinations WHERE id = :id AND school_id = :s", [
+                'id' => (int)$filters['examination_id'], 's' => $schoolId
+            ]);
+            if ($row) $meta[] = ['label' => 'Examination', 'value' => $row['name']];
+        }
+        $meta[] = ['label' => 'Students', 'value' => count($matrix['students'])];
+
+        $user = $this->auth->getUser();
+        $printedBy = $user ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) : '';
+        if ($printedBy === '') $printedBy = 'System';
+
+        $this->audit('Class Analysis Printed', 'reports', 'Printed class performance analysis.');
+
+        echo $this->view->renderWithLayout('reports/academic/print_class_analysis', 'print', [
+            'title'     => 'Class Performance Analysis',
+            'matrix'    => $matrix,
+            'meta'      => $meta,
+            'printedBy' => $printedBy,
+        ]);
+    }
+
+    public function exportClassAnalysis(): void
+    {
+        $this->requirePermission('reports.class_analysis.view');
+
+        $schoolId = $this->schoolId();
+
+        $filters = array_filter([
+            'academic_year_id' => $_GET['academic_year_id'] ?? null,
+            'term_id'          => $_GET['term_id']          ?? null,
+            'class_id'         => $_GET['class_id']         ?? null,
+            'stream_id'        => $_GET['stream_id']        ?? null,
+            'examination_id'   => $_GET['examination_id']   ?? null,
+        ]);
+
+        $matrix = !empty($filters['academic_year_id']) && !empty($filters['class_id'])
+            ? $this->reportService->getClassAnalysisMatrix($schoolId, $filters)
+            : ['students' => [], 'subjects' => [], 'marks' => [], 'totals' => [], 'headers' => []];
+
+        $this->audit('Class Analysis Exported', 'reports', 'Exported class performance analysis to CSV.');
+
+        $filename = 'class_analysis_' . date('Ymd_His') . '.csv';
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+
+        fputcsv($out, ['Class Performance Analysis']);
+        fputcsv($out, ['Generated At', date('Y-m-d H:i:s')]);
+        fputcsv($out, []);
+
+        $headers = ['#', 'ADM NO', 'STUDENT', 'SEX'];
+        foreach ($matrix['subjects'] as $subj) {
+            $isContrib = !isset($subj['contributes']) || !empty($subj['contributes']);
+            $headers[] = strtoupper($subj['code'] ?: $subj['name']) . ($isContrib ? '' : ' *');
+        }
+        $headers = array_merge($headers, ['TOTAL', 'AVG', 'AGG', 'DIV']);
+        fputcsv($out, $headers);
+
+        foreach ($matrix['students'] as $i => $st) {
+            $sid = (int)$st['id'];
+            $t   = $matrix['totals'][$sid] ?? null;
+
+            $rawSex = strtoupper(trim($st['gender'] ?? ''));
+            $sex    = in_array($rawSex, ['F', 'FEMALE', '2'], true) ? 'F'
+                    : (in_array($rawSex, ['M', 'MALE', '1'], true) ? 'M' : '-');
+
+            $row = [
+                $i + 1,
+                $st['admission_number'] ?? '',
+                strtoupper(trim(($st['last_name'] ?? '') . ' ' . ($st['first_name'] ?? ''))),
+                $sex,
+            ];
+
+            foreach ($matrix['subjects'] as $subj) {
+                $mark = $matrix['marks'][$sid][(int)$subj['id']] ?? null;
+                $row[] = $mark !== null ? (int)$mark : '';
+            }
+
+                        $row[] = $t ? (int)$t['total'] : '';
+            $row[] = $t ? $t['average'] : '';
+
+            if (!$t) {
+                $row[] = '';
+            } elseif (!empty($t['has_missing'])) {
+                $row[] = 'X';
+            } else {
+                $row[] = (int)$t['aggregate'];
+            }
+
+            if (!$t) {
+                $row[] = '';
+            } elseif (!empty($t['has_missing'])) {
+                $row[] = 'U';
+            } elseif (!empty($t['division_code'])) {
+                $row[] = strtoupper((string)$t['division_code']);
+            } else {
+                $row[] = '';
+            }
+
+            fputcsv($out, $row);
+        }
+
+        fclose($out);
+        exit;
     }
 }
