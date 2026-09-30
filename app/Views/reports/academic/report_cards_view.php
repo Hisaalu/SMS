@@ -405,7 +405,7 @@ $tdStyle = "border:1px solid {$borderColor};padding:4px 4px;text-align:center;fo
                                 <td style="<?= $tdStyle ?>font-weight:900;"><?= (int)round($totalMarksPerExam[$exam['id']]) ?></td>
                                 
                                 <?php if ($gradesPerExam): ?>
-                                    <td style="<?= $tdStyle ?>font-weight:900;"><?= !empty($t['is_ungraded']) ? 'U' : (int)round($t['score'] ?? 0) ?></td>
+                                    <td style="<?= $tdStyle ?>font-weight:900;"><?= !empty($t['is_ungraded']) ? 'X' : (int)round($t['score'] ?? 0) ?></td>
                                 <?php endif; ?>
                             <?php endforeach; ?>
                             <?php if ($showGrades): ?><td style="<?= $tdStyle ?>font-weight:900;"><?= (int)round($totalAggregate) ?></td><?php endif; ?>

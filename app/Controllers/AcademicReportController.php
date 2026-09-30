@@ -130,14 +130,8 @@ class AcademicReportController extends Controller
         $options  = $this->collectReportOptions($_GET);
         $students = $this->loadClassStudents($schoolId, $academicYearId, $classId, $streamId);
 
-        $academicYear = $this->db->fetch(
-            "SELECT name FROM academic_years WHERE id = :id AND school_id = :school_id", 
-            ['id' => $academicYearId, 'school_id' => $schoolId]
-        );
-        $term = $this->db->fetch(
-            "SELECT name FROM terms WHERE id = :id AND school_id = :school_id", 
-            ['id' => $termId, 'school_id' => $schoolId]
-        );
+        $academicYear = $this->db->fetch("SELECT name FROM academic_years WHERE id = :id", ['id' => $academicYearId]);
+        $term         = $this->db->fetch("SELECT name FROM terms WHERE id = :id", ['id' => $termId]);
 
         $allData = [];
         foreach ($students as $s) {

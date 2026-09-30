@@ -67,20 +67,12 @@ $prefStream = $_GET['stream_id']        ?? '';
                 <h6 class="fw-bold small text-uppercase mb-2" style="color: var(--accent-color);">
                     <i class="fas fa-calculator me-1"></i> Final Grade Source
                 </h6>
-                <?php $currentMethod = $opt('final_grade_method', 'average'); ?>
+                <?php $currentMethod = $opt('final_grade_method', 'best_set'); ?>
                 <div class="mb-3">
                     <select name="final_grade_method" class="form-select form-select-sm">
                         <option value="average"<?= $sel($currentMethod, 'average') ?>>Average of all selected exams</option>
                         <option value="best_set"<?= $sel($currentMethod, 'best_set') ?>>Best exam set</option>
                         <option value="worst_set"<?= $sel($currentMethod, 'worst_set') ?>>Worst exam set</option>
-                        <?php if (!empty($filters['examinations'])): ?>
-                            <option disabled>──────────</option>
-                            <?php foreach ($filters['examinations'] as $exam): ?>
-                                <option value="exam:<?= (int)$exam['id'] ?>"<?= $sel($currentMethod, 'exam:' . $exam['id']) ?>>
-                                    <?= htmlspecialchars($exam['name']) ?> only
-                                </option>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
                     </select>
                 </div>
 
