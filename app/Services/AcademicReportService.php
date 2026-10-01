@@ -931,9 +931,318 @@ class AcademicReportService
         ];
     }
 
+    public function getStudentResultsSummary(
+        int $studentId,
+        int $academicYearId,
+        int $termId,
+        int $schoolId
+    ): array {
+        $empty = [
+            'student'       => null,
+            'academic_year' => null,
+            'term'          => null,
+            'class'         => null,
+            'stream'        => null,
+            'exams'         => [],
+            'rows'          => [],
+            'totals'        => [],
+        ];
+
+        $student = $this->safeFetch(
+            "SELECT s.* FROM students s WHERE s.id = :id AND s.school_id = :school_id",
+            ['id' => $studentId, 'school_id' => $schoolId]
+        );
+        if (!$student) {
+            return $empty;
+        }
+
+        $enrollment = $this->safeFetch(
+            "SELECT se.class_id, se.stream_id
+             FROM student_enrollments se
+             WHERE se.student_id = :student_id AND se.academic_year_id = :year_id
+             ORDER BY se.id DESC LIMIT 1",
+            ['student_id' => $studentId, 'year_id' => $academicYearId]
+        );
+
+        $classId  = (int)($enrollment['class_id'] ?? 0);
+        $streamId = (int)($enrollment['stream_id'] ?? 0);
+
+        $student['class_name']  = $this->lookupName('classes', $classId);
+        $student['stream_name'] = $this->lookupName('streams', $streamId);
+        $student['class_id']    = $classId;
+        $student['stream_id']   = $streamId;
+        $student['school_id']   = $schoolId;
+
+        $academicYear = $this->safeFetch(
+            "SELECT id, name FROM academic_years WHERE id = :id AND school_id = :s",
+            ['id' => $academicYearId, 's' => $schoolId]
+        );
+
+        $term = $this->safeFetch(
+            "SELECT id, name, term_number FROM terms WHERE id = :id AND academic_year_id = :y",
+            ['id' => $termId, 'y' => $academicYearId]
+        );
+
+        $class = $this->safeFetch(
+            "SELECT id, name FROM classes WHERE id = :id AND school_id = :s",
+            ['id' => $classId, 's' => $schoolId]
+        );
+
+        $stream = $streamId
+            ? $this->safeFetch(
+                "SELECT id, name FROM streams WHERE id = :id AND class_id = :c",
+                ['id' => $streamId, 'c' => $classId]
+            )
+            : null;
+
+        $exams = $this->safeFetchAll(
+            "SELECT id, name, code
+             FROM examinations
+             WHERE school_id = :s
+               AND academic_year_id = :y
+               AND academic_period_id = :t
+             ORDER BY id ASC",
+            ['s' => $schoolId, 'y' => $academicYearId, 't' => $termId]
+        );
+
+        if (empty($exams)) {
+            return [
+                'student'       => $student,
+                'academic_year' => $academicYear,
+                'term'          => $term,
+                'class'         => $class,
+                'stream'        => $stream,
+                'exams'         => [],
+                'rows'          => [],
+                'totals'        => [],
+            ];
+        }
+
+        $examinationIds = array_column($exams, 'id');
+
+        $options = $this->analysisReportOptions();
+
+        $data = $this->getMultiExamReportCard(
+            $studentId,
+            $academicYearId,
+            $termId,
+            $schoolId,
+            $examinationIds,
+            $options
+        );
+
+        if (empty($data)) {
+            return [
+                'student'       => $student,
+                'academic_year' => $academicYear,
+                'term'          => $term,
+                'class'         => $class,
+                'stream'        => $stream,
+                'exams'         => [],
+                'rows'          => [],
+                'totals'        => [],
+            ];
+        }
+
+        $subjectMap = [];
+        foreach ($data['subjects'] as $subj) {
+            $sid = (int)$subj['id'];
+            $sa  = $data['subject_averages'][$sid] ?? null;
+
+            if (!isset($subjectMap[$sid])) {
+                $subjectMap[$sid] = [
+                    'id'          => $sid,
+                    'name'        => $subj['name'],
+                    'code'        => $subj['code'],
+                    'contributes' => $sa ? !empty($sa['contributes']) : false,
+                ];
+            } elseif (!empty($sa['contributes'])) {
+                $subjectMap[$sid]['contributes'] = true;
+            }
+        }
+        $subjects = array_values($subjectMap);
+        usort($subjects, function ($a, $b) {
+            $aC = !empty($a['contributes']) ? 0 : 1;
+            $bC = !empty($b['contributes']) ? 0 : 1;
+            if ($aC !== $bC) return $aC <=> $bC;
+            return strcmp((string)$a['name'], (string)$b['name']);
+        });
+
+        $marksByExam = $data['marks_by_exam'] ?? [];
+
+        $rows = [];
+        foreach ($subjects as $subj) {
+            $sid = (int)$subj['id'];
+
+            $row = [
+                'subject_id'   => $sid,
+                'subject_name' => $subj['name'],
+                'subject_code' => $subj['code'],
+                'contributes'  => !empty($subj['contributes']),
+                'exams'        => [],
+            ];
+
+            foreach ($exams as $exam) {
+                $examId = (int)$exam['id'];
+                $cell   = $marksByExam[$examId][$sid] ?? null;
+
+                $rawMark = ($cell && $cell['marks_obtained'] !== null && $cell['marks_obtained'] !== '')
+                    ? (int)round((float)$cell['marks_obtained'])
+                    : null;
+
+                $row['exams'][$examId] = [
+                    'mark'  => $rawMark,
+                    'grade' => $cell['grade'] ?? null,
+                    'score' => $cell['score'] ?? null,
+                ];
+            }
+
+            $rows[] = $row;
+        }
+
+        $totals = [];
+        foreach ($exams as $exam) {
+            $examId   = (int)$exam['id'];
+            $sum      = 0;
+            $count    = 0;
+            $scoreSum = 0;
+
+            foreach ($rows as $r) {
+                if (empty($r['contributes'])) continue;
+                $c = $r['exams'][$examId] ?? null;
+                if (!$c) continue;
+
+                if ($c['mark'] !== null) {
+                    $sum += $c['mark'];
+                    $count++;
+                }
+                if ($c['score'] !== null) {
+                    $scoreSum += (int)$c['score'];
+                }
+            }
+
+            $totals[$examId] = [
+                'sum'   => $sum,
+                'count' => $count,
+                'avg'   => $count > 0 ? round($sum / $count, 1) : 0,
+                'score' => $scoreSum,
+            ];
+        }
+
+        return [
+            'student'       => $student,
+            'academic_year' => $academicYear,
+            'term'          => $term,
+            'class'         => $class,
+            'stream'        => $stream,
+            'exams'         => array_map(fn($e) => [
+                'id'   => (int)$e['id'],
+                'name' => $e['name'],
+                'code' => $e['code'],
+            ], $exams),
+            'rows'   => $rows,
+            'totals' => $totals,
+        ];
+    }
+
+    public function studentResults(): void
+    {
+        $this->requirePermission('reports.academic.view');
+
+        $schoolId = $this->schoolId();
+
+        $studentId      = (int)($_GET['student_id'] ?? 0);
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+
+        $summary = [
+            'student'       => null,
+            'academic_year' => null,
+            'term'          => null,
+            'class'         => null,
+            'stream'        => null,
+            'exams'         => [],
+            'rows'          => [],
+            'totals'        => [],
+        ];
+
+        if ($studentId > 0) {
+            $student = $this->db->fetch(
+                "SELECT * FROM students WHERE id = :id AND school_id = :s",
+                ['id' => $studentId, 's' => $schoolId]
+            );
+            $summary['student'] = $student;
+        }
+
+        if ($studentId > 0 && $academicYearId > 0 && $termId > 0) {
+            $service = new \NexaT\Services\AcademicReportService();
+            $summary = $service->getStudentResultsSummary($studentId, $academicYearId, $termId, $schoolId);
+        }
+
+        echo $this->view->renderWithLayout('reports/academic/student_results', 'default', [
+            'title'    => 'Student Results',
+            'summary'  => $summary,
+            'filters'  => $this->reportService->getReportFilters($schoolId),
+            'students' => $this->db->fetchAll(
+                "SELECT s.id, s.admission_number, s.first_name, s.last_name,
+                        cl.id AS class_id, cl.name AS class_name
+                 FROM students s
+                 LEFT JOIN student_enrollments se ON se.student_id = s.id AND se.status = 'active'
+                 LEFT JOIN classes cl ON se.class_id = cl.id
+                 WHERE s.school_id = :s
+                 ORDER BY s.last_name ASC, s.first_name ASC",
+                ['s' => $schoolId]
+            ),
+            'selectedFilters' => [
+                'student_id'       => $studentId,
+                'academic_year_id' => $academicYearId,
+                'class_id'         => $classId,
+                'term_id'          => $termId,
+            ],
+        ]);
+    }
+
+    public function printStudentResults(): void
+    {
+        $this->requirePermission('reports.academic.view');
+
+        $schoolId = $this->schoolId();
+
+        $studentId      = (int)($_GET['student_id'] ?? 0);
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+
+        if (!$studentId || !$academicYearId || !$termId) {
+            $this->flashError('Missing filters for the printable results sheet.');
+            $this->redirect('/reports/academic/student-results');
+            return;
+        }
+
+        $service = new \NexaT\Services\AcademicReportService();
+        $summary = $service->getStudentResultsSummary($studentId, $academicYearId, $termId, $schoolId);
+
+        if (empty($summary['student'])) {
+            $this->flashError('Student not found.');
+            $this->redirect('/reports/academic/student-results');
+            return;
+        }
+
+        $user = $this->auth->getUser();
+        $printedBy = $user ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) : '';
+        if ($printedBy === '') $printedBy = 'System';
+
+        $this->audit('Student Results Printed', 'reports', "Printed student results #{$studentId}");
+
+        echo $this->view->renderWithLayout('reports/academic/print_student_results', 'print', [
+            'title'        => 'Student Results',
+            'summary'      => $summary,
+            'printedBy'    => $printedBy,
+        ]);
+    }
+
     private function resolveNextTerm(int $schoolId, int $academicYearId, int $termId): ?array
     {
-        // 1. Try the next term within the same academic year
         $current = $this->safeFetch(
             "SELECT term_number FROM terms WHERE id = :id AND school_id = :s",
             ['id' => $termId, 's' => $schoolId]
@@ -960,7 +1269,6 @@ class AcademicReportService
             }
         }
 
-        // 2. Fall back to the first term of the next academic year
         $nextYear = $this->safeFetch(
             "SELECT id FROM academic_years
              WHERE school_id = :s AND start_date > (

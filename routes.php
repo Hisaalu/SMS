@@ -231,6 +231,7 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->get('/results/class/export', ['ResultController', 'exportResults']);
     $router->get('/results/class/{examinationId}', ['ResultController', 'classResults']);
     $router->get('/results/student/{studentId}', ['ResultController', 'studentResults']);
+    $router->get('/results/student/{studentId}/print', ['ResultController', 'printStudentResults']);
     $router->post('/results/publish/{examinationId}', ['ResultController', 'publish']);
 
     $router->get('/promotion/rules', ['PromotionRuleController', 'index']);
@@ -252,6 +253,9 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->get('/reports/academic/class-analysis/export', ['AcademicReportController', 'exportClassAnalysis']);
     $router->get('/reports/academic/report-cards', ['AcademicReportController', 'ReportCards']);
     $router->get('/reports/academic/report-cards/view', ['AcademicReportController', 'generateReportCards']);
+    $router->get('/reports/academic/student-results',       ['AcademicReportController', 'studentResults']);
+    $router->get('/reports/academic/student-results/view',   ['AcademicReportController', 'viewStudentResults']);
+    $router->get('/reports/academic/student-results/print', ['AcademicReportController', 'printStudentResults']);
 
     $router->get('/notifications',                ['NotificationController', 'index']);
     $router->post('/notifications/mark-read',     ['NotificationController', 'markRead']);

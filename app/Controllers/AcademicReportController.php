@@ -64,6 +64,145 @@ class AcademicReportController extends Controller
         ]);
     }
 
+    public function studentResults(): void
+    {
+        $this->requirePermission('reports.academic.view');
+
+        $schoolId = $this->schoolId();
+
+        $studentId      = (int)($_GET['student_id'] ?? 0);
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+
+        $summary = [
+            'student'       => null,
+            'academic_year' => null,
+            'term'          => null,
+            'class'         => null,
+            'stream'        => null,
+            'exams'         => [],
+            'rows'          => [],
+            'totals'        => [],
+        ];
+
+        if ($studentId > 0) {
+            $summary['student'] = $this->db->fetch(
+                "SELECT * FROM students WHERE id = :id AND school_id = :s",
+                ['id' => $studentId, 's' => $schoolId]
+            );
+        }
+
+        if ($studentId > 0 && $academicYearId > 0 && $termId > 0) {
+            $service = new \NexaT\Services\AcademicReportService();
+            $summary = $service->getStudentResultsSummary($studentId, $academicYearId, $termId, $schoolId);
+        }
+
+        echo $this->view->renderWithLayout('reports/academic/student_results', 'default', [
+            'title'    => 'Student Results',
+            'summary'  => $summary,
+            'filters'  => $this->reportService->getReportFilters($schoolId),
+            'students' => $this->db->fetchAll(
+                "SELECT s.id, s.admission_number, s.first_name, s.last_name, s.gender,
+                        cl.id   AS class_id,
+                        cl.name AS class_name,
+                        st.name AS stream_name,
+                        sc.name AS category_name,
+                        ss.name AS status_name
+                 FROM students s
+                 LEFT JOIN student_enrollments se ON se.student_id = s.id AND se.status = 'active'
+                 LEFT JOIN classes cl            ON se.class_id = cl.id
+                 LEFT JOIN streams st            ON se.stream_id = st.id
+                 LEFT JOIN student_categories sc ON se.student_category_id = sc.id
+                 LEFT JOIN student_statuses ss   ON se.student_status_id = ss.id
+                 WHERE s.school_id = :s
+                 ORDER BY s.last_name ASC, s.first_name ASC",
+                ['s' => $schoolId]
+            ),
+            'selectedFilters' => [
+                'student_id'       => $studentId,
+                'academic_year_id' => $academicYearId,
+                'class_id'         => $classId,
+                'term_id'          => $termId,
+            ],
+        ]);
+    }
+
+    public function viewStudentResults(): void
+    {
+        $this->requirePermission('reports.academic.view');
+
+        $schoolId = $this->schoolId();
+
+        $studentId      = (int)($_GET['student_id'] ?? 0);
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+
+        if (!$studentId || !$academicYearId || !$termId) {
+            $this->flashError('Select a student, year and term to view results.');
+            $this->redirect('/reports/academic/student-results');
+            return;
+        }
+
+        $service = new \NexaT\Services\AcademicReportService();
+        $summary = $service->getStudentResultsSummary($studentId, $academicYearId, $termId, $schoolId);
+
+        if (empty($summary['student'])) {
+            $this->flashError('Student not found.');
+            $this->redirect('/reports/academic/student-results');
+            return;
+        }
+
+        echo $this->view->renderWithLayout('reports/academic/student_results_view', 'default', [
+            'title'  => 'Student Results',
+            'summary' => $summary,
+            'backUrl' => BASE_URL . '/reports/academic/student-results'
+                . '?student_id=' . $studentId
+                . '&academic_year_id=' . $academicYearId
+                . '&term_id=' . $termId
+                . ($classId ? '&class_id=' . $classId : ''),
+        ]);
+    }
+
+    public function printStudentResults(): void
+    {
+        $this->requirePermission('reports.academic.view');
+
+        $schoolId = $this->schoolId();
+
+        $studentId      = (int)($_GET['student_id'] ?? 0);
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+
+        if (!$studentId || !$academicYearId || !$termId) {
+            $this->flashError('Missing filters for the printable results sheet.');
+            $this->redirect('/reports/academic/student-results');
+            return;
+        }
+
+        $service = new \NexaT\Services\AcademicReportService();
+        $summary = $service->getStudentResultsSummary($studentId, $academicYearId, $termId, $schoolId);
+
+        if (empty($summary['student'])) {
+            $this->flashError('Student not found.');
+            $this->redirect('/reports/academic/student-results');
+            return;
+        }
+
+        $user = $this->auth->getUser();
+        $printedBy = $user ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) : '';
+        if ($printedBy === '') $printedBy = 'System';
+
+        $this->audit('Student Results Printed', 'reports', "Printed student results #{$studentId}");
+
+        echo $this->view->renderWithLayout('reports/academic/print_student_results', 'print', [
+            'title'     => 'Student Results',
+            'summary'   => $summary,
+            'printedBy' => $printedBy,
+        ]);
+    }
+
     public function classAnalysis(): void
     {
         $this->requirePermission('reports.class_analysis.view');

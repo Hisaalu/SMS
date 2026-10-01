@@ -1015,4 +1015,101 @@ class ResultController extends Controller
             return '';
         }
     }
+
+    public function studentResults($params = []): void
+    {
+        $this->requirePermission('results.view');
+
+        $schoolId = $this->schoolId();
+
+        $studentId = (int)($params['studentId'] ?? $_GET['student_id'] ?? 0);
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+
+        if (!$studentId) {
+            $this->flashError('Student not specified.');
+            $this->redirect('/students');
+        }
+
+        $service = new \NexaT\Services\AcademicReportService();
+
+        $summary = ($academicYearId && $termId)
+            ? $service->getStudentResultsSummary($studentId, $academicYearId, $termId, $schoolId)
+            : [
+                'student'       => $this->db->fetch("SELECT * FROM students WHERE id = :id AND school_id = :s", ['id' => $studentId, 's' => $schoolId]),
+                'academic_year' => null,
+                'term'          => null,
+                'class'         => null,
+                'stream'        => null,
+                'terms'         => [],
+                'subject_list'  => [],
+            ];
+
+        echo $this->view->renderWithLayout('examinations/results/student_results', 'default', [
+            'title'          => 'Student Results',
+            'student'        => $summary['student'] ?? null,
+            'academicYear'   => $summary['academic_year'] ?? null,
+            'term'           => $summary['term'] ?? null,
+            'class'          => $summary['class'] ?? null,
+            'stream'         => $summary['stream'] ?? null,
+            'terms'          => $summary['terms'] ?? [],
+            'subjectList'    => $summary['subject_list'] ?? [],
+            'filters'        => [
+                'academic_years' => $this->db->fetchAll("SELECT id, name FROM academic_years WHERE school_id = :s ORDER BY id DESC", ['s' => $schoolId]),
+                'terms'          => $this->db->fetchAll("SELECT id, name, academic_year_id FROM terms WHERE school_id = :s ORDER BY term_number ASC", ['s' => $schoolId]),
+                'classes'        => $this->db->fetchAll("SELECT id, name FROM classes WHERE school_id = :s ORDER BY name ASC", ['s' => $schoolId]),
+            ],
+            'selectedFilters' => [
+                'academic_year_id' => $academicYearId,
+                'class_id'         => $classId,
+                'term_id'          => $termId,
+            ],
+        ]);
+    }
+
+    public function printStudentResults($params = []): void
+    {
+        $this->requirePermission('results.view');
+
+        $schoolId = $this->schoolId();
+
+        $studentId      = (int)($params['studentId'] ?? $_GET['student_id'] ?? 0);
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+
+        if (!$studentId || !$academicYearId || !$termId) {
+            $this->flashError('Missing filters for the printable results sheet.');
+            $this->redirect('/students');
+            return;
+        }
+
+        $service = new \NexaT\Services\AcademicReportService();
+        $summary = $service->getStudentResultsSummary($studentId, $academicYearId, $termId, $schoolId);
+
+        if (empty($summary['student'])) {
+            $this->flashError('Student not found.');
+            $this->redirect('/students');
+            return;
+        }
+
+        $user = $this->auth->getUser();
+        $printedBy = $user ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) : '';
+        if ($printedBy === '') $printedBy = 'System';
+
+        $this->audit('Student Results Printed', 'results', "Printed student results #{$studentId}");
+
+        echo $this->view->renderWithLayout('examinations/results/print_student_results', 'print', [
+            'title'         => 'Student Results',
+            'student'       => $summary['student'],
+            'academicYear'  => $summary['academic_year'],
+            'term'          => $summary['term'],
+            'class'         => $summary['class'],
+            'stream'        => $summary['stream'],
+            'terms'         => $summary['terms'] ?? [],
+            'subjectList'   => $summary['subject_list'] ?? [],
+            'printedBy'     => $printedBy,
+        ]);
+    }
 }
