@@ -2,6 +2,63 @@
 <?php
 $hasFilters = !empty($filters);
 ?>
+<style>
+    .staff-table {
+        border-collapse: collapse;
+        font-size: 0.85rem;
+        background: #ffffff;
+        color: #000000;
+    }
+    .staff-table thead th {
+        background: #f1f5f9;
+        color: #1e293b;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+        font-weight: 800;
+        border: 1px solid #94a3b8;
+        border-bottom: 2px solid #64748b;
+        vertical-align: middle;
+    }
+    .staff-table td {
+        border: 1px solid #94a3b8;
+        padding: 6px 8px;
+        vertical-align: middle;
+        background: #ffffff;
+        color: #000000;
+    }
+    .staff-table tbody tr:hover td {
+        background: rgba(var(--accent-rgb), 0.10);
+    }
+    .staff-table .staff-num     { font-weight: 700; color: #000000; }
+    .staff-table .staff-name    { font-weight: 700; color: #000000; }
+    .staff-table .staff-name small { color: #64748b; font-weight: 500; }
+    .staff-table .staff-muted   { color: #475569; }
+
+    [data-theme="dark"] .staff-table {
+        background: var(--surface-color);
+        color: var(--text-color);
+    }
+    [data-theme="dark"] .staff-table thead th {
+        background: var(--border-color);
+        color: var(--accent-color);
+        border: 1px solid var(--border-color);
+        border-bottom: 2px solid var(--border-color);
+    }
+    [data-theme="dark"] .staff-table td {
+        background: var(--surface-color);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+    }
+    [data-theme="dark"] .staff-table tbody tr:hover td {
+        background: rgba(var(--accent-rgb), 0.14);
+    }
+    [data-theme="dark"] .staff-table .staff-num,
+    [data-theme="dark"] .staff-table .staff-name { color: var(--text-color); }
+    [data-theme="dark"] .staff-table .staff-name small,
+    [data-theme="dark"] .staff-table .staff-muted { color: var(--text-muted); }
+</style>
+
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <div>
@@ -77,7 +134,7 @@ $hasFilters = !empty($filters);
     <div class="card">
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table staff-table mb-0">
                     <thead>
                         <tr>
                             <th>Staff #</th>
@@ -109,12 +166,12 @@ $hasFilters = !empty($filters);
                         <?php else: ?>
                             <?php foreach ($staffMembers as $row): ?>
                                 <tr>
-                                    <td><span class="fw-bold"><?= htmlspecialchars($row['staff_number'] ?? '-') ?></span></td>
+                                    <td class="staff-num"><?= htmlspecialchars($row['staff_number'] ?? '-') ?></td>
                                     <td>
-                                        <div class="fw-semibold"><?= htmlspecialchars(trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''))) ?></div>
-                                        <small class="text-muted"><?= htmlspecialchars($row['phone'] ?? $row['email'] ?? '') ?></small>
+                                        <div class="staff-name"><?= htmlspecialchars(trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''))) ?></div>
+                                        <small class="staff-muted"><?= htmlspecialchars($row['phone'] ?? $row['email'] ?? '') ?></small>
                                     </td>
-                                    <td><span class="text-muted"><?= htmlspecialchars($row['username'] ?? '-') ?></span></td>
+                                    <td class="staff-muted"><?= htmlspecialchars($row['username'] ?? '-') ?></td>
                                     <td><?= htmlspecialchars($row['category_name'] ?? '-') ?></td>
                                     <td><?= htmlspecialchars($row['department_name'] ?? '-') ?></td>
                                     <td>

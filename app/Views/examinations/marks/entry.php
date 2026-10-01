@@ -1,18 +1,37 @@
 <!-- File: /app/Views/examinations/marks/entry.php -->
 <style>
-    .marks-table,
-    .marks-table > :not(caption) > * > * {
-        border-color: #000000 !important;
+    .marks-table {
+        border-collapse: collapse;
+        font-size: 0.85rem;
+        white-space: nowrap;
+        background: #ffffff;
+        color: #000000;
     }
     .marks-table thead th {
-        border-bottom-width: 2px !important;
+        background: #f1f5f9;
+        color: #1e293b;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+        font-weight: 800;
+        border: 1px solid #94a3b8;
+        border-bottom: 2px solid #64748b;
+        vertical-align: middle;
     }
-
-    [data-theme="dark"] .marks-table,
-    [data-theme="dark"] .marks-table > :not(caption) > * > * {
-        border-color: #000000 !important;
+    .marks-table td {
+        border: 1px solid #94a3b8;
+        padding: 6px 8px;
+        vertical-align: middle;
+        background: #ffffff;
+        color: #000000;
     }
-
+    .marks-table tbody tr:hover td {
+        background: rgba(var(--accent-rgb), 0.10);
+    }
+    .marks-table .marks-num   { text-align: center; color: #475569; }
+    .marks-table .marks-adm   { font-weight: 700; color: #000000; }
+    .marks-table .marks-name  { font-weight: 700; color: #000000; text-transform: uppercase; }
+    .marks-table .marks-center{ text-align: center; color: #000000; }
     .marks-table .mark-col {
         width: 110px;
         min-width: 110px;
@@ -21,6 +40,49 @@
         min-width: 88px;
         padding: 0.35rem 0.4rem;
         font-size: 0.85rem;
+        background: #ffffff;
+        color: #000000;
+        border: 1px solid #94a3b8;
+    }
+    .marks-table .mark-input:focus {
+        background: #ffffff;
+        color: #000000;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.25);
+    }
+
+    [data-theme="dark"] .marks-table {
+        background: var(--surface-color);
+        color: var(--text-color);
+    }
+    [data-theme="dark"] .marks-table thead th {
+        background: var(--border-color);
+        color: var(--accent-color);
+        border: 1px solid var(--border-color);
+        border-bottom: 2px solid var(--border-color);
+    }
+    [data-theme="dark"] .marks-table td {
+        background: var(--surface-color);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+    }
+    [data-theme="dark"] .marks-table tbody tr:hover td {
+        background: rgba(var(--accent-rgb), 0.14);
+    }
+    [data-theme="dark"] .marks-table .marks-num   { color: var(--text-muted); }
+    [data-theme="dark"] .marks-table .marks-adm,
+    [data-theme="dark"] .marks-table .marks-name,
+    [data-theme="dark"] .marks-table .marks-center{ color: var(--text-color); }
+    [data-theme="dark"] .marks-table .mark-input {
+        background: var(--input-bg);
+        color: var(--text-color);
+        border: 1px solid var(--input-border);
+    }
+    [data-theme="dark"] .marks-table .mark-input:focus {
+        background: var(--input-bg);
+        color: var(--text-color);
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.25);
     }
 </style>
 
@@ -87,10 +149,10 @@
                         <p class="mb-0">No students found for this selection.</p>
                     </div>
                 <?php else: ?>
-                    <table class="table table-bordered table-hover align-middle mb-0 text-nowrap small marks-table">
+                    <table class="table marks-table mb-0">
                         <thead class="sticky-top">
                             <tr>
-                                <th style="width: 40px;">No</th>
+                                <th style="width: 40px;" class="text-center">No</th>
                                 <th style="width: 110px;">Student No</th>
                                 <th>Name</th>
                                 <th style="width: 40px;" class="text-center">Sex</th>
@@ -114,10 +176,10 @@
                                     }
                                 ?>
                                 <tr>
-                                    <td><?= $index + 1 ?></td>
-                                    <td class="fw-semibold"><?= htmlspecialchars($student['admission_number']) ?></td>
-                                    <td class="fw-bold text-uppercase"><?= htmlspecialchars(($student['last_name'] ?? '') . ' ' . ($student['first_name'] ?? '')) ?></td>
-                                    <td class="text-center"><?= $sexDisplay ?></td>
+                                    <td class="marks-num"><?= $index + 1 ?></td>
+                                    <td class="marks-adm"><?= htmlspecialchars($student['admission_number']) ?></td>
+                                    <td class="marks-name"><?= htmlspecialchars(($student['last_name'] ?? '') . ' ' . ($student['first_name'] ?? '')) ?></td>
+                                    <td class="marks-center"><?= $sexDisplay ?></td>
                                     <?php foreach ($subjects as $subj): ?>
                                         <?php $val = $existingMarks[$student['id']][$subj['id']]['marks_obtained'] ?? ''; ?>
                                         <td class="p-1 text-center mark-col">

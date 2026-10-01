@@ -9,36 +9,36 @@
         border-collapse: collapse;
         font-size: 0.82rem;
         white-space: nowrap;
-        background: var(--surface-color);
-        color: var(--text-color);
+        background: #ffffff;
+        color: #000000;
     }
     .sa-table thead th {
-        background: var(--border-color);
-        color: var(--accent-color);
+        background: #f1f5f9;
+        color: #1e293b;
         font-size: 0.7rem;
         text-transform: uppercase;
         letter-spacing: .3px;
         font-weight: 800;
-        border: 1px solid var(--border-color);
-        border-bottom: 2px solid var(--border-color);
+        border: 1px solid #94a3b8;
+        border-bottom: 2px solid #64748b;
         vertical-align: middle;
     }
     .sa-table td {
-        border: 1px solid var(--border-color);
+        border: 1px solid #94a3b8;
         padding: 4px 6px;
         vertical-align: middle;
-        background: transparent;
-        color: var(--text-color);
+        background: #ffffff;
+        color: #000000;
     }
     .sa-table tbody tr:hover td {
-        background: rgba(var(--accent-rgb), 0.08);
+        background: rgba(var(--accent-rgb), 0.10);
     }
-    .sa-table .sa-num    { text-align: center; color: var(--text-muted); }
-    .sa-table .sa-stu    { font-weight: 700; text-transform: uppercase; }
-    .sa-table .sa-adm    { font-weight: 700; }
-    .sa-table .sa-center { text-align: center; }
+    .sa-table .sa-num    { text-align: center; color: #475569; }
+    .sa-table .sa-stu    { font-weight: 700; text-transform: uppercase; color: #000000; }
+    .sa-table .sa-adm    { font-weight: 700; color: #000000; }
+    .sa-table .sa-center { text-align: center; color: #000000; }
     .sa-table .sa-mark   { text-align: center; font-weight: 800; color: #c62828; }
-    .sa-table .sa-grade  { text-align: center; font-weight: 800; color: var(--text-color); }
+    .sa-table .sa-grade  { text-align: center; font-weight: 800; color: #000000; }
     .sa-table .sa-remark { font-size: 0.78rem; text-transform: uppercase; color: #c62828; font-weight: 700; }
 
     .sa-summary {
@@ -51,6 +51,28 @@
     }
     .sa-summary strong { color: var(--accent-color); }
 
+    [data-theme="dark"] .sa-table {
+        background: var(--surface-color);
+        color: var(--text-color);
+    }
+    [data-theme="dark"] .sa-table thead th {
+        background: var(--border-color);
+        color: var(--accent-color);
+        border: 1px solid var(--border-color);
+        border-bottom: 2px solid var(--border-color);
+    }
+    [data-theme="dark"] .sa-table td {
+        background: var(--surface-color);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+    }
+    [data-theme="dark"] .sa-table .sa-num    { color: var(--text-muted); }
+    [data-theme="dark"] .sa-table .sa-stu,
+    [data-theme="dark"] .sa-table .sa-adm,
+    [data-theme="dark"] .sa-table .sa-center,
+    [data-theme="dark"] .sa-table .sa-grade  { color: var(--text-color); }
+    [data-theme="dark"] .sa-table .sa-mark   { color: #ff7b7b; }
+    [data-theme="dark"] .sa-table .sa-remark { color: #ff7b7b; }
     [data-theme="dark"] .sa-table tbody tr:hover td {
         background: rgba(var(--accent-rgb), 0.14);
     }
@@ -59,7 +81,7 @@
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-start flex-nowrap mb-3 gap-2">
         <div class="flex-grow-1">
-            <h4 class="mb-0 fw-bold">Subject Performance Analysis</h4>
+            <h4 class="mb-0 fw-bold">Subject Analysis</h4>
             <small class="text-muted">Per-student breakdown for a single subject</small>
         </div>
         <div class="d-flex gap-2">
@@ -179,7 +201,6 @@
         <div class="card">
             <div class="card-header sa-card-header fw-bold d-flex justify-content-between align-items-center">
                 <span><i class="fas fa-book me-2 text-secondary"></i>Marks Breakdown</span>
-                <small class="text-muted">Sorted by subject mark (highest first)</small>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive" style="max-height: 650px; overflow-y: auto;">

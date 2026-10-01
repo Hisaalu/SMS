@@ -9,56 +9,89 @@
         border-collapse: collapse;
         font-size: 0.82rem;
         white-space: nowrap;
-        background: var(--surface-color);
-        color: var(--text-color);
+        background: #ffffff;
+        color: #000000;
     }
     .ca-table thead th {
-        background: var(--border-color);
-        color: var(--accent-color);
+        background: #f1f5f9;
+        color: #1e293b;
         font-size: 0.7rem;
         text-transform: uppercase;
         letter-spacing: .3px;
         font-weight: 800;
-        border: 1px solid var(--border-color);
-        border-bottom: 2px solid var(--border-color);
+        border: 1px solid #94a3b8;
+        border-bottom: 2px solid #64748b;
         vertical-align: middle;
     }
     .ca-table td {
-        border: 1px solid var(--border-color);
+        border: 1px solid #94a3b8;
         padding: 4px 6px;
         vertical-align: middle;
-        background: transparent;
-        color: var(--text-color);
+        background: #ffffff;
+        color: #000000;
     }
     .ca-table tbody tr:hover td {
-        background: rgba(var(--accent-rgb), 0.08);
+        background: rgba(var(--accent-rgb), 0.10);
     }
-    .ca-table .ca-num     { text-align: center; color: var(--text-muted); }
-    .ca-table .ca-stu     { font-weight: 700; color: var(--text-color); text-transform: uppercase; }
-    .ca-table .ca-adm     { font-weight: 700; color: var(--text-color); }
-    .ca-table .ca-marks   { text-align: center; color: var(--text-color); }
+    .ca-table .ca-num     { text-align: center; color: #475569; }
+    .ca-table .ca-stu     { font-weight: 700; color: #000000; text-transform: uppercase; }
+    .ca-table .ca-adm     { font-weight: 700; color: #000000; }
+    .ca-table .ca-marks   { text-align: center; color: #000000; }
     .ca-table .ca-total,
     .ca-table .ca-avg,
     .ca-table .ca-agg,
-    .ca-table .ca-div,
-    .ca-table .ca-pos     { font-weight: 800; text-align: center; }
+    .ca-table .ca-div     { font-weight: 800; text-align: center; }
     .ca-table .ca-total,
     .ca-table .ca-avg,
     .ca-table .ca-agg     { color: #c62828; }
-    .ca-table .ca-div     { color: var(--text-color); }
+    .ca-table .ca-div     { color: #000000; }
 
+    /* Non-contributing subject columns (e.g. ICT, Music) get muted styling */
     .ca-table thead th.ca-noncontrib,
     .ca-table td.ca-noncontrib {
+        background: #f8fafc;
+        color: #64748b;
+        font-style: italic;
+    }
+    .ca-table thead th.ca-noncontrib {
+        color: #64748b;
+    }
+
+    [data-theme="dark"] .ca-table {
+        background: var(--surface-color);
+        color: var(--text-color);
+    }
+    [data-theme="dark"] .ca-table thead th {
+        background: var(--border-color);
+        color: var(--accent-color);
+        border: 1px solid var(--border-color);
+        border-bottom: 2px solid var(--border-color);
+    }
+    [data-theme="dark"] .ca-table td {
+        background: var(--surface-color);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+    }
+    [data-theme="dark"] .ca-table tbody tr:hover td {
+        background: rgba(var(--accent-rgb), 0.14);
+    }
+    [data-theme="dark"] .ca-table .ca-num { color: var(--text-muted); }
+    [data-theme="dark"] .ca-table .ca-stu,
+    [data-theme="dark"] .ca-table .ca-adm,
+    [data-theme="dark"] .ca-table .ca-marks,
+    [data-theme="dark"] .ca-table .ca-div { color: var(--text-color); }
+    [data-theme="dark"] .ca-table .ca-total,
+    [data-theme="dark"] .ca-table .ca-avg,
+    [data-theme="dark"] .ca-table .ca-agg { color: #ff7b7b; }
+
+    [data-theme="dark"] .ca-table thead th.ca-noncontrib,
+    [data-theme="dark"] .ca-table td.ca-noncontrib {
         background: rgba(var(--accent-rgb), 0.04);
         color: var(--text-muted);
         font-style: italic;
     }
-    .ca-table thead th.ca-noncontrib {
+    [data-theme="dark"] .ca-table thead th.ca-noncontrib {
         color: var(--text-muted);
-    }
-
-    [data-theme="dark"] .ca-table tbody tr:hover td {
-        background: rgba(var(--accent-rgb), 0.14);
     }
 </style>
 

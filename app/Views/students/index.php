@@ -1,4 +1,67 @@
 <!-- File: /app/Views/students/index.php -->
+<style>
+    .stu-table {
+        border-collapse: collapse;
+        font-size: 0.85rem;
+        white-space: nowrap;
+        background: #ffffff;
+        color: #000000;
+    }
+    .stu-table thead th {
+        background: #f1f5f9;
+        color: #1e293b;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+        font-weight: 800;
+        border: 1px solid #94a3b8;
+        border-bottom: 2px solid #64748b;
+        vertical-align: middle;
+    }
+    .stu-table td {
+        border: 1px solid #94a3b8;
+        padding: 6px 8px;
+        vertical-align: middle;
+        background: #ffffff;
+        color: #000000;
+    }
+    .stu-table tbody tr:hover td {
+        background: rgba(var(--accent-rgb), 0.10);
+    }
+    .stu-table .stu-num   { text-align: center; color: #475569; }
+    .stu-table .stu-adm   { font-weight: 700; color: #000000; }
+    .stu-table .stu-name  { font-weight: 700; color: #000000; text-transform: uppercase; }
+    .stu-table .stu-center{ text-align: center; color: #000000; }
+    .stu-table .stu-actions { text-align: center; white-space: nowrap; }
+
+    /* Non-data status colours stay visible on white */
+    .stu-table .badge.bg-success  { background: #16A34A !important; color: #fff !important; }
+    .stu-table .badge.bg-secondary{ background: #64748B !important; color: #fff !important; }
+
+    [data-theme="dark"] .stu-table {
+        background: var(--surface-color);
+        color: var(--text-color);
+    }
+    [data-theme="dark"] .stu-table thead th {
+        background: var(--border-color);
+        color: var(--accent-color);
+        border: 1px solid var(--border-color);
+        border-bottom: 2px solid var(--border-color);
+    }
+    [data-theme="dark"] .stu-table td {
+        background: var(--surface-color);
+        color: var(--text-color);
+        border: 1px solid var(--border-color);
+    }
+    [data-theme="dark"] .stu-table tbody tr:hover td {
+        background: rgba(var(--accent-rgb), 0.14);
+    }
+    [data-theme="dark"] .stu-table .stu-num   { color: var(--text-muted); }
+    [data-theme="dark"] .stu-table .stu-adm,
+    [data-theme="dark"] .stu-table .stu-name,
+    [data-theme="dark"] .stu-table .stu-center{ color: var(--text-color); }
+</style>
+
 <div class="container-fluid px-0">
 
     <?php if (isset($_SESSION['flash_success'])): ?>
@@ -118,10 +181,10 @@
         </div>
 
         <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
-            <table class="table table-hover align-middle mb-0 text-nowrap small">
+            <table class="table stu-table mb-0">
                 <thead class="sticky-top">
                     <tr>
-                        <th style="width: 40px;">No</th>
+                        <th style="width: 40px;" class="text-center">No</th>
                         <th>Student No</th>
                         <th>Name</th>
                         <th class="text-center">Sex</th>
@@ -141,15 +204,15 @@
                                 $sexDisplay = in_array($rawSex, ['F', 'FEMALE', '2']) ? 'F' : (in_array($rawSex, ['M', 'MALE', '1']) ? 'M' : '-');
                             ?>
                             <tr>
-                                <td><?= $offsetIndex ?></td>
-                                <td class="fw-semibold"><?= htmlspecialchars($st['admission_number'] ?? '-') ?></td>
-                                <td class="fw-bold text-uppercase"><?= htmlspecialchars(($st['last_name'] ?? '') . ' ' . ($st['first_name'] ?? '')) ?></td>
-                                <td class="text-center"><?= $sexDisplay ?></td>
+                                <td class="stu-num"><?= $offsetIndex ?></td>
+                                <td class="stu-adm"><?= htmlspecialchars($st['admission_number'] ?? '-') ?></td>
+                                <td class="stu-name"><?= htmlspecialchars(($st['last_name'] ?? '') . ' ' . ($st['first_name'] ?? '')) ?></td>
+                                <td class="stu-center"><?= $sexDisplay ?></td>
                                 <td><?= htmlspecialchars($st['class_name'] ?? '-') ?></td>
                                 <td><?= htmlspecialchars($st['stream_name'] ?? 'GENERAL') ?></td>
                                 <td><?= htmlspecialchars($st['category_name'] ?? '-') ?></td>
                                 <td><?= htmlspecialchars($st['status_name'] ?? 'Active') ?></td>
-                                <td class="text-center">
+                                <td class="stu-actions">
                                     <a href="<?= BASE_URL . '/student/show?id=' . $st['id'] ?>" class="btn btn-sm btn-secondary py-0 px-1 me-1" title="View Profile">
                                         <i class="fas fa-eye"></i>
                                     </a>
