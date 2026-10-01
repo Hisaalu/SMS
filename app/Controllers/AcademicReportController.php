@@ -47,17 +47,19 @@ class AcademicReportController extends Controller
             'academic_year_id' => $_GET['academic_year_id'] ?? null,
             'term_id'          => $_GET['term_id']          ?? null,
             'class_id'         => $_GET['class_id']         ?? null,
+            'stream_id'        => $_GET['stream_id']        ?? null,
             'subject_id'       => $_GET['subject_id']       ?? null,
+            'examination_id'   => $_GET['examination_id']   ?? null,
         ]);
 
-        $stats = !empty($filters['subject_id'])
-            ? $this->reportService->getSubjectPerformance($schoolId, $filters)
-            : [];
+        $matrix = (!empty($filters['academic_year_id']) && !empty($filters['class_id']) && !empty($filters['subject_id']))
+            ? $this->reportService->getSubjectAnalysisMatrix($schoolId, $filters)
+            : ['subject' => null, 'class' => null, 'students' => [], 'marks' => [], 'summary' => [], 'headers' => []];
 
         echo $this->view->renderWithLayout('reports/academic/subject_analysis', 'default', [
             'title'           => 'Subject Performance Analysis',
             'filters'         => $this->reportService->getReportFilters($schoolId),
-            'stats'           => $stats,
+            'matrix'          => $matrix,
             'selectedFilters' => $filters,
         ]);
     }
@@ -226,7 +228,7 @@ class AcademicReportController extends Controller
         ];
     }
 
-        public function printClassAnalysis(): void
+    public function printClassAnalysis(): void
     {
         $this->requirePermission('reports.class_analysis.view');
 
@@ -375,6 +377,133 @@ class AcademicReportController extends Controller
             }
 
             fputcsv($out, $row);
+        }
+
+        fclose($out);
+        exit;
+    }
+
+    public function printSubjectAnalysis(): void
+    {
+        $this->requirePermission('reports.subject_analysis.view');
+
+        $schoolId = $this->schoolId();
+
+        $filters = array_filter([
+            'academic_year_id' => $_GET['academic_year_id'] ?? null,
+            'term_id'          => $_GET['term_id']          ?? null,
+            'class_id'         => $_GET['class_id']         ?? null,
+            'stream_id'        => $_GET['stream_id']        ?? null,
+            'subject_id'       => $_GET['subject_id']       ?? null,
+            'examination_id'   => $_GET['examination_id']   ?? null,
+        ]);
+
+        $matrix = (!empty($filters['academic_year_id']) && !empty($filters['class_id']) && !empty($filters['subject_id']))
+            ? $this->reportService->getSubjectAnalysisMatrix($schoolId, $filters)
+            : ['subject' => null, 'class' => null, 'students' => [], 'marks' => [], 'summary' => [], 'headers' => []];
+
+        $meta = [];
+        foreach ([
+            'academic_year_id' => 'Academic Year',
+            'term_id'          => 'Term',
+            'class_id'         => 'Class',
+            'stream_id'        => 'Stream',
+            'examination_id'   => 'Examination',
+        ] as $key => $label) {
+            if (empty($filters[$key])) continue;
+            $table = match ($key) {
+                'academic_year_id' => 'academic_years',
+                'term_id'          => 'terms',
+                'class_id'         => 'classes',
+                'stream_id'        => 'streams',
+                'examination_id'   => 'examinations',
+            };
+            $row = $this->db->fetch(
+                "SELECT name FROM {$table} WHERE id = :id AND school_id = :s",
+                ['id' => (int)$filters[$key], 's' => $schoolId]
+            );
+            if ($row) $meta[] = ['label' => $label, 'value' => $row['name']];
+        }
+        if (!empty($matrix['subject'])) {
+            $meta[] = ['label' => 'Subject', 'value' => ($matrix['subject']['code'] ?: $matrix['subject']['name'])];
+        }
+        $meta[] = ['label' => 'Students', 'value' => count($matrix['students'])];
+
+        $user = $this->auth->getUser();
+        $printedBy = $user ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) : '';
+        if ($printedBy === '') $printedBy = 'System';
+
+        $this->audit('Subject Analysis Printed', 'reports', 'Printed subject performance analysis.');
+
+        echo $this->view->renderWithLayout('reports/academic/print_subject_analysis', 'print', [
+            'title'     => 'Subject Performance Analysis',
+            'matrix'    => $matrix,
+            'meta'      => $meta,
+            'printedBy' => $printedBy,
+        ]);
+    }
+
+    public function exportSubjectAnalysis(): void
+    {
+        $this->requirePermission('reports.subject_analysis.view');
+
+        $schoolId = $this->schoolId();
+
+        $filters = array_filter([
+            'academic_year_id' => $_GET['academic_year_id'] ?? null,
+            'term_id'          => $_GET['term_id']          ?? null,
+            'class_id'         => $_GET['class_id']         ?? null,
+            'stream_id'        => $_GET['stream_id']        ?? null,
+            'subject_id'       => $_GET['subject_id']       ?? null,
+            'examination_id'   => $_GET['examination_id']   ?? null,
+        ]);
+
+        $matrix = (!empty($filters['academic_year_id']) && !empty($filters['class_id']) && !empty($filters['subject_id']))
+            ? $this->reportService->getSubjectAnalysisMatrix($schoolId, $filters)
+            : ['subject' => null, 'class' => null, 'students' => [], 'marks' => [], 'summary' => [], 'headers' => []];
+
+        $this->audit('Subject Analysis Exported', 'reports', 'Exported subject performance analysis to CSV.');
+
+        $filename = 'subject_analysis_' . date('Ymd_His') . '.csv';
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+
+        fputcsv($out, ['Subject Performance Analysis']);
+        fputcsv($out, ['Generated At', date('Y-m-d H:i:s')]);
+        if (!empty($matrix['subject'])) {
+            fputcsv($out, ['Subject', $matrix['subject']['code'] . ' - ' . $matrix['subject']['name']]);
+        }
+        fputcsv($out, []);
+
+        fputcsv($out, [
+            '#', 'ADM NO', 'STUDENT', 'SEX',
+            'MARK', 'GRADE', 'SCORE', 'REMARK',
+        ]);
+
+        foreach ($matrix['students'] as $i => $st) {
+            $sid = (int)$st['id'];
+            $m   = $matrix['marks'][$sid] ?? [];
+
+            $rawSex = strtoupper(trim($st['gender'] ?? ''));
+            $sex    = in_array($rawSex, ['F', 'FEMALE', '2'], true) ? 'F'
+                    : (in_array($rawSex, ['M', 'MALE', '1'], true) ? 'M' : '-');
+
+            fputcsv($out, [
+                $i + 1,
+                $st['admission_number'] ?? '',
+                strtoupper(trim(($st['last_name'] ?? '') . ' ' . ($st['first_name'] ?? ''))),
+                $sex,
+                $m['mark']     ?? '',
+                $m['grade']    ?? '',
+                $m['score']    ?? '',
+                $m['remark']   ?? '',
+            ]);
         }
 
         fclose($out);

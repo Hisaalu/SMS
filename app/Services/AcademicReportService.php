@@ -520,6 +520,180 @@ class AcademicReportService
         ];
     }
 
+    public function getSubjectAnalysisMatrix(int $schoolId, array $filters): array
+    {
+        $empty = [
+            'subject' => null,
+            'class'   => null,
+            'students' => [],
+            'marks'    => [],
+            'summary'  => [],
+            'headers'  => [],
+        ];
+
+        if (empty($filters['academic_year_id']) || empty($filters['class_id']) || empty($filters['subject_id'])) {
+            return $empty;
+        }
+
+        $academicYearId = (int)$filters['academic_year_id'];
+        $classId        = (int)$filters['class_id'];
+        $subjectId      = (int)$filters['subject_id'];
+        $termId         = (int)($filters['term_id'] ?? 0);
+        $streamId       = !empty($filters['stream_id']) ? (int)$filters['stream_id'] : null;
+        $examinationId  = (int)($filters['examination_id'] ?? 0);
+
+        if ($examinationId > 0) {
+            $examinationIds = [(int)$examinationId];
+        } else {
+            $examinationIds = $this->resolveAnalysisExaminationIds($schoolId, $academicYearId, $termId, $classId);
+        }
+
+        if (!$termId && !empty($examinationIds)) {
+            $row = $this->safeFetch(
+                "SELECT academic_period_id AS t FROM examinations WHERE id = :id LIMIT 1",
+                ['id' => (int)$examinationIds[0]]
+            );
+            $termId = (int)($row['t'] ?? 0);
+        }
+
+        $subject = $this->safeFetch(
+            "SELECT id, name, code, grading_subject_type_id
+             FROM subjects WHERE id = :id AND school_id = :s",
+            ['id' => $subjectId, 's' => $schoolId]
+        );
+        if (!$subject) {
+            return $empty;
+        }
+
+        $class = $this->safeFetch(
+            "SELECT id, name FROM classes WHERE id = :id AND school_id = :s",
+            ['id' => $classId, 's' => $schoolId]
+        );
+
+        $options = $this->analysisReportOptions();
+
+        $students = $this->safeFetchAll(
+            "SELECT DISTINCT s.id, s.admission_number, s.first_name, s.last_name, s.gender,
+                    cl.name AS class_name, str.name AS stream_name
+             FROM students s
+             INNER JOIN student_enrollments se ON s.id = se.student_id
+             LEFT JOIN classes cl ON se.class_id = cl.id
+             LEFT JOIN streams str ON se.stream_id = str.id
+             WHERE se.status = 'active'
+               AND se.academic_year_id = :year_id
+               AND se.class_id = :class_id
+               AND s.school_id = :school_id" .
+               ($streamId ? " AND se.stream_id = :stream_id" : "") . "
+             ORDER BY s.last_name ASC, s.first_name ASC",
+            array_filter([
+                'year_id'   => $academicYearId,
+                'class_id'  => $classId,
+                'school_id' => $schoolId,
+                'stream_id' => $streamId,
+            ], fn($v) => $v !== null)
+        );
+
+        if (empty($students)) {
+            return array_merge($empty, ['subject' => $subject, 'class' => $class]);
+        }
+
+        $marks   = [];
+        $summary = [
+            'entered'     => 0,
+            'missing'     => 0,
+            'avg_mark'    => 0.0,
+            'highest'     => null,
+            'lowest'      => null,
+            'pass_rate'   => 0.0,
+            'grade_counts' => [],
+        ];
+
+        $totalMark   = 0;
+        $enteredMarks = [];
+
+        foreach ($students as $s) {
+            $sid  = (int)$s['id'];
+            $data = $this->getMultiExamReportCard(
+                $sid, $academicYearId, $termId, $schoolId, $examinationIds, $options
+            );
+            if (empty($data)) {
+                continue;
+            }
+
+            $sa         = $data['subject_averages'][$subjectId] ?? null;
+            $hasMissing = !empty($data['has_missing']);
+
+            $mark   = $sa ? (int)round((float)$sa['mark'])   : null;
+            $grade  = $sa ? (string)($sa['grade'] ?? '-')    : '-';
+            $score  = $sa ? (int)round((float)$sa['score'])  : 0;
+            $remark = $sa ? (string)($sa['remark'] ?? '')    : '';
+            $init   = $sa ? (string)($sa['initials'] ?? '')  : '';
+
+            if ($sa === null) {
+                $mark = null;
+            }
+
+            $marks[$sid] = [
+                'mark'        => $mark,
+                'grade'       => $grade,
+                'score'       => $score,
+                'remark'      => $remark,
+                'initials'    => $init,
+                'total'       => (int)round((float)$data['total_score']),
+                'average'     => $data['graded_subjects'] > 0
+                    ? round((float)$data['total_score'] / (int)$data['graded_subjects'], 1)
+                    : 0,
+                'aggregate'   => (int)round((float)$data['total_aggregate']),
+                'division'    => $data['division_code'] ?? null,
+                'has_missing' => $hasMissing,
+                'contributes' => $sa ? !empty($sa['contributes']) : false,
+            ];
+
+            if ($mark !== null) {
+                $enteredMarks[] = $mark;
+                $totalMark += $mark;
+                $summary['entered']++;
+
+                $g = strtoupper((string)$grade);
+                $summary['grade_counts'][$g] = ($summary['grade_counts'][$g] ?? 0) + 1;
+            } else {
+                $summary['missing']++;
+            }
+        }
+
+        if (!empty($enteredMarks)) {
+            $summary['avg_mark'] = round($totalMark / count($enteredMarks), 2);
+            $summary['highest']  = max($enteredMarks);
+            $summary['lowest']   = min($enteredMarks);
+        }
+
+        usort($students, function ($a, $b) use ($marks) {
+            $aM = $marks[(int)$a['id']]['mark'] ?? -1;
+            $bM = $marks[(int)$b['id']]['mark'] ?? -1;
+            if ($aM !== $bM) return $bM <=> $aM;
+
+            $cmp = strcmp((string)($a['last_name'] ?? ''), (string)($b['last_name'] ?? ''));
+            if ($cmp !== 0) return $cmp;
+            return strcmp((string)($a['first_name'] ?? ''), (string)($b['first_name'] ?? ''));
+        });
+
+        return [
+            'subject' => $subject,
+            'class'   => $class,
+            'students' => $students,
+            'marks'    => $marks,
+            'summary'  => $summary,
+            'headers'  => [
+                'academic_year_id' => $academicYearId,
+                'term_id'          => $termId,
+                'class_id'         => $classId,
+                'stream_id'        => $streamId,
+                'subject_id'       => $subjectId,
+                'examination_ids'  => $examinationIds,
+            ],
+        ];
+    }
+
     private function resolveAnalysisExaminationIds(int $schoolId, int $yearId, int $termId, int $classId): array
     {
         $sql = "SELECT id FROM examinations
