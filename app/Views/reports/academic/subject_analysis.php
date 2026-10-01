@@ -82,7 +82,7 @@
     <div class="d-flex justify-content-between align-items-start flex-nowrap mb-3 gap-2">
         <div class="flex-grow-1">
             <h4 class="mb-0 fw-bold">Subject Analysis</h4>
-            <small class="text-muted">Per-student breakdown for a single subject</small>
+            <small class="text-muted">Subject breakdown</small>
         </div>
         <div class="d-flex gap-2">
             <button type="button" class="btn btn-sm btn-outline-secondary" id="printSaBtn">

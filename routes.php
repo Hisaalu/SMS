@@ -256,6 +256,12 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->get('/reports/academic/student-results',       ['AcademicReportController', 'studentResults']);
     $router->get('/reports/academic/student-results/view',   ['AcademicReportController', 'viewStudentResults']);
     $router->get('/reports/academic/student-results/print', ['AcademicReportController', 'printStudentResults']);
+    $router->get('/reports/academic/teachers-assessment',        ['AcademicReportController', 'teacherAssessment']);
+    $router->get('/reports/academic/teachers-assessment/print',  ['AcademicReportController', 'printTeacherAssessment']);
+    $router->get('/reports/academic/teachers-assessment/export', ['AcademicReportController', 'exportTeacherAssessment']);
+    $router->get('/reports/academic/division-analysis',        ['AcademicReportController', 'divisionAnalysis']);
+    $router->get('/reports/academic/division-analysis/print',  ['AcademicReportController', 'printDivisionAnalysis']);
+    $router->get('/reports/academic/division-analysis/export', ['AcademicReportController', 'exportDivisionAnalysis']);
 
     $router->get('/notifications',                ['NotificationController', 'index']);
     $router->post('/notifications/mark-read',     ['NotificationController', 'markRead']);

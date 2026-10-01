@@ -165,6 +165,288 @@ class AcademicReportController extends Controller
         ]);
     }
 
+    public function teacherAssessment(): void
+    {
+        $this->requirePermission('reports.academic.view');
+
+        $schoolId = $this->schoolId();
+
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $streamId       = !empty($_GET['stream_id']) ? (int)$_GET['stream_id'] : null;
+
+        $summary = ($academicYearId && $termId && $classId)
+            ? $this->reportService->getTeacherAssessmentSummary($schoolId, $academicYearId, $termId, $classId, $streamId)
+            : ['teachers' => [], 'department' => [], 'students' => 0, 'exams' => []];
+
+        $academicYear = $academicYearId ? $this->db->fetch(
+            "SELECT name FROM academic_years WHERE id = :id AND school_id = :s",
+            ['id' => $academicYearId, 's' => $schoolId]
+        ) : null;
+
+        $term = $termId ? $this->db->fetch(
+            "SELECT name FROM terms WHERE id = :id AND school_id = :s",
+            ['id' => $termId, 's' => $schoolId]
+        ) : null;
+
+        $class = $classId ? $this->db->fetch(
+            "SELECT name FROM classes WHERE id = :id AND school_id = :s",
+            ['id' => $classId, 's' => $schoolId]
+        ) : null;
+
+        $stream = $streamId ? $this->db->fetch(
+            "SELECT name FROM streams WHERE id = :id AND school_id = :s",
+            ['id' => $streamId, 's' => $schoolId]
+        ) : null;
+
+        echo $this->view->renderWithLayout('reports/academic/teachers_assessment', 'default', [
+            'title'           => 'Teachers Assessment',
+            'filters'         => $this->reportService->getReportFilters($schoolId),
+            'summary'         => $summary,
+            'academicYear'    => $academicYear,
+            'term'            => $term,
+            'class'           => $class,
+            'stream'          => $stream,
+            'selectedFilters' => [
+                'academic_year_id' => $academicYearId,
+                'term_id'          => $termId,
+                'class_id'         => $classId,
+                'stream_id'        => $streamId,
+            ],
+        ]);
+    }
+
+    public function printTeacherAssessment(): void
+    {
+        $this->requirePermission('reports.academic.view');
+
+        $schoolId = $this->schoolId();
+
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $streamId       = !empty($_GET['stream_id']) ? (int)$_GET['stream_id'] : null;
+
+        if (!$academicYearId || !$termId || !$classId) {
+            $this->flashError('Select year, term and class before printing.');
+            $this->redirect('/reports/academic/teachers-assessment');
+            return;
+        }
+
+        $summary = $this->reportService->getTeacherAssessmentSummary($schoolId, $academicYearId, $termId, $classId, $streamId);
+
+        $academicYear = $this->db->fetch("SELECT name FROM academic_years WHERE id = :id AND school_id = :s", ['id' => $academicYearId, 's' => $schoolId]);
+        $term         = $this->db->fetch("SELECT name FROM terms WHERE id = :id AND school_id = :s", ['id' => $termId, 's' => $schoolId]);
+        $class        = $this->db->fetch("SELECT name FROM classes WHERE id = :id AND school_id = :s", ['id' => $classId, 's' => $schoolId]);
+        $stream       = $streamId ? $this->db->fetch("SELECT name FROM streams WHERE id = :id AND school_id = :s", ['id' => $streamId, 's' => $schoolId]) : null;
+
+        $user = $this->auth->getUser();
+        $printedBy = $user ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) : '';
+        if ($printedBy === '') $printedBy = 'System';
+
+        $this->audit('Teacher Assessment Printed', 'reports', 'Printed teacher assessment.');
+
+        echo $this->view->renderWithLayout('reports/academic/print_teachers_assessment', 'print', [
+            'title'        => 'Teachers Assessment Report',
+            'summary'      => $summary,
+            'academicYear' => $academicYear,
+            'term'         => $term,
+            'class'        => $class,
+            'stream'       => $stream,
+            'printedBy'    => $printedBy,
+        ]);
+    }
+
+    public function exportTeacherAssessment(): void
+    {
+        $this->requirePermission('reports.academic.view');
+
+        $schoolId = $this->schoolId();
+
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $streamId       = !empty($_GET['stream_id']) ? (int)$_GET['stream_id'] : null;
+
+        $summary = ($academicYearId && $termId && $classId)
+            ? $this->reportService->getTeacherAssessmentSummary($schoolId, $academicYearId, $termId, $classId, $streamId)
+            : ['teachers' => [], 'department' => [], 'students' => 0, 'exams' => []];
+
+        $this->audit('Teacher Assessment Exported', 'reports', 'Exported teacher assessment.');
+
+        $filename = 'teacher_assessment_' . date('Ymd_His') . '.csv';
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+
+        fputcsv($out, ['Teachers Assessment']);
+        fputcsv($out, ['Generated At', date('Y-m-d H:i:s')]);
+        fputcsv($out, []);
+
+        fputcsv($out, ['DEPARTMENTAL RANKING']);
+        fputcsv($out, ['DEPARTMENT', 'PERCENTAGE', 'POSITION']);
+        foreach ($summary['department'] as $row) {
+            fputcsv($out, [
+                $row['department_name'],
+                $row['percentage'] . ' %',
+                $row['position'],
+            ]);
+        }
+
+        fputcsv($out, []);
+        fputcsv($out, ["GENERAL TEACHER'S RANKING"]);
+        fputcsv($out, ['TEACHER', 'SUBJECT', 'PERCENTAGE', 'POSITION']);
+        foreach ($summary['teachers'] as $row) {
+            fputcsv($out, [
+                $row['teacher_name'],
+                strtoupper($row['subject_code'] ?: $row['subject_name']),
+                $row['percentage'] . ' %',
+                $row['position'],
+            ]);
+        }
+
+        fclose($out);
+        exit;
+    }
+
+    public function divisionAnalysis(): void
+    {
+        $this->requirePermission('reports.academic.view');
+
+        $schoolId = $this->schoolId();
+
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $streamId       = !empty($_GET['stream_id']) ? (int)$_GET['stream_id'] : null;
+        $examinationId  = !empty($_GET['examination_id']) ? (int)$_GET['examination_id'] : null;
+
+        $summary = ($academicYearId && $termId && $classId)
+            ? $this->reportService->getDivisionAnalysisSummary($schoolId, $academicYearId, $termId, $classId, $streamId, $examinationId)
+            : ['divisions' => [], 'students' => [], 'total' => 0, 'exams' => [], 'class_size' => 0];
+
+        $academicYear = $academicYearId ? $this->db->fetch("SELECT name FROM academic_years WHERE id = :id AND school_id = :s", ['id' => $academicYearId, 's' => $schoolId]) : null;
+        $term         = $termId ? $this->db->fetch("SELECT name FROM terms WHERE id = :id AND school_id = :s", ['id' => $termId, 's' => $schoolId]) : null;
+        $class        = $classId ? $this->db->fetch("SELECT name FROM classes WHERE id = :id AND school_id = :s", ['id' => $classId, 's' => $schoolId]) : null;
+        $stream       = $streamId ? $this->db->fetch("SELECT name FROM streams WHERE id = :id AND school_id = :s", ['id' => $streamId, 's' => $schoolId]) : null;
+
+        echo $this->view->renderWithLayout('reports/academic/division_analysis', 'default', [
+            'title'           => 'Division Analysis',
+            'filters'         => $this->reportService->getReportFilters($schoolId),
+            'summary'         => $summary,
+            'academicYear'    => $academicYear,
+            'term'            => $term,
+            'class'           => $class,
+            'stream'          => $stream,
+            'selectedFilters' => [
+                'academic_year_id' => $academicYearId,
+                'term_id'          => $termId,
+                'class_id'         => $classId,
+                'stream_id'        => $streamId,
+                'examination_id'   => $examinationId,
+            ],
+        ]);
+    }
+
+    public function printDivisionAnalysis(): void
+    {
+        $this->requirePermission('reports.academic.view');
+
+        $schoolId = $this->schoolId();
+
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $streamId       = !empty($_GET['stream_id']) ? (int)$_GET['stream_id'] : null;
+        $examinationId  = !empty($_GET['examination_id']) ? (int)$_GET['examination_id'] : null;
+
+        if (!$academicYearId || !$termId || !$classId) {
+            $this->flashError('Select year, term and class before printing.');
+            $this->redirect('/reports/academic/division-analysis');
+            return;
+        }
+
+        $summary = $this->reportService->getDivisionAnalysisSummary($schoolId, $academicYearId, $termId, $classId, $streamId, $examinationId);
+
+        $academicYear = $this->db->fetch("SELECT name FROM academic_years WHERE id = :id AND school_id = :s", ['id' => $academicYearId, 's' => $schoolId]);
+        $term         = $this->db->fetch("SELECT name FROM terms WHERE id = :id AND school_id = :s", ['id' => $termId, 's' => $schoolId]);
+        $class        = $this->db->fetch("SELECT name FROM classes WHERE id = :id AND school_id = :s", ['id' => $classId, 's' => $schoolId]);
+        $stream       = $streamId ? $this->db->fetch("SELECT name FROM streams WHERE id = :id AND school_id = :s", ['id' => $streamId, 's' => $schoolId]) : null;
+
+        $user = $this->auth->getUser();
+        $printedBy = $user ? trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) : '';
+        if ($printedBy === '') $printedBy = 'System';
+
+        $this->audit('Division Analysis Printed', 'reports', 'Printed division analysis.');
+
+        echo $this->view->renderWithLayout('reports/academic/print_division_analysis', 'print', [
+            'title'        => 'Division Analysis',
+            'summary'      => $summary,
+            'academicYear' => $academicYear,
+            'term'         => $term,
+            'class'        => $class,
+            'stream'       => $stream,
+            'printedBy'    => $printedBy,
+        ]);
+    }
+
+    public function exportDivisionAnalysis(): void
+    {
+        $this->requirePermission('reports.academic.view');
+
+        $schoolId = $this->schoolId();
+
+        $academicYearId = (int)($_GET['academic_year_id'] ?? 0);
+        $termId         = (int)($_GET['term_id'] ?? 0);
+        $classId        = (int)($_GET['class_id'] ?? 0);
+        $streamId       = !empty($_GET['stream_id']) ? (int)$_GET['stream_id'] : null;
+        $examinationId  = !empty($_GET['examination_id']) ? (int)$_GET['examination_id'] : null;
+
+        $summary = ($academicYearId && $termId && $classId)
+            ? $this->reportService->getDivisionAnalysisSummary($schoolId, $academicYearId, $termId, $classId, $streamId, $examinationId)
+            : ['divisions' => [], 'students' => [], 'total' => 0, 'exams' => [], 'class_size' => 0];
+
+        $this->audit('Division Analysis Exported', 'reports', 'Exported division analysis.');
+
+        $filename = 'division_analysis_' . date('Ymd_His') . '.csv';
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF");
+
+        fputcsv($out, ['Division Analysis']);
+        fputcsv($out, ['Generated At', date('Y-m-d H:i:s')]);
+        fputcsv($out, []);
+
+        fputcsv($out, ['DIVISION', 'AGGREGATE RANGE', 'STUDENTS', 'PERCENTAGE']);
+        $total = max(1, (int)$summary['total']);
+        foreach ($summary['divisions'] as $d) {
+            $range = ($d['min_agg'] !== null && $d['max_agg'] !== null)
+                ? $d['min_agg'] . ' - ' . $d['max_agg']
+                : '-';
+            fputcsv($out, [
+                'DIV ' . $d['code'],
+                $range,
+                $d['count'],
+                round(($d['count'] / $total) * 100, 1) . ' %',
+            ]);
+        }
+        fputcsv($out, ['TOTAL', '', $summary['total'], '100 %']);
+
+        fclose($out);
+        exit;
+    }
+
     public function printStudentResults(): void
     {
         $this->requirePermission('reports.academic.view');

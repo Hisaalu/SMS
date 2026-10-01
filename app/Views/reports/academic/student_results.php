@@ -56,7 +56,7 @@
     <div class="d-flex justify-content-between align-items-start flex-nowrap mb-3 gap-2">
         <div class="flex-grow-1">
             <h4 class="mb-0 fw-bold">Student Results</h4>
-            <small class="text-muted">Pick a year, term and class, then select a student to view results</small>
+            <small class="text-muted">View Student Results</small>
         </div>
     </div>
 

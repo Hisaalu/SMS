@@ -5,7 +5,7 @@
             <h4 class="mb-1 fw-bold text-dark">
                 <i class="fas fa-layer-group text-primary me-2"></i>Report Cards
             </h4>
-            <p class="text-muted small mb-0">Configure and generate students academic report cards.</p>
+            <p class="text-muted small mb-0">Configure and generate students Report Cards.</p>
         </div>
         <div>
         </div>

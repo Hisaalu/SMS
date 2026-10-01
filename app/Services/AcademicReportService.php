@@ -1145,6 +1145,474 @@ class AcademicReportService
         ];
     }
 
+    public function getTeacherAssessmentSummary(
+        int $schoolId,
+        int $academicYearId,
+        int $termId,
+        int $classId,
+        ?int $streamId = null
+    ): array {
+        $empty = [
+            'teachers'   => [],
+            'department' => [],
+            'students'   => 0,
+            'exams'      => [],
+        ];
+
+        if (!$academicYearId || !$termId || !$classId) {
+            return $empty;
+        }
+
+        $exams = $this->safeFetchAll(
+            "SELECT id, name FROM examinations
+             WHERE school_id = :s
+               AND academic_year_id = :y
+               AND academic_period_id = :t
+             ORDER BY id ASC",
+            ['s' => $schoolId, 'y' => $academicYearId, 't' => $termId]
+        );
+
+        if (empty($exams)) {
+            return $empty;
+        }
+
+        $examinationIds = array_column($exams, 'id');
+
+        $students = $this->safeFetchAll(
+            "SELECT DISTINCT s.id
+             FROM students s
+             INNER JOIN student_enrollments se ON se.student_id = s.id
+             WHERE se.status = 'active'
+               AND se.academic_year_id = :year_id
+               AND se.class_id = :class_id
+               AND s.school_id = :school_id" .
+               ($streamId ? " AND se.stream_id = :stream_id" : ""),
+            array_filter([
+                'year_id'   => $academicYearId,
+                'class_id'  => $classId,
+                'school_id' => $schoolId,
+                'stream_id' => $streamId,
+            ], fn($v) => $v !== null)
+        );
+
+        if (empty($students)) {
+            return $empty;
+        }
+
+        $assignments = $this->safeFetchAll(
+            "SELECT ta.staff_id,
+                    ta.subject_id,
+                    ta.class_id,
+                    MIN(ta.stream_id) AS stream_id,
+                    st.first_name,
+                    st.last_name,
+                    sub.name AS subject_name,
+                    sub.code AS subject_code,
+                    sub.grading_subject_type_id AS subject_type_id
+             FROM teacher_assignments ta
+             INNER JOIN staff st     ON ta.staff_id = st.id
+             INNER JOIN subjects sub ON ta.subject_id = sub.id
+             WHERE ta.school_id = :school_id
+               AND ta.class_id  = :class_id
+               AND ta.status    = 'active'
+             GROUP BY ta.staff_id, ta.subject_id,
+                      st.first_name, st.last_name,
+                      sub.name, sub.code, sub.grading_subject_type_id",
+            ['school_id' => $schoolId, 'class_id' => $classId]
+        );
+
+        if (empty($assignments)) {
+            return [
+                'teachers'   => [],
+                'department' => [],
+                'students'   => count($students),
+                'exams'      => array_map(fn($e) => ['id' => (int)$e['id'], 'name' => $e['name']], $exams),
+            ];
+        }
+
+        $subjectTeachers = [];
+        foreach ($assignments as $a) {
+            if ($streamId !== null) {
+                $assignStream = $a['stream_id'] !== null ? (int)$a['stream_id'] : null;
+                if ($assignStream !== null && $assignStream !== $streamId) {
+                    continue;
+                }
+            }
+
+            $subjId = (int)$a['subject_id'];
+            $typeId = !empty($a['subject_type_id']) ? (int)$a['subject_type_id'] : null;
+
+            $typeRow      = $this->subjectTypeRow($typeId);
+            $isGraded     = $typeRow ? (bool)$typeRow['is_graded'] : true; 
+            $isSubsidiary = $typeRow ? (bool)$typeRow['is_subsidiary'] : false;
+
+            if (!$isGraded && !$isSubsidiary) {
+                continue; 
+            }
+
+            if (!isset($subjectTeachers[$subjId])) {
+                $subjectTeachers[$subjId] = [
+                    'subject_id'   => $subjId,
+                    'subject_name' => $a['subject_name'],
+                    'subject_code' => $a['subject_code'],
+                    'teachers'     => [],
+                ];
+            }
+
+            $subjectTeachers[$subjId]['teachers'][] = [
+                'staff_id'   => (int)$a['staff_id'],
+                'first_name' => $a['first_name'],
+                'last_name'  => $a['last_name'],
+            ];
+        }
+
+        if (empty($subjectTeachers)) {
+            return [
+                'teachers'   => [],
+                'department' => [],
+                'students'   => count($students),
+                'exams'      => array_map(fn($e) => ['id' => (int)$e['id'], 'name' => $e['name']], $exams),
+            ];
+        }
+
+        $options = $this->analysisReportOptions();
+
+        $perSubjectScores = []; 
+        $perSubjectMaxes  = []; 
+
+        foreach ($students as $s) {
+            $data = $this->getMultiExamReportCard(
+                (int)$s['id'],
+                $academicYearId,
+                $termId,
+                $schoolId,
+                $examinationIds,
+                $options
+            );
+            if (empty($data)) {
+                continue;
+            }
+
+            foreach ($data['subject_averages'] as $sid => $sa) {
+                if (empty($sa['contributes'])) {
+                    continue; 
+                }
+
+                $perSubjectScores[$sid][] = (float)$sa['mark'];
+
+                $gs = $data['grading_system'] ?? null;
+                if ($gs && !empty($gs['rules'])) {
+                    $max = 0.0;
+                    foreach ($gs['rules'] as $rule) {
+                        $max = max($max, (float)$rule['max_mark']);
+                    }
+                    if ($max > 0) {
+                        $perSubjectMaxes[$sid] = $max;
+                    }
+                }
+            }
+        }
+
+        $subjectRows = [];
+        foreach ($subjectTeachers as $subjId => $meta) {
+            $scores = $perSubjectScores[$subjId] ?? [];
+            if (empty($scores)) {
+                continue; 
+            }
+
+            $count = count($scores);
+            $sum   = array_sum($scores);
+            $avg   = $count > 0 ? $sum / $count : 0;
+
+            $max = $perSubjectMaxes[$subjId] ?? 100.0;
+            $pct = $max > 0 ? ($avg / $max) * 100 : 0;
+
+            foreach ($meta['teachers'] as $teacher) {
+                $subjectRows[] = [
+                    'staff_id'     => $teacher['staff_id'],
+                    'teacher_name' => strtoupper(trim($teacher['last_name'] . ' ' . $teacher['first_name'])),
+                    'subject_id'   => $subjId,
+                    'subject_name' => $meta['subject_name'],
+                    'subject_code' => $meta['subject_code'],
+                    'percentage'   => round($pct, 0),
+                    'students'     => $count,
+                ];
+            }
+        }
+
+        if (empty($subjectRows)) {
+            return [
+                'teachers'   => [],
+                'department' => [],
+                'students'   => count($students),
+                'exams'      => array_map(fn($e) => ['id' => (int)$e['id'], 'name' => $e['name']], $exams),
+            ];
+        }
+
+        usort($subjectRows, function ($a, $b) {
+            if ($a['percentage'] !== $b['percentage']) return $b['percentage'] <=> $a['percentage'];
+            return strcmp($a['teacher_name'], $b['teacher_name']);
+        });
+
+        $rank = 0;
+        $last = null;
+        foreach ($subjectRows as $i => &$row) {
+            if ($last === null || $row['percentage'] !== $last) {
+                $rank = $i + 1;
+                $last = $row['percentage'];
+            }
+            $row['position'] = $rank;
+        }
+        unset($row);
+
+        $deptRows = $this->safeFetchAll(
+            "SELECT d.id AS department_id, d.name AS department_name
+             FROM departments d
+             WHERE d.school_id = :s
+             ORDER BY d.name ASC",
+            ['s' => $schoolId]
+        );
+
+        $staffDepartments = $this->safeFetchAll(
+            "SELECT s.id AS staff_id, s.department_id
+             FROM staff s
+             WHERE s.school_id = :s",
+            ['s' => $schoolId]
+        );
+
+        $staffToDept = [];
+        foreach ($staffDepartments as $sd) {
+            $staffToDept[(int)$sd['staff_id']] = $sd['department_id'] !== null ? (int)$sd['department_id'] : null;
+        }
+
+        $deptAgg = [];
+        foreach ($subjectRows as $row) {
+            $deptId = $staffToDept[$row['staff_id']] ?? null;
+            if ($deptId === null) continue;
+
+            if (!isset($deptAgg[$deptId])) {
+                $deptAgg[$deptId] = ['sum' => 0, 'count' => 0];
+            }
+            $deptAgg[$deptId]['sum']   += $row['percentage'];
+            $deptAgg[$deptId]['count'] += 1;
+        }
+
+        $departmental = [];
+        foreach ($deptRows as $d) {
+            $id = (int)$d['department_id'];
+            if (!isset($deptAgg[$id])) continue;
+            $departmental[] = [
+                'department_id'   => $id,
+                'department_name' => $d['department_name'],
+                'percentage'      => round($deptAgg[$id]['sum'] / max(1, $deptAgg[$id]['count'])),
+            ];
+        }
+
+        usort($departmental, function ($a, $b) {
+            if ($a['percentage'] !== $b['percentage']) return $b['percentage'] <=> $a['percentage'];
+            return strcmp($a['department_name'], $b['department_name']);
+        });
+
+        $dRank = 0;
+        $dLast = null;
+        foreach ($departmental as $i => &$row) {
+            if ($dLast === null || $row['percentage'] !== $dLast) {
+                $dRank = $i + 1;
+                $dLast = $row['percentage'];
+            }
+            $row['position'] = $dRank;
+        }
+        unset($row);
+
+        return [
+            'teachers'   => $subjectRows,
+            'department' => $departmental,
+            'students'   => count($students),
+            'exams'      => array_map(fn($e) => ['id' => (int)$e['id'], 'name' => $e['name']], $exams),
+        ];
+    }
+
+    public function getDivisionAnalysisSummary(
+        int $schoolId,
+        int $academicYearId,
+        int $termId,
+        int $classId,
+        ?int $streamId = null,
+        ?int $examinationId = null
+    ): array {
+        $empty = [
+            'divisions'   => [],
+            'students'    => [],
+            'total'       => 0,
+            'exams'       => [],
+            'class_size'  => 0,
+        ];
+
+        if (!$academicYearId || !$termId || !$classId) {
+            return $empty;
+        }
+
+        if ($examinationId) {
+            $exams = $this->safeFetchAll(
+                "SELECT id, name FROM examinations
+                 WHERE id = :id AND school_id = :s",
+                ['id' => $examinationId, 's' => $schoolId]
+            );
+        } else {
+            $exams = $this->safeFetchAll(
+                "SELECT id, name FROM examinations
+                 WHERE school_id = :s
+                   AND academic_year_id = :y
+                   AND academic_period_id = :t
+                 ORDER BY id ASC",
+                ['s' => $schoolId, 'y' => $academicYearId, 't' => $termId]
+            );
+        }
+
+        if (empty($exams)) {
+            return $empty;
+        }
+
+        $examinationIds = array_column($exams, 'id');
+
+        $students = $this->safeFetchAll(
+            "SELECT DISTINCT s.id, s.admission_number, s.first_name, s.last_name, s.gender
+             FROM students s
+             INNER JOIN student_enrollments se ON se.student_id = s.id
+             WHERE se.status = 'active'
+               AND se.academic_year_id = :year_id
+               AND se.class_id = :class_id
+               AND s.school_id = :school_id" .
+               ($streamId ? " AND se.stream_id = :stream_id" : ""),
+            array_filter([
+                'year_id'   => $academicYearId,
+                'class_id'  => $classId,
+                'school_id' => $schoolId,
+                'stream_id' => $streamId,
+            ], fn($v) => $v !== null)
+        );
+
+        if (empty($students)) {
+            return $empty;
+        }
+
+        $options = $this->analysisReportOptions();
+
+        $divisionSchemeService = new DivisionSchemeService();
+        $divisionService       = new DivisionService();
+
+        $divisionRanges = [];
+        $activeSchemeId = null;
+        try {
+            $system = $this->gradingService->getSystemForClass($classId, $schoolId, $academicYearId);
+            $systemId = !empty($system['id']) ? (int)$system['id'] : null;
+
+            if ($systemId) {
+                $schemes = $divisionSchemeService->getForSystem($systemId, $schoolId, true);
+                if (!empty($schemes)) {
+                    $activeSchemeId = (int)$schemes[0]['id'];
+                }
+            }
+            if ($activeSchemeId === null) {
+                $allSchemes = $divisionSchemeService->getAll($schoolId, true);
+                if (!empty($allSchemes)) {
+                    $activeSchemeId = (int)$allSchemes[0]['id'];
+                }
+            }
+            if ($activeSchemeId !== null) {
+                $divisionRanges = $divisionService->getForScheme($activeSchemeId, true);
+            }
+        } catch (\Throwable $e) {
+            $divisionRanges = [];
+        }
+
+        $perDivision = [];
+        $studentsList = [];
+
+        foreach ($students as $s) {
+            $sid  = (int)$s['id'];
+            $data = $this->getMultiExamReportCard(
+                $sid, $academicYearId, $termId, $schoolId, $examinationIds, $options
+            );
+            if (empty($data)) {
+                continue;
+            }
+
+            $code = $data['division_code'] ?? null;
+            $agg  = (int)round((float)($data['total_aggregate'] ?? 0));
+
+            $key = $code !== null && $code !== '' ? strtoupper((string)$code) : 'U';
+
+            if (!isset($perDivision[$key])) {
+                $perDivision[$key] = [
+                    'code'       => $key,
+                    'count'      => 0,
+                    'students'   => [],
+                    'min_agg'    => null,
+                    'max_agg'    => null,
+                ];
+            }
+
+            $perDivision[$key]['count']++;
+            $perDivision[$key]['students'][] = [
+                'id'        => $sid,
+                'adm'       => $s['admission_number'] ?? '',
+                'name'      => strtoupper(trim(($s['last_name'] ?? '') . ' ' . ($s['first_name'] ?? ''))),
+                'aggregate' => $agg,
+            ];
+
+            $studentsList[] = [
+                'id'        => $sid,
+                'adm'       => $s['admission_number'] ?? '',
+                'name'      => strtoupper(trim(($s['last_name'] ?? '') . ' ' . ($s['first_name'] ?? ''))),
+                'division'  => $key,
+                'aggregate' => $agg,
+            ];
+        }
+
+        foreach ($divisionRanges as $d) {
+            $code = strtoupper(preg_replace('/^D/i', '', (string)$d['code']));
+            if (isset($perDivision[$code])) {
+                $perDivision[$code]['min_agg'] = (int)$d['min_aggregate'];
+                $perDivision[$code]['max_agg'] = (int)$d['max_aggregate'];
+            }
+        }
+
+        foreach ($divisionRanges as $d) {
+            $code = strtoupper(preg_replace('/^D/i', '', (string)$d['code']));
+            if (!isset($perDivision[$code])) {
+                $perDivision[$code] = [
+                    'code'     => $code,
+                    'count'    => 0,
+                    'students' => [],
+                    'min_agg'  => (int)$d['min_aggregate'],
+                    'max_agg'  => (int)$d['max_aggregate'],
+                ];
+            }
+        }
+
+        $divisions = array_values($perDivision);
+        usort($divisions, function ($a, $b) {
+            $aMin = $a['min_agg'] ?? PHP_INT_MAX;
+            $bMin = $b['min_agg'] ?? PHP_INT_MAX;
+            if ($aMin !== $bMin) return $aMin <=> $bMin;
+            return strcmp($a['code'], $b['code']);
+        });
+
+        usort($studentsList, function ($a, $b) {
+            if ($a['aggregate'] !== $b['aggregate']) return $a['aggregate'] <=> $b['aggregate'];
+            return strcmp($a['name'], $b['name']);
+        });
+
+        return [
+            'divisions'  => $divisions,
+            'students'   => $studentsList,
+            'total'      => count($studentsList),
+            'exams'      => array_map(fn($e) => ['id' => (int)$e['id'], 'name' => $e['name']], $exams),
+            'class_size' => count($students),
+        ];
+    }
+
     public function studentResults(): void
     {
         $this->requirePermission('reports.academic.view');
