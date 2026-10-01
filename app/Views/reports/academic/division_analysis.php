@@ -206,7 +206,7 @@
                             <?php foreach ($summary['divisions'] as $d): ?>
                                 <?php $pct = $summary['total'] > 0 ? round(($d['count'] / $summary['total']) * 100, 1) : 0; ?>
                                 <tr>
-                                    <td class="da-bold">DIV <?= htmlspecialchars($d['code']) ?></td>
+                                    <td class="da-bold"> <?= htmlspecialchars($d['code']) ?></td>
                                     <td>
                                         <?= $d['min_agg'] !== null && $d['max_agg'] !== null
                                             ? (int)$d['min_agg'] . ' - ' . (int)$d['max_agg']

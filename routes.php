@@ -271,6 +271,16 @@ $router->group(['middleware' => ['auth']], function ($router) {
 
     $router->get('/api/marks-entry/lookup', ['MarkController', 'entryLookup']);
     $router->get('/api/results/lookup', ['ResultController', 'lookup']);
+
+    $router->get('/reports/attendance/registers',        ['AttendanceReportController', 'registers']);
+    $router->get('/reports/attendance/registers/print',  ['AttendanceReportController', 'printRegisters']);
+    $router->get('/reports/attendance/registers/export', ['AttendanceReportController', 'exportRegisters']);
+    $router->get('/reports/attendance',                  ['AttendanceReportController', 'reports']);
+    $router->get('/reports/attendance/print',            ['AttendanceReportController', 'printReports']);
+    $router->get('/reports/attendance/export',           ['AttendanceReportController', 'exportReports']);
+    $router->get('/reports/attendance/student-monitor',        ['AttendanceReportController', 'studentMonitor']);
+    $router->get('/reports/attendance/student-monitor/view',   ['AttendanceReportController', 'viewStudentMonitor']);
+    $router->get('/reports/attendance/student-monitor/print',  ['AttendanceReportController', 'printStudentMonitor']);
 });
 
 $router->group(['prefix' => '/api', 'middleware' => ['auth']], function ($router) {
