@@ -11,19 +11,17 @@
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 class="mb-0 fw-bold">Admit New Student</h4>
-            <small class="text-muted">Register a new student into the system</small>
+            <h4 class="mb-0 fw-bold">Admit Student</h4>
+            <small class="text-muted">Register a new Student</small>
         </div>
         <a href="<?= BASE_URL ?>/students" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-arrow-left me-1"></i> Back to List
+            <i class="fas fa-arrow-left me-1"></i> Back
         </a>
     </div>
 
     <form action="<?= BASE_URL ?>/students/store" method="POST" enctype="multipart/form-data">
         <div class="row g-3">
-            <!-- LEFT COLUMN -->
             <div class="col-lg-8">
-                <!-- Personal Details -->
                 <div class="card border-0 shadow-sm mb-3">
                     <div class="card-header bg-white pt-3 pb-0 border-0">
                         <h6 class="mb-0 fw-bold text-primary">
@@ -88,7 +86,6 @@
                     </div>
                 </div>
 
-                <!-- Academic Placement -->
                 <div class="card border-0 shadow-sm mb-3">
                     <div class="card-header bg-white pt-3 pb-0 border-0">
                         <h6 class="mb-0 fw-bold text-primary">
@@ -146,7 +143,6 @@
                     </div>
                 </div>
 
-                <!-- Guardian Information -->
                 <div class="card border-0 shadow-sm mb-3">
                     <div class="card-header bg-white pt-3 pb-0 border-0">
                         <h6 class="mb-0 fw-bold text-primary">
@@ -186,7 +182,6 @@
                 </div>
             </div>
 
-            <!-- RIGHT COLUMN: Photo + Actions -->
             <div class="col-lg-4">
                 <div class="card border-0 shadow-sm mb-3">
                     <div class="card-header bg-white pt-3 pb-0 border-0">
@@ -195,14 +190,12 @@
                         </h6>
                     </div>
                     <div class="card-body text-center">
-                        <!-- Initials circle (always shown until a photo is picked) -->
                         <div id="photoPlaceholder"
                              class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center shadow-sm mb-3"
                              style="width:140px; height:140px; font-size:52px; font-weight:600;">
                             <i class="fas fa-user"></i>
                         </div>
 
-                        <!-- Hidden img that replaces the placeholder when a file is picked -->
                         <img id="photoPreview"
                              class="rounded-circle border shadow-sm mb-3 d-none"
                              style="width:140px; height:140px; object-fit:cover;"
@@ -218,7 +211,7 @@
                 <div class="card border-0 shadow-sm">
                     <div class="card-body d-grid gap-2">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-1"></i> Save & Admit Student
+                            <i class="fas fa-save me-1"></i> Save & Admit
                         </button>
                         <a href="<?= BASE_URL ?>/students" class="btn btn-outline-secondary">Cancel</a>
                     </div>
