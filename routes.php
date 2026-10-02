@@ -281,6 +281,14 @@ $router->group(['middleware' => ['auth']], function ($router) {
     $router->get('/reports/attendance/student-monitor',        ['AttendanceReportController', 'studentMonitor']);
     $router->get('/reports/attendance/student-monitor/view',   ['AttendanceReportController', 'viewStudentMonitor']);
     $router->get('/reports/attendance/student-monitor/print',  ['AttendanceReportController', 'printStudentMonitor']);
+
+    $router->get('/communication',                  ['CommunicationController', 'index']);
+    $router->get('/communication/compose',          ['CommunicationController', 'compose']);
+    $router->post('/communication/preview',         ['CommunicationController', 'preview']);
+    $router->post('/communication/send',            ['CommunicationController', 'send']);
+
+    $router->get('/staff/communication',            ['CommunicationController', 'staffIndex']);
+    $router->get('/staff/communication/compose',    ['CommunicationController', 'staffCompose']);
 });
 
 $router->group(['prefix' => '/api', 'middleware' => ['auth']], function ($router) {
