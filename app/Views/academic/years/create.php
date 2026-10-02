@@ -45,7 +45,7 @@
             </div>
 
             <button type="submit" class="btn btn-primary mt-3">
-                <i class="fas fa-save me-1"></i> Create Academic Year
+                <i class="fas fa-save me-1"></i> Create
             </button>
         </form>
     </div>

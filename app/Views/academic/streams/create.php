@@ -50,7 +50,7 @@
 
                 <div class="col-12 d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Save Stream
+                        <i class="fas fa-save me-1"></i> Save 
                     </button>
                     <a href="<?= BASE_URL ?>/academic/streams" class="btn btn-secondary">Cancel</a>
                 </div>

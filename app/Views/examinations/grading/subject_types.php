@@ -181,7 +181,7 @@
                         </label>
 
                         <button type="submit" class="btn btn-primary btn-sm w-100 mt-2">
-                            <i class="fas fa-save me-1"></i> Add Type
+                            <i class="fas fa-save me-1"></i> Add
                         </button>
                     </form>
                 </div>

@@ -75,7 +75,30 @@
     </table>
 <?php endif; ?>
 
-<div class="d-flex justify-content-between align-items-center mt-4 pt-2 border-top small text-muted" style="font-size: 0.72rem;">
-    <span>Printed by: <strong><?= htmlspecialchars($printedBy ?? 'System') ?></strong></span>
-    <span>Generated on <?= date('d M Y, H:i') ?></span>
+<div class="mt-4 pt-3 border-top small">
+    <div class="d-flex flex-wrap align-items-end gap-3 mb-2" style="font-size: 0.85rem;">
+        <span>
+            Approved By: <span style="display:inline-block; min-width: 180px; border-bottom: 1px solid #000; height: 14px;">&nbsp;</span>
+        </span>
+        <span>
+            Signature <span style="display:inline-block; min-width: 180px; border-bottom: 1px solid #000; height: 14px;">&nbsp;</span>
+        </span>
+        <span>
+            Date:
+            <span style="display:inline-block; min-width: 22px; border-bottom: 1px solid #000; height: 14px;">&nbsp;</span>
+            /
+            <span style="display:inline-block; min-width: 22px; border-bottom: 1px solid #000; height: 14px;">&nbsp;</span>
+            /
+            <span style="display:inline-block; min-width: 30px; border-bottom: 1px solid #000; height: 14px;">&nbsp;</span>
+        </span>
+    </div>
+
+    <div class="d-flex flex-wrap gap-3" style="font-size: 0.8rem;">
+        <span>
+            Printed By : <strong><?= htmlspecialchars($printedBy ?? 'System', ENT_QUOTES, 'UTF-8') ?></strong>
+        </span>
+        <span>
+            Date : <?= date('Y/m/d, H:i:s') ?>
+        </span>
+    </div>
 </div>

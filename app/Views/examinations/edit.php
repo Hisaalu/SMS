@@ -16,7 +16,7 @@
 
     <div class="card">
         <div class="card-body">
-            <form method="POST" action="<?= BASE_URL ?>/examinations/<?= $examination['id'] ?>/update">
+            <form method="POST" action="<?= BASE_URL ?>/examinations/<?= (int)$examination['id'] ?>/update" id="examEditForm">
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Examination Name <span class="text-danger">*</span></label>
@@ -30,48 +30,56 @@
                         <label class="form-label">Description</label>
                         <textarea class="form-control" name="description" rows="2"><?= htmlspecialchars($examination['description'] ?? '') ?></textarea>
                     </div>
+
                     <div class="col-md-4">
                         <label class="form-label">Academic Year <span class="text-danger">*</span></label>
-                        <select class="form-select" name="academic_year_id" required>
+                        <select class="form-select" name="academic_year_id" id="exam_year" required>
                             <option value="">Select Year</option>
                             <?php foreach ($academicYears as $year): ?>
-                                <option value="<?= $year['id'] ?>" <?= $year['id'] == $examination['academic_year_id'] ? 'selected' : '' ?>>
+                                <option value="<?= (int)$year['id'] ?>"
+                                        <?= $year['id'] == $examination['academic_year_id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($year['name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
+
                     <div class="col-md-4">
                         <label class="form-label">Term <span class="text-danger">*</span></label>
-                        <select class="form-select" name="academic_period_id" required>
+                        <select class="form-select" name="academic_period_id" id="exam_term" required>
                             <option value="">Select Term</option>
                             <?php foreach ($terms as $term): ?>
-                                <option value="<?= $term['id'] ?>" <?= $term['id'] == $examination['academic_period_id'] ? 'selected' : '' ?>>
+                                <option value="<?= (int)$term['id'] ?>"
+                                        data-year="<?= (int)($term['academic_year_id'] ?? 0) ?>"
+                                        <?= $term['id'] == $examination['academic_period_id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($term['name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
+
                     <div class="col-md-4">
                         <label class="form-label">Assessment Type <span class="text-danger">*</span></label>
                         <select class="form-select" name="assessment_type_id" required>
                             <option value="">Select Type</option>
                             <?php foreach ($assessmentTypes as $type): ?>
-                                <option value="<?= $type['id'] ?>" <?= $type['id'] == $examination['assessment_type_id'] ? 'selected' : '' ?>>
+                                <option value="<?= (int)$type['id'] ?>" <?= $type['id'] == $examination['assessment_type_id'] ? 'selected' : '' ?>>
                                     <?= htmlspecialchars($type['name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
+
                     <div class="col-md-4">
                         <label class="form-label">Status</label>
                         <select class="form-select" name="status">
-                            <option value="draft" <?= $examination['status'] === 'draft' ? 'selected' : '' ?>>Draft</option>
+                            <option value="draft"     <?= $examination['status'] === 'draft'     ? 'selected' : '' ?>>Draft</option>
                             <option value="published" <?= $examination['status'] === 'published' ? 'selected' : '' ?>>Published</option>
                             <option value="completed" <?= $examination['status'] === 'completed' ? 'selected' : '' ?>>Completed</option>
-                            <option value="archived" <?= $examination['status'] === 'archived' ? 'selected' : '' ?>>Archived</option>
+                            <option value="archived"  <?= $examination['status'] === 'archived'  ? 'selected' : '' ?>>Archived</option>
                         </select>
                     </div>
+
                     <div class="col-md-4">
                         <label class="form-label">Start Date</label>
                         <input type="date" class="form-control" name="start_date" value="<?= htmlspecialchars($examination['start_date'] ?? '') ?>">
@@ -84,7 +92,7 @@
 
                 <div class="mt-3">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Update Exam
+                        <i class="fas fa-save me-1"></i> Update
                     </button>
                     <a href="<?= BASE_URL ?>/examinations" class="btn btn-secondary">Cancel</a>
                 </div>
@@ -92,3 +100,43 @@
         </div>
     </div>
 </div>
+
+<script>
+(function () {
+    const yearSel = document.getElementById('exam_year');
+    const termSel = document.getElementById('exam_term');
+    if (!yearSel || !termSel) return;
+
+    const initialTerm = termSel.value;
+    const initialYear = yearSel.value;
+
+    const allTerms = Array.from(termSel.querySelectorAll('option[data-year]'));
+
+    function rebuildTerms(keepSelection) {
+        const y = yearSel.value;
+        const keep = keepSelection ? termSel.value : '';
+
+        termSel.innerHTML = '<option value="">Select Term</option>';
+
+        if (!y) return;
+
+        allTerms.forEach(function (opt) {
+            if (opt.getAttribute('data-year') === y) {
+                const c = opt.cloneNode(true);
+                if (keep && c.value === keep) c.selected = true;
+                termSel.appendChild(c);
+            }
+        });
+    }
+
+    yearSel.addEventListener('change', function () {
+        termSel.value = '';
+        rebuildTerms(false);
+    });
+
+    if (initialYear) {
+        rebuildTerms(true);
+        if (initialTerm) termSel.value = initialTerm;
+    }
+})();
+</script>

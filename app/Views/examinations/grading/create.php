@@ -90,7 +90,7 @@
 
                 <div class="mt-4 d-flex flex-wrap gap-2">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Create | Add Rules
+                        <i class="fas fa-save me-1"></i> Create | Add 
                     </button>
                     <a href="<?= BASE_URL ?>/grading/systems" class="btn btn-secondary">Cancel</a>
                 </div>

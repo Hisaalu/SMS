@@ -110,7 +110,7 @@
 
                 <div class="col-12 d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Save Term
+                        <i class="fas fa-save me-1"></i> Save 
                     </button>
                     <a href="<?= BASE_URL ?>/academic/terms<?= !empty($selectedYearId) ? '?year=' . (int)$selectedYearId : '' ?>"
                        class="btn btn-secondary">

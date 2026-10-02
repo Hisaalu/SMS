@@ -46,7 +46,7 @@
 
                 <div class="mt-3">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Create Asse.. Type
+                        <i class="fas fa-save me-1"></i> Create
                     </button>
                     <a href="<?= BASE_URL ?>/assessment/types" class="btn btn-secondary">Cancel</a>
                 </div>
