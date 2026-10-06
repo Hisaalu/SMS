@@ -83,9 +83,16 @@
             --input-border: #D0D7DE;
             --success-bg:   #ECFDF5;
             --success-bd:   #A7F3D0;
+            --success-tx:   #065F46;
             --error-bg:     #FEF2F2;
             --error-bd:     #FECACA;
             --error-tx:     #991B1B;
+            --warning-bg:   #FFFBEB;
+            --warning-bd:   #FDE68A;
+            --warning-tx:   #92400E;
+            --info-bg:      #EFF6FF;
+            --info-bd:      #BFDBFE;
+            --info-tx:      #1E40AF;
             --page-cl:      #f0f3f7;
         }
 
@@ -314,6 +321,9 @@
         }
         .alert i { margin-top: 0.15rem; flex-shrink: 0; }
         .alert-danger  { background: var(--error-bg);   border-color: var(--error-bd);   color: var(--error-tx); }
+        .alert-success { background: var(--success-bg); border-color: var(--success-bd); color: var(--success-tx); }
+        .alert-warning { background: var(--warning-bg); border-color: var(--warning-bd); color: var(--warning-tx); }
+        .alert-info    { background: var(--info-bg);    border-color: var(--info-bd);    color: var(--info-tx); }
 
         .page-footer {
             text-align: center;
@@ -352,6 +362,27 @@
                 <div class="alert alert-danger" role="alert" aria-live="assertive">
                     <i class="fas fa-exclamation-circle"></i>
                     <span><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></span>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($warning)): ?>
+                <div class="alert alert-warning" role="alert" aria-live="polite">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span><?= htmlspecialchars($warning, ENT_QUOTES, 'UTF-8') ?></span>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($success)): ?>
+                <div class="alert alert-success" role="alert" aria-live="polite">
+                    <i class="fas fa-check-circle"></i>
+                    <span><?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?></span>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($info)): ?>
+                <div class="alert alert-info" role="alert" aria-live="polite">
+                    <i class="fas fa-info-circle"></i>
+                    <span><?= htmlspecialchars($info, ENT_QUOTES, 'UTF-8') ?></span>
                 </div>
             <?php endif; ?>
 

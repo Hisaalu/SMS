@@ -18,14 +18,21 @@ class AuthController extends Controller
 
         $email = $_SESSION['old_email'] ?? '';
         unset($_SESSION['old_email']);
-
         $error   = null;
         $success = null;
+        $warning = null;
+        $info    = null;
 
         foreach (Toast::pull() as $t) {
-            $type = $t['type'] ?? 'info';
-            if ($type === 'error'   && $error   === null) $error   = $t['message'];
-            if ($type === 'success' && $success === null) $success = $t['message'];
+            $type = $t['type']    ?? 'info';
+            $msg  = $t['message'] ?? '';
+            if ($msg === '') {
+                continue;
+            }
+            if ($type === 'error'   && $error   === null) $error   = $msg;
+            elseif ($type === 'success' && $success === null) $success = $msg;
+            elseif ($type === 'warning' && $warning === null) $warning = $msg;
+            elseif ($type === 'info'    && $info    === null) $info    = $msg;
         }
 
         if ($reason = \NexaT\Core\Auth::pullLogoutReason()) {
@@ -38,6 +45,8 @@ class AuthController extends Controller
             'email'   => $email,
             'error'   => $error,
             'success' => $success,
+            'warning' => $warning,
+            'info'    => $info,
         ]);
     }
 
@@ -90,7 +99,6 @@ class AuthController extends Controller
         $_SESSION['school_name'] = $this->getSchoolName();
 
         unset($_SESSION['old_email']);
-
         $_SESSION['_just_logged_in'] = true;
         $this->redirect('dashboard');
     }
