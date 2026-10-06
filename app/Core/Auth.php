@@ -21,6 +21,14 @@ class Auth
         }
 
         $this->db = Database::getInstance();
+
+        if ($this->hasTimedOut()) {
+            $this->forceLogout('timeout');
+            return;
+        }
+
+        $this->touchActivity();
+
         $this->loadUser();
     }
 
@@ -63,12 +71,12 @@ class Auth
         $user = $this->userModel::findByEmailOrUsernameGlobal($identifier);
 
         if (!$user) {
-            $this->lastError = 'Incorrect email/username or password!';
+            $this->lastError = 'Incorrect email/username or password.';
             return false;
         }
 
         if (!password_verify($password, (string)$user->password)) {
-            $this->lastError = 'Incorrect email/username or password!';
+            $this->lastError = 'Incorrect email/username or password.';
             return false;
         }
 
@@ -111,6 +119,9 @@ class Auth
 
         $_SESSION[SESSION_USER_KEY] = $user->id;
 
+        $_SESSION['_login_time']    = time();
+        $_SESSION['_last_activity'] = time();
+
         if (isset($user->last_login_at) && method_exists($user, 'save')) {
             $user->last_login_at = date('Y-m-d H:i:s');
             $user->save();
@@ -151,5 +162,82 @@ class Auth
             $this->loadUser();
         }
         return $this;
+    }
+
+    private function hasTimedOut(): bool
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return false;
+        }
+
+        $sessionKey = defined('SESSION_USER_KEY') ? \SESSION_USER_KEY : 'user_id';
+
+        if (empty($_SESSION[$sessionKey]) && empty($_SESSION['user_id'])) {
+            return false;
+        }
+
+        $idleWindow     = defined('SESSION_IDLE_TIMEOUT')     ? SESSION_IDLE_TIMEOUT     : 900;
+        $absoluteWindow = defined('SESSION_ABSOLUTE_TIMEOUT') ? SESSION_ABSOLUTE_TIMEOUT : 0;
+
+        $now          = time();
+        $lastActivity = $this->session ? $this->session->lastActivity() : (int)($_SESSION['_last_activity'] ?? 0);
+        $loginTime    = $this->session ? $this->session->loginTime()    : (int)($_SESSION['_login_time']    ?? 0);
+
+        if ($lastActivity > 0 && ($now - $lastActivity) > $idleWindow) {
+            return true;
+        }
+
+        if ($absoluteWindow > 0 && $loginTime > 0 && ($now - $loginTime) > $absoluteWindow) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private function touchActivity(): void
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return;
+        }
+
+        if ($this->session) {
+            $this->session->touchActivity();
+        } else {
+            $_SESSION['_last_activity'] = time();
+        }
+    }
+
+    private function forceLogout(string $reason = 'timeout'): void
+    {
+        $_SESSION['_logout_reason'] = $reason;
+
+        $sessionKey = defined('SESSION_USER_KEY') ? \SESSION_USER_KEY : 'user_id';
+        unset(
+            $_SESSION[$sessionKey],
+            $_SESSION['user_id'],
+            $_SESSION['username'],
+            $_SESSION['school_id'],
+            $_SESSION['school_name'],
+            $_SESSION['_last_activity'],
+            $_SESSION['_login_time']
+        );
+
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+
+        $this->user = null;
+    }
+
+    public static function pullLogoutReason(): ?string
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return null;
+        }
+
+        $reason = $_SESSION['_logout_reason'] ?? null;
+        unset($_SESSION['_logout_reason']);
+
+        return $reason;
     }
 }

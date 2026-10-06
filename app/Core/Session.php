@@ -10,6 +10,12 @@ class Session
 
     public function __construct()
     {
+        if (defined('SESSION_IDLE_TIMEOUT')) {
+            $lifetime = SESSION_IDLE_TIMEOUT + 300;
+            @ini_set('session.gc_maxlifetime', (string)$lifetime);
+            @ini_set('session.cookie_lifetime', (string)SESSION_IDLE_TIMEOUT);
+        }
+
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
@@ -79,5 +85,42 @@ class Session
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
         }
+    }
+
+    public function touchActivity(): void
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return;
+        }
+
+        $_SESSION['_last_activity'] = time();
+
+        if (ini_get('session.use_cookies')) {
+            $p = session_get_cookie_params();
+            $lifetime = defined('SESSION_IDLE_TIMEOUT') ? SESSION_IDLE_TIMEOUT : 900;
+
+            setcookie(
+                session_name(),
+                session_id(),
+                [
+                    'expires'  => time() + $lifetime,
+                    'path'     => $p['path'],
+                    'domain'   => $p['domain'],
+                    'secure'   => $p['secure'],
+                    'httponly' => $p['httponly'],
+                    'samesite' => $p['samesite'] ?? 'Lax',
+                ]
+            );
+        }
+    }
+
+    public function lastActivity(): int
+    {
+        return (int)($_SESSION['_last_activity'] ?? 0);
+    }
+
+    public function loginTime(): int
+    {
+        return (int)($_SESSION['_login_time'] ?? 0);
     }
 }

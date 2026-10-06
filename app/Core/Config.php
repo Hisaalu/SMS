@@ -55,5 +55,27 @@ class Config
 
         self::$config = $config;
         self::$loaded = true;
+
+        self::defineSessionTimeouts($config);
+    }
+
+    private static function defineSessionTimeouts(array $config): void
+    {
+        $idle = (int)($config['app']['session']['idle_timeout'] ?? 0);
+        if ($idle <= 0) {
+            $idle = 15 * 60;
+        }
+
+        $absolute = (int)($config['app']['session']['absolute_timeout'] ?? 0);
+        if ($absolute <= 0) {
+            $absolute = 8 * 60 * 60;
+        }
+
+        if (!defined('SESSION_IDLE_TIMEOUT')) {
+            define('SESSION_IDLE_TIMEOUT', $idle);
+        }
+        if (!defined('SESSION_ABSOLUTE_TIMEOUT')) {
+            define('SESSION_ABSOLUTE_TIMEOUT', $absolute);
+        }
     }
 }

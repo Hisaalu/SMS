@@ -28,6 +28,12 @@ class AuthController extends Controller
             if ($type === 'success' && $success === null) $success = $t['message'];
         }
 
+        if ($reason = \NexaT\Core\Auth::pullLogoutReason()) {
+            if ($reason === 'timeout') {
+                $error = $error ?: 'Your session expired due to inactivity. Please sign in again.';
+            }
+        }
+
         echo $this->view->render('auth/login', [
             'email'   => $email,
             'error'   => $error,
