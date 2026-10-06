@@ -951,15 +951,11 @@ $pendingToasts = Toast::pull();
 <body>
 
     <?php
-        // $pendingToasts was already set earlier in this file:
-        //     $pendingToasts = Toast::pull();
-        // Pass it to the partial. The partial MUST NOT pull again.
         include __DIR__ . '/../partials/toasts.php';
     ?>
 
     <nav class="navbar navbar-custom" id="mainNavbar">
         <div class="container-fluid">
-
             <div class="navbar-left">
                 <button class="nav-toggle-btn d-lg-none"
                         type="button"
@@ -971,18 +967,23 @@ $pendingToasts = Toast::pull();
                     <i class="fas fa-bars" aria-hidden="true"></i>
                 </button>
 
-                <a class="navbar-brand" href="<?= BASE_URL . '/dashboard' ?>">
+                <div class="navbar-brand">
                     <?php if ($logoUrl): ?>
-                        <img class="brand-logo" src="<?= $logoUrl ?>" alt="<?= $schoolFull ?>">
+                        <a href="<?= BASE_URL ?>/dashboard" aria-label="Go to Dashboard">
+                            <img class="brand-logo"
+                                src="<?= $logoUrl ?>"
+                                alt="<?= $schoolFull ?>">
+                        </a>
                     <?php else: ?>
-                        <i class="fas fa-graduation-cap brand-icon" aria-hidden="true"></i>
+                        <a href="<?= BASE_URL ?>/dashboard" aria-label="Go to Dashboard">
+                            <i class="fas fa-graduation-cap brand-icon" aria-hidden="true"></i>
+                        </a>
                     <?php endif; ?>
                     <span class="brand-text">
                         <span><?= $schoolFull ?></span>
                     </span>
-                </a>
+                </div>
             </div>
-
             <div class="navbar-actions">
                 <button type="button"
                         class="theme-toggle"
