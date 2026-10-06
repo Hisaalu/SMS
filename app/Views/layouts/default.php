@@ -45,9 +45,73 @@ $userName      = htmlspecialchars($user->first_name ?? 'User', ENT_QUOTES, 'UTF-
 $initial     = strtoupper(substr($user->first_name ?? '', 0, 1));
 $userInitial = $initial !== '' ? $initial : 'U';
 
-$pageTitle = isset($pageTitle) && $pageTitle !== ''
-    ? htmlspecialchars((string) $pageTitle, ENT_QUOTES, 'UTF-8')
-    : 'Dashboard';
+$resolveCurrentPageName = static function (): string {
+    if (isset($pageTitle) && trim((string)$pageTitle) !== '') {
+        return (string)$pageTitle;
+    }
+
+    $menuFile = __DIR__ . '/_sidebar_menu.php';
+    if (is_file($menuFile)) {
+        $menuSections = (static function () use ($menuFile) {
+            ob_start();
+            include $menuFile;
+            ob_end_clean();
+            return $menuSections ?? [];
+        })();
+
+        $currentPath = rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '', '/');
+        $basePath    = rtrim(parse_url(BASE_URL, PHP_URL_PATH) ?? '', '/');
+
+        $match = static function (array $sections, string $currentPath, string $basePath): ?string {
+            foreach ($sections as $section) {
+                foreach ($section['items'] ?? [] as $item) {
+                    $type = $item['type'] ?? 'single';
+
+                    if ($type === 'single' && !empty($item['url'])) {
+                        $itemPath = rtrim(parse_url($item['url'], PHP_URL_PATH) ?? $item['url'], '/');
+                        $full     = rtrim($basePath . $itemPath, '/');
+                        if ($currentPath === $full) {
+                            return (string)$item['title'];
+                        }
+                    }
+
+                    foreach ($item['subitems'] ?? [] as $sub) {
+                        if (empty($sub['url'])) {
+                            continue;
+                        }
+                        $itemPath = rtrim(parse_url($sub['url'], PHP_URL_PATH) ?? $sub['url'], '/');
+                        $full     = rtrim($basePath . $itemPath, '/');
+                        if ($currentPath === $full) {
+                            return (string)$sub['title'];
+                        }
+                    }
+                }
+            }
+            return null;
+        };
+
+        $found = $match($menuSections, $currentPath, $basePath);
+        if ($found !== null) {
+            return $found;
+        }
+    }
+
+    $path = rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '', '/');
+    if (str_ends_with($path, '/dashboard') || $path === '') {
+        return 'Dashboard';
+    }
+
+    return 'Page';
+};
+
+$resolvedPageName = $resolveCurrentPageName();
+
+$tabPageName = htmlspecialchars($resolvedPageName, ENT_QUOTES, 'UTF-8');
+
+if (!isset($pageTitle) || $pageTitle === '') {
+    $pageTitle = 'Dashboard';
+}
+$pageTitle = htmlspecialchars((string)$pageTitle, ENT_QUOTES, 'UTF-8');
 
 $csrfToken = '';
 if (function_exists('csrf_token')) {
@@ -72,7 +136,7 @@ $pendingToasts = Toast::pull();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?= $csrfToken ?>">
-    <title><?= $schoolFull ?> - <?= $pageTitle ?></title>
+    <title><?= $schoolFull ?> / <?= $tabPageName ?></title>
 
     <script>
         (function () {
