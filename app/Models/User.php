@@ -270,4 +270,20 @@ class User extends Model
         $this->cachedRoles = null;
         $this->cachedPermissions = null;
     }
+
+    public static function findByEmailOrUsernameGlobal(string $identifier): ?static
+    {
+        $instance = new static();
+        $result = $instance->db->fetch(
+            "SELECT * FROM {$instance->table}
+            WHERE email = :id_email OR username = :id_username
+            LIMIT 1",
+            [
+                'id_email'    => $identifier,
+                'id_username' => $identifier,
+            ]
+        );
+
+        return $instance->hydrate($result);
+    }
 }

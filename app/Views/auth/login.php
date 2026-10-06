@@ -350,17 +350,17 @@
         <div class="auth-card">
             <h2>Login to Your Account</h2>
 
-            <?php if ($flash = $this->getFlash('error')): ?>
+            <?php if (!empty($error)): ?>
                 <div class="alert alert-danger" role="alert" aria-live="assertive">
                     <i class="fas fa-exclamation-circle"></i>
-                    <span><?= htmlspecialchars($flash, ENT_QUOTES, 'UTF-8') ?></span>
+                    <span><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></span>
                 </div>
             <?php endif; ?>
 
-            <?php if ($flash = $this->getFlash('success')): ?>
+            <?php if (!empty($success)): ?>
                 <div class="alert alert-success" role="alert" aria-live="polite">
                     <i class="fas fa-check-circle"></i>
-                    <span><?= htmlspecialchars($flash, ENT_QUOTES, 'UTF-8') ?></span>
+                    <span><?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?></span>
                 </div>
             <?php endif; ?>
 

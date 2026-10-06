@@ -5,6 +5,7 @@ namespace NexaT\Controllers;
 
 use NexaT\Core\Controller;
 use NexaT\Core\SettingsService;
+use NexaT\Core\Toast;
 
 class AuthController extends Controller
 {
@@ -15,13 +16,22 @@ class AuthController extends Controller
             return;
         }
 
-        $email    = $_SESSION['old_email'] ?? '';
-        $password = $_SESSION['old_password'] ?? '';
-        unset($_SESSION['old_email'], $_SESSION['old_password']);
+        $email = $_SESSION['old_email'] ?? '';
+        unset($_SESSION['old_email']);
+
+        $error   = null;
+        $success = null;
+
+        foreach (Toast::pull() as $t) {
+            $type = $t['type'] ?? 'info';
+            if ($type === 'error'   && $error   === null) $error   = $t['message'];
+            if ($type === 'success' && $success === null) $success = $t['message'];
+        }
 
         echo $this->view->render('auth/login', [
-            'email'    => $email,
-            'password' => $password,
+            'email'   => $email,
+            'error'   => $error,
+            'success' => $success,
         ]);
     }
 
@@ -31,35 +41,51 @@ class AuthController extends Controller
             session_start();
         }
 
-        $email    = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
-
-        $_SESSION['old_email']    = $email;
-        $_SESSION['old_password'] = $password;
-
-        if ($email === '' || $password === '') {
-            $this->flashError('Please enter your email and password.');
-            session_write_close();
-            $this->redirect('login');
+        if ($this->auth->check()) {
+            $this->redirect('dashboard');
+            return;
         }
 
-        if (!$this->auth->attempt($email, $password)) {
-            $this->flashError('Invalid email/password. Please try again!');
-            session_write_close();
+        $identifier = trim($_POST['email'] ?? '');
+        $password   = $_POST['password'] ?? '';
+
+        $_SESSION['old_email'] = $identifier;
+
+        if ($identifier === '' || $password === '') {
+            Toast::error('Please enter your email or username and your password.');
             $this->redirect('login');
+            return;
+        }
+
+        if (!$this->auth->attempt($identifier, $password)) {
+            $reason = method_exists($this->auth, 'lastError') ? $this->auth->lastError() : null;
+            Toast::error($reason ?: 'Incorrect email/username or password. Please try again.');
+            $this->redirect('login');
+            return;
         }
 
         $user = $this->auth->getUser();
 
-        if ($user) {
-            $_SESSION['school_id']   = $user->school_id ?? 1;
-            $_SESSION['school_name'] = $this->getSchoolName();
+        if (!$user) {
+            Toast::error('Unable to complete sign-in. Please try again.');
+            $this->redirect('login');
+            return;
         }
 
-        unset($_SESSION['old_email'], $_SESSION['old_password']);
+        $status = strtolower((string)($user->status ?? 'active'));
+        if ($status !== 'active') {
+            $this->auth->logout();
+            Toast::error('Your account is not active. Please contact your administrator.');
+            $this->redirect('login');
+            return;
+        }
 
-        $this->flashSuccess('Welcome back!');
-        session_write_close();
+        $_SESSION['school_id']   = $user->school_id ?? 1;
+        $_SESSION['school_name'] = $this->getSchoolName();
+
+        unset($_SESSION['old_email']);
+
+        Toast::success('Welcome back, ' . ($user->first_name ?? '') . '!');
         $this->redirect('dashboard');
     }
 
@@ -72,8 +98,7 @@ class AuthController extends Controller
         $this->auth->logout();
         unset($_SESSION['school_id'], $_SESSION['school_name']);
 
-        $this->flashSuccess('You have been logged out successfully!');
-        session_write_close();
+        Toast::success('You have been logged out successfully!');
         $this->redirect('login');
     }
 
