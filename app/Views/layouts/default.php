@@ -128,6 +128,12 @@ if (function_exists('csrf_token')) {
 }
 $csrfToken = htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8');
 
+if (!empty($_SESSION['_just_logged_in'])) {
+    unset($_SESSION['_just_logged_in']);
+    $greetName = $user->first_name ?? ($user->username ?? 'there');
+    \NexaT\Core\Toast::success('Welcome back, ' . $greetName . '!');
+}
+
 $pendingToasts = Toast::pull();
 ?>
 <!DOCTYPE html>
