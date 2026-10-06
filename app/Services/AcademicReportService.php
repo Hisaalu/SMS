@@ -1969,7 +1969,7 @@ class AcademicReportService
             if ($teacher) {
                 $f = strtoupper(substr(trim($teacher['first_name']), 0, 1));
                 $l = strtoupper(substr(trim($teacher['last_name']),  0, 1));
-                $initials[$sid] = $f . '.' . $l;
+                $initials[$sid] = $f . '' . $l;
             } else {
                 $initials[$sid] = '';
             }

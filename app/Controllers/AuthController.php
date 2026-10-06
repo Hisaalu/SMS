@@ -37,7 +37,7 @@ class AuthController extends Controller
 
         if ($reason = \NexaT\Core\Auth::pullLogoutReason()) {
             if ($reason === 'timeout') {
-                $error = $error ?: 'Your session expired due to inactivity. Please sign in again.';
+                $error = $error ?: 'Session expired due to inactivity. Please log in again!';
             }
         }
 
@@ -99,7 +99,10 @@ class AuthController extends Controller
         $_SESSION['school_name'] = $this->getSchoolName();
 
         unset($_SESSION['old_email']);
-        $_SESSION['_just_logged_in'] = true;
+
+        $greetName = $user->first_name ?? ($user->username ?? '');
+        Toast::success('Welcome back, ' . $greetName . '!');
+
         $this->redirect('dashboard');
     }
 
