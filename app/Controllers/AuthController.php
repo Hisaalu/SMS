@@ -108,11 +108,12 @@ class AuthController extends Controller
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
+        Toast::success('You have been logged out successfully!');
 
         $this->auth->logout();
+
         unset($_SESSION['school_id'], $_SESSION['school_name']);
 
-        Toast::success('You have been logged out successfully!');
         $this->redirect('login');
     }
 

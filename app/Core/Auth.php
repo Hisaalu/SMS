@@ -132,12 +132,26 @@ class Auth
 
     public function logout(): void
     {
-        if ($this->session) {
-            $this->session->destroy();
-        } elseif (session_status() === PHP_SESSION_ACTIVE) {
-            $_SESSION = [];
-            session_destroy();
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            $this->user = null;
+            return;
         }
+
+        $sessionKey = defined('SESSION_USER_KEY') ? \SESSION_USER_KEY : 'user_id';
+
+        unset(
+            $_SESSION[$sessionKey],
+            $_SESSION['user_id'],
+            $_SESSION['username'],
+            $_SESSION['school_id'],
+            $_SESSION['school_name'],
+            $_SESSION['_last_activity'],
+            $_SESSION['_login_time'],
+            $_SESSION['_just_logged_in']
+        );
+
+        session_regenerate_id(true);
+
         $this->user = null;
     }
 
