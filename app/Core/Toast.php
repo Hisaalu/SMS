@@ -17,6 +17,16 @@ class Toast
             $_SESSION[self::SESSION_KEY] = [];
         }
 
+        $signature = $type . '|' . $message . '|' . ($title ?? '');
+        foreach ($_SESSION[self::SESSION_KEY] as $existing) {
+            $existingSig = ($existing['type'] ?? '')
+                        . '|' . ($existing['message'] ?? '')
+                        . '|' . ($existing['title'] ?? '');
+            if ($existingSig === $signature) {
+                return; 
+            }
+        }
+
         $_SESSION[self::SESSION_KEY][] = [
             'type'     => $type,
             'message'  => $message,
@@ -54,6 +64,21 @@ class Toast
         $toasts = $_SESSION[self::SESSION_KEY] ?? [];
         unset($_SESSION[self::SESSION_KEY]);
 
-        return is_array($toasts) ? $toasts : [];
+        if (!is_array($toasts)) {
+            return [];
+        }
+
+        $seen   = [];
+        $unique = [];
+        foreach ($toasts as $t) {
+            $sig = ($t['type'] ?? '') . '|' . ($t['message'] ?? '') . '|' . ($t['title'] ?? '');
+            if (isset($seen[$sig])) {
+                continue;
+            }
+            $seen[$sig] = true;
+            $unique[] = $t;
+        }
+
+        return $unique;
     }
 }

@@ -1,9 +1,7 @@
 <?php
 // File: /app/Views/partials/toasts.php
 
-use NexaT\Core\Toast;
-
-$toasts = Toast::pull();
+$toasts = is_array($pendingToasts ?? null) ? $pendingToasts : [];
 
 foreach (['success' => 'success', 'error' => 'error', 'warning' => 'warning', 'info' => 'info'] as $key => $type) {
     if (!empty($_SESSION['flash_' . $key])) {
@@ -22,6 +20,18 @@ if (isset($flashBag) && is_array($flashBag)) {
         }
     }
 }
+
+$seen   = [];
+$unique = [];
+foreach ($toasts as $t) {
+    $sig = ($t['type'] ?? '') . '|' . ($t['message'] ?? '') . '|' . ($t['title'] ?? '');
+    if (isset($seen[$sig])) {
+        continue;
+    }
+    $seen[$sig] = true;
+    $unique[]   = $t;
+}
+$toasts = $unique;
 
 if (empty($toasts)) {
     echo '<div id="toastRoot" class="toast-root" aria-live="polite" aria-atomic="true"></div>';

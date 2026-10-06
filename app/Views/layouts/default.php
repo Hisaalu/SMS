@@ -130,7 +130,7 @@ $csrfToken = htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8');
 
 if (!empty($_SESSION['_just_logged_in'])) {
     unset($_SESSION['_just_logged_in']);
-    $greetName = $user->first_name ?? ($user->username ?? 'there');
+    $greetName = $user->first_name ?? ($user->username ?? '');
     \NexaT\Core\Toast::success('Welcome back, ' . $greetName . '!');
 }
 
@@ -951,13 +951,9 @@ $pendingToasts = Toast::pull();
 <body>
 
     <?php
-        $flashBag = ['success' => [], 'error' => [], 'warning' => [], 'info' => []];
-        foreach ($pendingToasts as $t) {
-            $type = $t['type'] ?? 'info';
-            if (isset($flashBag[$type])) {
-                $flashBag[$type][] = $t['message'] ?? '';
-            }
-        }
+        // $pendingToasts was already set earlier in this file:
+        //     $pendingToasts = Toast::pull();
+        // Pass it to the partial. The partial MUST NOT pull again.
         include __DIR__ . '/../partials/toasts.php';
     ?>
 

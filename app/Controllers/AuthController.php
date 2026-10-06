@@ -91,7 +91,7 @@ class AuthController extends Controller
 
         unset($_SESSION['old_email']);
 
-        Toast::success('Welcome back, ' . ($user->first_name ?? '') . '!');
+        $_SESSION['_just_logged_in'] = true;
         $this->redirect('dashboard');
     }
 
