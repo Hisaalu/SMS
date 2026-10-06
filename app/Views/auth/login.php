@@ -83,7 +83,6 @@
             --input-border: #D0D7DE;
             --success-bg:   #ECFDF5;
             --success-bd:   #A7F3D0;
-            --success-tx:   #065F46;
             --error-bg:     #FEF2F2;
             --error-bd:     #FECACA;
             --error-tx:     #991B1B;
@@ -315,7 +314,6 @@
         }
         .alert i { margin-top: 0.15rem; flex-shrink: 0; }
         .alert-danger  { background: var(--error-bg);   border-color: var(--error-bd);   color: var(--error-tx); }
-        .alert-success { background: var(--success-bg); border-color: var(--success-bd); color: var(--success-tx); }
 
         .page-footer {
             text-align: center;
@@ -354,13 +352,6 @@
                 <div class="alert alert-danger" role="alert" aria-live="assertive">
                     <i class="fas fa-exclamation-circle"></i>
                     <span><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></span>
-                </div>
-            <?php endif; ?>
-
-            <?php if (!empty($success)): ?>
-                <div class="alert alert-success" role="alert" aria-live="polite">
-                    <i class="fas fa-check-circle"></i>
-                    <span><?= htmlspecialchars($success, ENT_QUOTES, 'UTF-8') ?></span>
                 </div>
             <?php endif; ?>
 
