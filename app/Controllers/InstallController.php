@@ -5,7 +5,7 @@ namespace NexaT\Controllers;
 
 use NexaT\Core\Controller;
 use NexaT\Core\Database;
-use NexaT\Services\SettingsService;
+use NexaT\Core\SettingsService;
 use NexaT\Services\NotificationService;
 
 class InstallController extends Controller
@@ -345,10 +345,10 @@ class InstallController extends Controller
             throw new \Exception("Failed to create academic year.");
         }
 
-        $this->seedTerms($yearId, (int)$year);
+        $this->seedTerms($yearId, (int)$year, $schoolId);
     }
 
-    private function seedTerms(int $yearId, int $year): void
+    private function seedTerms(int $yearId, int $year, int $schoolId): void
     {
         try {
             $this->db->fetch("SELECT 1 FROM terms LIMIT 1");
@@ -364,6 +364,7 @@ class InstallController extends Controller
 
         foreach ($terms as $index => $term) {
             $this->db->insert('terms', [
+                'school_id'        => $schoolId,
                 'academic_year_id' => $yearId,
                 'name'             => $term['name'],
                 'term_number'      => $term['term_number'],

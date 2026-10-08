@@ -54,8 +54,13 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold small">New Password</label>
-                    <input type="password" class="form-control" name="password" minlength="8"
-                           placeholder="Leave blank to keep current password">
+                    <div class="input-group">
+                        <input type="password" class="form-control" name="password" id="passwordInput" minlength="8"
+                               placeholder="Leave blank to keep current password">
+                        <button class="btn btn-outline-secondary border" type="button" id="togglePasswordBtn" tabindex="-1">
+                            <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold small">Account Status</label>
@@ -89,3 +94,19 @@
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const toggleBtn = document.getElementById('togglePasswordBtn');
+    const passwordInput = document.getElementById('passwordInput');
+    const toggleIcon = document.getElementById('togglePasswordIcon');
+
+    if (toggleBtn && passwordInput && toggleIcon) {
+        toggleBtn.addEventListener('click', function () {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            toggleIcon.className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
+        });
+    }
+});
+</script>
