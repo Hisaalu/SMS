@@ -411,6 +411,7 @@
                             id="password"
                             name="password"
                             placeholder="Password"
+                            value="<?= htmlspecialchars($password ?? '', ENT_QUOTES, 'UTF-8') ?>"
                             autocomplete="current-password"
                             required>
                         <button type="button" class="toggle-password" id="togglePasswordBtn" aria-label="Toggle password visibility">

@@ -217,6 +217,7 @@ if (empty($toasts)) {
         if (!root) return;
 
         const MAX_VISIBLE = 4;
+        const DEFAULT_DURATION = 5000;
 
         function prune() {
             const cards = root.querySelectorAll('[data-toast]:not(.toast-hide)');
@@ -242,10 +243,12 @@ if (empty($toasts)) {
             }
             card.addEventListener('toast:dismiss', () => dismiss(card));
 
-            const duration = parseInt(card.dataset.duration || '5000', 10);
-            if (duration > 0) {
-                setTimeout(() => dismiss(card), duration);
+            let duration = parseInt(card.dataset.duration || '0', 10);
+            if (!duration || duration <= 0) {
+                duration = DEFAULT_DURATION;
             }
+
+            setTimeout(() => dismiss(card), duration);
         }
 
         root.querySelectorAll('[data-toast]').forEach(bind);
@@ -259,13 +262,15 @@ if (empty($toasts)) {
         };
 
         function show(type, message, title, duration) {
-            type = typeMeta[type] ? type : 'info';
-            const meta = typeMeta[type];
+            const safeType = typeMeta[type] ? type : 'info';
+            const meta = typeMeta[safeType];
             const card = document.createElement('div');
-            card.className = 'toast-card toast-' + type;
+            card.className = 'toast-card toast-' + safeType;
             card.setAttribute('role', 'alert');
             card.setAttribute('data-toast', '');
-            card.dataset.duration = String(duration ?? meta.duration);
+
+            const finalDuration = (duration && duration > 0) ? duration : meta.duration;
+            card.dataset.duration = String(finalDuration);
 
             const titleHtml = title
                 ? `<div class="toast-title">${escapeHtml(title)}</div>`

@@ -40,12 +40,42 @@ $logoUrl    = $logoUrl    ? htmlspecialchars($logoUrl,    ENT_QUOTES, 'UTF-8') :
 
 $rawSchoolName = $schoolName ?? 'NexaT School';
 $schoolFull    = htmlspecialchars($rawSchoolName, ENT_QUOTES, 'UTF-8');
-$userName      = htmlspecialchars($user->first_name ?? 'User', ENT_QUOTES, 'UTF-8');
 
-$initial     = strtoupper(substr($user->first_name ?? '', 0, 1));
-$userInitial = $initial !== '' ? $initial : 'U';
+$resolvedUser = (isset($user) && is_object($user)) ? $user : null;
+
+if (!$resolvedUser && !empty($_SESSION['user_id']) && class_exists('NexaT\\Models\\User')) {
+    $resolvedUser = \NexaT\Models\User::findWithoutScope((int)$_SESSION['user_id']) 
+                 ?? \NexaT\Models\User::find((int)$_SESSION['user_id']);
+}
+
+$firstName = '';
+$lastName  = '';
+$userNameProp = 'User';
+
+if ($resolvedUser) {
+    $firstName = trim($resolvedUser->first_name ?? '');
+    $lastName  = trim($resolvedUser->last_name ?? '');
+    $userNameProp = !empty($firstName) ? $firstName : ($resolvedUser->username ?? 'User');
+} elseif (!empty($_SESSION['username'])) {
+    $userNameProp = $_SESSION['username'];
+}
+
+$userName = htmlspecialchars($userNameProp, ENT_QUOTES, 'UTF-8');
+
+$userInitial = 'U';
+if (!empty($firstName) && !empty($lastName)) {
+    $userInitial = strtoupper(substr($firstName, 0, 1) . substr($lastName, 0, 1));
+} elseif (!empty($userNameProp) && strlen($userNameProp) >= 2) {
+    $parts = explode(' ', trim($userNameProp));
+    if (count($parts) >= 2) {
+        $userInitial = strtoupper(substr($parts[0], 0, 1) . substr($parts[1], 0, 1));
+    } else {
+        $userInitial = strtoupper(substr($userNameProp, 0, 2));
+    }
+}
 
 $resolveCurrentPageName = static function (): string {
+    global $pageTitle;
     if (isset($pageTitle) && trim((string)$pageTitle) !== '') {
         return (string)$pageTitle;
     }
@@ -55,8 +85,9 @@ $resolveCurrentPageName = static function (): string {
         $menuSections = (static function () use ($menuFile) {
             ob_start();
             include $menuFile;
+            $sections = $menuSections ?? [];
             ob_end_clean();
-            return $menuSections ?? [];
+            return $sections;
         })();
 
         $currentPath = rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '', '/');

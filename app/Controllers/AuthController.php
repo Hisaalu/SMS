@@ -16,8 +16,10 @@ class AuthController extends Controller
             return;
         }
 
-        $email = $_SESSION['old_email'] ?? '';
-        unset($_SESSION['old_email']);
+        $email    = $_SESSION['old_email'] ?? '';
+        $password = $_SESSION['old_password'] ?? '';
+        unset($_SESSION['old_email'], $_SESSION['old_password']);
+
         $error   = null;
         $success = null;
         $warning = null;
@@ -42,11 +44,12 @@ class AuthController extends Controller
         }
 
         echo $this->view->render('auth/login', [
-            'email'   => $email,
-            'error'   => $error,
-            'success' => $success,
-            'warning' => $warning,
-            'info'    => $info,
+            'email'    => $email,
+            'password' => $password,
+            'error'    => $error,
+            'success'  => $success,
+            'warning'  => $warning,
+            'info'     => $info,
         ]);
     }
 
@@ -64,7 +67,8 @@ class AuthController extends Controller
         $identifier = trim($_POST['email'] ?? '');
         $password   = $_POST['password'] ?? '';
 
-        $_SESSION['old_email'] = $identifier;
+        $_SESSION['old_email']    = $identifier;
+        $_SESSION['old_password'] = $password;
 
         if ($identifier === '' || $password === '') {
             Toast::error('Please enter your email or username and your password.');
@@ -98,7 +102,7 @@ class AuthController extends Controller
         $_SESSION['school_id']   = $user->school_id ?? 1;
         $_SESSION['school_name'] = $this->getSchoolName();
 
-        unset($_SESSION['old_email']);
+        unset($_SESSION['old_email'], $_SESSION['old_password']);
 
         $greetName = $user->first_name ?? ($user->username ?? '');
         Toast::success('Welcome back, ' . $greetName . '!');

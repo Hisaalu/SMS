@@ -10,6 +10,10 @@ class Toast
     public static function push(string $type, string $message, ?string $title = null, int $duration = 0): void
     {
         if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
+        }
+
+        if (session_status() === PHP_SESSION_NONE) {
             return;
         }
 
@@ -57,6 +61,10 @@ class Toast
 
     public static function pull(): array
     {
+        if (session_status() === PHP_SESSION_NONE) {
+            @session_start();
+        }
+
         if (session_status() === PHP_SESSION_NONE) {
             return [];
         }

@@ -133,8 +133,7 @@ class Auth
     public function logout(): void
     {
         if (session_status() !== PHP_SESSION_ACTIVE) {
-            $this->user = null;
-            return;
+            @session_start();
         }
 
         $sessionKey = defined('SESSION_USER_KEY') ? \SESSION_USER_KEY : 'user_id';
@@ -150,7 +149,9 @@ class Auth
             $_SESSION['_just_logged_in']
         );
 
-        session_regenerate_id(true);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
 
         $this->user = null;
     }
@@ -181,7 +182,7 @@ class Auth
     private function hasTimedOut(): bool
     {
         if (session_status() !== PHP_SESSION_ACTIVE) {
-            return false;
+            @session_start();
         }
 
         $sessionKey = defined('SESSION_USER_KEY') ? \SESSION_USER_KEY : 'user_id';
@@ -223,6 +224,10 @@ class Auth
 
     private function forceLogout(string $reason = 'timeout'): void
     {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            @session_start();
+        }
+
         $_SESSION['_logout_reason'] = $reason;
 
         $sessionKey = defined('SESSION_USER_KEY') ? \SESSION_USER_KEY : 'user_id';
@@ -246,7 +251,7 @@ class Auth
     public static function pullLogoutReason(): ?string
     {
         if (session_status() !== PHP_SESSION_ACTIVE) {
-            return null;
+            @session_start();
         }
 
         $reason = $_SESSION['_logout_reason'] ?? null;
