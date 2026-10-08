@@ -255,7 +255,7 @@ $pendingToasts = Toast::pull();
         }
 
         .navbar-brand {
-            color: var(--navbar-text) !important;
+            color: var(--accent-color) !important;
             font-weight: var(--font-weight-bold);
             font-size: 0.95rem;
             letter-spacing: -0.2px;

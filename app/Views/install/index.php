@@ -70,7 +70,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Install · NexaT School</title>
+    <title>Install / NexaT School</title>
 
     <?php if ($logoUrl): ?>
         <link rel="icon" type="image/png" href="<?= htmlspecialchars($logoUrl, ENT_QUOTES, 'UTF-8') ?>">

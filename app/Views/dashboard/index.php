@@ -558,7 +558,7 @@ $firstName = htmlspecialchars($user->first_name ?? $user->username ?? 'Administr
                 <div class="card-header py-3 d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="fw-bold mb-0">
-                            <i class="fas fa-user-plus me-2 text-success"></i>Recently Added Learners
+                            <i class="fas fa-user-plus me-2 text-success"></i>Recent Learners
                         </h6>
                         <small>For <?= $yearLabel ?></small>
                     </div>
