@@ -10,6 +10,11 @@ class Session
 
     public function __construct()
     {
+        if (!headers_sent() && session_status() === PHP_SESSION_NONE) {
+            $isLocal = ($_SERVER['HTTP_HOST'] ?? '') === 'localhost' || str_starts_with($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1');
+            session_name($isLocal ? 'NEXAT_LOCAL_SID' : 'NEXAT_PROD_SID');
+        }
+
         if (defined('SESSION_IDLE_TIMEOUT')) {
             $lifetime = SESSION_IDLE_TIMEOUT + 300;
             @ini_set('session.gc_maxlifetime', (string)$lifetime);

@@ -46,14 +46,12 @@ class DatabaseSessionHandler implements \SessionHandlerInterface
                 "INSERT INTO php_sessions (session_id, session_data, session_expires) 
                  VALUES (:id, :data, :expires)
                  ON DUPLICATE KEY UPDATE 
-                    session_data = :data2, 
-                    session_expires = :expires2",
+                    session_data = VALUES(session_data), 
+                    session_expires = VALUES(session_expires)",
                 [
                     'id' => $id,
                     'data' => $data,
                     'expires' => $expires,
-                    'data2' => $data,
-                    'expires2' => $expires,
                 ]
             );
             return true;

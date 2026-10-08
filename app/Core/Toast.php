@@ -70,7 +70,12 @@ class Toast
         }
 
         $toasts = $_SESSION[self::SESSION_KEY] ?? [];
+        
         unset($_SESSION[self::SESSION_KEY]);
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            @session_write_close();
+            @session_start();
+        }
 
         if (!is_array($toasts)) {
             return [];

@@ -71,14 +71,14 @@ class AuthController extends Controller
         $_SESSION['old_password'] = $password;
 
         if ($identifier === '' || $password === '') {
-            Toast::error('Please enter your email or username and your password.');
+            Toast::error('Please enter your email or username and your password!');
             $this->redirect('login');
             return;
         }
 
         if (!$this->auth->attempt($identifier, $password)) {
             $reason = method_exists($this->auth, 'lastError') ? $this->auth->lastError() : null;
-            Toast::error($reason ?: 'Incorrect email/username or password. Please try again.');
+            Toast::error($reason ?: 'Incorrect email/username or password. Please try again!');
             $this->redirect('login');
             return;
         }
@@ -86,7 +86,7 @@ class AuthController extends Controller
         $user = $this->auth->getUser();
 
         if (!$user) {
-            Toast::error('Unable to complete sign-in. Please try again.');
+            Toast::error('Unable to complete sign-in. Please try again!');
             $this->redirect('login');
             return;
         }
@@ -94,7 +94,7 @@ class AuthController extends Controller
         $status = strtolower((string)($user->status ?? 'active'));
         if ($status !== 'active') {
             $this->auth->logout();
-            Toast::error('Your account is not active. Please contact your administrator.');
+            Toast::error('Your account is not active. Please contact your administrator!');
             $this->redirect('login');
             return;
         }
